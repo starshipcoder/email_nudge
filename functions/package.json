@@ -15,7 +15,7 @@
     "test:watch": "jest --watch"
   },
   "engines": {
-    "node": "18"
+    "node": ">=18"
   },
   "dependencies": {
     "firebase-admin": "^11.11.0",

@@ -1,4 +1,4 @@
-import { resolveSegment, shouldSendEmail, getPrimaryNeed, hasNeed } from '../utils/segmentResolver'
+import { resolveSegment, shouldSendEmail, getPrimaryNeed } from '../utils/segmentResolver'
 import { User, Need } from '../types'
 
 // Helper to create a test user
