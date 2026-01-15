@@ -26,7 +26,7 @@ export const onPaywallStateChanged = onDocumentUpdated('users/{userId}', async (
     await sendEmailNow(userId, 'QuickStart')
 
     // Schedule follow-up emails
-    await scheduleEmail(userId, 'NeedHelp')
-    await scheduleEmail(userId, 'NeedHelpWith')
+    await scheduleEmail(userId, 'NoVisits')
+    await scheduleEmail(userId, 'NoOptimization')
   }
 })

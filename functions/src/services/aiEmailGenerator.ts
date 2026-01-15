@@ -1,6 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { defineSecret } from 'firebase-functions/params'
 import { User, EmailName, Locale, Need, Role } from '../types'
+import { isTemplateSegment, renderEmailTemplate } from '../templates/emailTemplates'
+import { resolveSegment } from '../utils/segmentResolver'
 
 export const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY')
 
@@ -12,36 +14,25 @@ function getAnthropic(): Anthropic {
   return anthropicClient
 }
 
-// Contexte et objectif par type d'email
-const EMAIL_CONFIG: Record<EmailName, { context: string; goal: string }> = {
+// Contexte et objectif par type d'email (uniquement pour emails générés par IA)
+type AIEmailName = 'WhatsMissing' | 'QuickStart'
+
+const EMAIL_CONFIG: Record<AIEmailName, { context: string; goal: string }> = {
   WhatsMissing: {
     context: "L'utilisateur a commencé l'onboarding mais l'a abandonné sans finir.",
     goal: "Comprendre ce qui lui a manqué ou bloqué. Proposer de l'aide."
   },
-  FreeOptions: {
-    context: "L'utilisateur a vu le paywall mais l'a fermé sans souscrire.",
-    goal: "Expliquer qu'il peut quand même utiliser l'app gratuitement avec des limitations. L'encourager à essayer."
-  },
   QuickStart: {
     context: "L'utilisateur vient de commencer son essai gratuit.",
     goal: "L'aider à démarrer rapidement. Donner 1-2 conseils pratiques selon son métier."
-  },
-  NeedHelp: {
-    context: "L'utilisateur est en essai depuis 24h mais n'a pas encore créé de tournée.",
-    goal: "Proposer de l'aide pour créer sa première tournée. Demander si quelque chose bloque."
-  },
-  NeedHelpWith: {
-    context: "L'utilisateur est en essai depuis 48h et n'a toujours pas créé de tournée.",
-    goal: "Dernière tentative d'aide. Demander directement ce qui manque ou bloque."
-  },
-  TrialEndsSoon: {
-    context: "L'essai gratuit se termine dans 2 jours.",
-    goal: "Rappeler la fin de l'essai. Demander s'il a des questions avant de décider."
-  },
-  WhyLeaving: {
-    context: "L'utilisateur a annulé son abonnement.",
-    goal: "Comprendre pourquoi il part. Demander un feedback honnête pour améliorer l'app."
   }
+}
+
+// Emails qui utilisent l'IA
+const AI_EMAILS: EmailName[] = ['WhatsMissing', 'QuickStart']
+
+function isAIEmail(emailName: EmailName): emailName is AIEmailName {
+  return AI_EMAILS.includes(emailName)
 }
 
 // Labels traduits par langue
@@ -221,16 +212,53 @@ Infos user:
   }
 }
 
+/**
+ * Extract first name from user or email
+ */
+export function getFirstName(user: User): string | null {
+  return user.prenom || extractFirstName(user.email)
+}
+
+/**
+ * Generate email - uses template or AI depending on email type
+ */
 export async function generateEmail(
   user: User,
   emailName: EmailName,
   extraVariables?: Record<string, string | number>
 ): Promise<GeneratedEmail> {
   const locale = user.locale || 'fr'
+  const segment = resolveSegment(emailName, user)
+
+  // Use template for simple emails
+  if (isTemplateSegment(segment)) {
+    const firstName = getFirstName(user)
+    return renderEmailTemplate(segment, locale, {
+      prenom: firstName || undefined
+    })
+  }
+
+  // Use AI for WhatsMissing and QuickStart
+  if (!isAIEmail(emailName)) {
+    throw new Error(`No template or AI config for email: ${emailName}`)
+  }
+
+  return generateAIEmail(user, emailName, extraVariables)
+}
+
+/**
+ * Generate email using Anthropic AI
+ */
+async function generateAIEmail(
+  user: User,
+  emailName: AIEmailName,
+  extraVariables?: Record<string, string | number>
+): Promise<GeneratedEmail> {
+  const locale = user.locale || 'fr'
   const config = EMAIL_CONFIG[emailName]
 
   // Try to get first name: from user data or extract from email
-  const firstName = user.prenom || extractFirstName(user.email) || null
+  const firstName = getFirstName(user)
   const firstNameDisplay = firstName || 'inconnu'
 
   const roleLabel = ROLE_LABELS[locale]?.[user.role] || ROLE_LABELS['en'][user.role]

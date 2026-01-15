@@ -13,7 +13,7 @@ function createUser(overrides: Partial<User> = {}): User {
     onboarding_step_reached: 1,
     paywall_seen: false,
     paywall_passed: false,
-    routes_optimized: 0,
+    has_optimized_route: false,
     has_added_visits: false,
     trial_active: false,
     subscription_active: false,
@@ -78,25 +78,7 @@ describe('renderTemplate - Variable Replacement', () => {
     expect(body).not.toContain('Hey ,')
   })
 
-  it('replaces days_remaining in TrialEndsSoon', () => {
-    const { subject, body } = renderTemplate('TrialEndsSoon', { days_remaining: 2 })
-    expect(subject).toContain('2 jours')
-    expect(body).toContain('2 jours')
-  })
 
-  it('replaces churn_reason in WhyLeaving__with_feedback', () => {
-    const { body } = renderTemplate('WhyLeaving__with_feedback', {
-      churn_reason: 'Trop cher pour moi'
-    })
-    expect(body).toContain('Trop cher pour moi')
-  })
-
-  it('replaces primary_need_label in NeedHelpWith', () => {
-    const { subject } = renderTemplate('NeedHelpWith', {
-      primary_need_label: 'la prospection'
-    })
-    expect(subject).toContain('la prospection')
-  })
 })
 
 describe('renderTemplate - Conditional Blocks', () => {
@@ -111,15 +93,6 @@ describe('renderTemplate - Conditional Blocks', () => {
   })
 })
 
-describe('renderTemplate - Needs List', () => {
-  it('renders needs list in NeedHelpWith', () => {
-    const { body } = renderTemplate('NeedHelpWith', {
-      needs_labels: ['trouver des hôtels', 'optimiser tes visites']
-    })
-    expect(body).toContain('• trouver des hôtels')
-    expect(body).toContain('• optimiser tes visites')
-  })
-})
 
 describe('renderTemplate - Signature', () => {
   it('includes Harold signature in all templates', () => {
@@ -127,9 +100,10 @@ describe('renderTemplate - Signature', () => {
       'WhatsMissing__default',
       'FreeOptions',
       'QuickStart__default',
-      'NeedHelp__no_visits',
-      'TrialEndsSoon',
-      'WhyLeaving__silent'
+      'NoVisits',
+      'NoOptimization',
+      'WhyLeaving__unsubscribe',
+      'WhyLeaving__billing_error'
     ] as const
 
     segments.forEach(segment => {
@@ -153,12 +127,10 @@ describe('renderTemplate - All Segments Exist', () => {
     'QuickStart__tracking',
     'QuickStart__technician',
     'QuickStart__default',
-    'NeedHelp__no_visits',
-    'NeedHelp__no_optimization',
-    'NeedHelpWith',
-    'TrialEndsSoon',
-    'WhyLeaving__silent',
-    'WhyLeaving__with_feedback'
+    'NoVisits',
+    'NoOptimization',
+    'WhyLeaving__unsubscribe',
+    'WhyLeaving__billing_error'
   ] as const
 
   allSegments.forEach(segment => {

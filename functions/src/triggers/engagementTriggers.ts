@@ -12,12 +12,12 @@ export const onUserEngagementChanged = onDocumentUpdated('users/{userId}', async
   if (!before || !after) return
 
   // User optimized first route or added visits - cancel pending NeedHelp emails
-  const wasInactive = !before.has_added_visits && (before.routes_optimized || 0) === 0
-  const isNowActive = after.has_added_visits || (after.routes_optimized || 0) > 0
+  const wasInactive = !before.has_added_visits && !before.has_optimized_route
+  const isNowActive = after.has_added_visits || after.has_optimized_route
 
   if (wasInactive && isNowActive) {
-    console.log(`User ${userId} is now active (routes_optimized: ${after.routes_optimized}, has_added_visits: ${after.has_added_visits}) - cancelling pending emails`)
-    await cancelPendingEmails(userId, ['NeedHelp', 'NeedHelpWith'])
+    console.log(`User ${userId} is now active (has_optimized_route: ${after.has_optimized_route}, has_added_visits: ${after.has_added_visits}) - cancelling pending emails`)
+    await cancelPendingEmails(userId, ['NoVisits', 'NoOptimization'])
   }
 
   // User replied - kill switch
@@ -26,8 +26,8 @@ export const onUserEngagementChanged = onDocumentUpdated('users/{userId}', async
     await cancelPendingEmails(userId, [
       'WhatsMissing',
       'FreeOptions',
-      'NeedHelp',
-      'NeedHelpWith',
+      'NoVisits',
+      'NoOptimization',
       'WhyLeaving'
     ])
   }

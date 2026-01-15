@@ -1,0 +1,22 @@
+{
+  "FreeOptions": {
+    "subject": "3 formas gratuitas de crear sus rutas",
+    "body": "Hola{{prenom}},\n\nNo pasa nada si no empezó la prueba.\n\nPuede crear sus rutas sin nosotros:\n• Google Maps → limitado a 10 paradas\n• Excel + copiar-pegar → funciona, pero lento\n• Otras apps → a menudo de pago también\n\nSi algo más le bloqueó, dígamelo.\n\n— Harold, creador de Easy Way"
+  },
+  "NoVisits": {
+    "subject": "¿Necesita ayuda?",
+    "body": "Hola{{prenom}},\n\nVi que aún no ha añadido visitas.\n\n¿Atascado en algo? Cuénteme.\n\n— Harold, creador de Easy Way"
+  },
+  "NoOptimization": {
+    "subject": "¡Añadió visitas!",
+    "body": "Hola{{prenom}},\n\n¡Genial, añadió sus primeras visitas!\n\n¿Ha probado a optimizar su ruta? Un clic y le ahorramos tiempo.\n\n¿Necesita ayuda? Respóndame.\n\n— Harold, creador de Easy Way"
+  },
+  "WhyLeaving__unsubscribe": {
+    "subject": "Una pregunta antes de irse",
+    "body": "Hola{{prenom}},\n\nVi que canceló su suscripción.\n\nNo pasa nada — pero me ayudaría entender por qué.\n\nResponda en 2 palabras, leo todo.\n\n— Harold, creador de Easy Way"
+  },
+  "WhyLeaving__billing_error": {
+    "subject": "Un problema con su pago",
+    "body": "Hola{{prenom}},\n\nVi que hubo un problema con su pago.\n\nSi es un error de tarjeta o un problema técnico, no dude en responderme — puedo ayudarle a resolverlo.\n\n— Harold, creador de Easy Way"
+  }
+}

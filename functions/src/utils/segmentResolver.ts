@@ -32,12 +32,10 @@ export function resolveSegment(emailName: EmailName, user: User): Segment {
       return 'FreeOptions'
     case 'QuickStart':
       return resolveQuickStart(user)
-    case 'NeedHelp':
-      return resolveNeedHelp(user)
-    case 'NeedHelpWith':
-      return 'NeedHelpWith'
-    case 'TrialEndsSoon':
-      return 'TrialEndsSoon'
+    case 'NoVisits':
+      return 'NoVisits'
+    case 'NoOptimization':
+      return 'NoOptimization'
     case 'WhyLeaving':
       return resolveWhyLeaving(user)
     default:
@@ -64,15 +62,9 @@ function resolveQuickStart(user: User): Segment {
   return 'QuickStart__default'
 }
 
-function resolveNeedHelp(user: User): Segment {
-  if (!user.has_added_visits) return 'NeedHelp__no_visits'
-  if ((user.routes_optimized || 0) === 0) return 'NeedHelp__no_optimization'
-  return 'NeedHelp__no_visits' // fallback
-}
-
 function resolveWhyLeaving(user: User): Segment {
-  if (user.churn_reason) return 'WhyLeaving__with_feedback'
-  return 'WhyLeaving__silent'
+  if (user.churn_reason === 'billing_error') return 'WhyLeaving__billing_error'
+  return 'WhyLeaving__unsubscribe'
 }
 
 /**
@@ -84,8 +76,8 @@ export function shouldSendEmail(emailName: EmailName, user: User): { send: boole
     return { send: false, reason: 'No email address (legacy user)' }
   }
 
-  // Kill switch: has_replied stops all emails except TrialEndsSoon
-  if (emailName !== 'TrialEndsSoon' && user.has_replied) {
+  // Kill switch: has_replied stops all emails
+  if (user.has_replied) {
     return { send: false, reason: 'User has replied - kill switch active' }
   }
 

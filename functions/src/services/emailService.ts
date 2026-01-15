@@ -63,7 +63,7 @@ Locale: ${user.locale || 'fr'}
 Trial active: ${user.trial_active}
 Subscription active: ${user.subscription_active}
 Has added visits: ${user.has_added_visits}
-Routes optimized: ${user.routes_optimized}
+Has optimized route: ${user.has_optimized_route}
 `
 }
 
@@ -72,9 +72,8 @@ const DELAYS: Record<EmailName, number> = {
   WhatsMissing: 60 * 60 * 1000,        // 1 hour
   FreeOptions: 10 * 60 * 1000,          // 10 minutes
   QuickStart: 0,                         // Immediate
-  NeedHelp: 24 * 60 * 60 * 1000,        // 24 hours
-  NeedHelpWith: 48 * 60 * 60 * 1000,    // 48 hours
-  TrialEndsSoon: 0,                      // Scheduled separately
+  NoVisits: 24 * 60 * 60 * 1000,        // 24 hours
+  NoOptimization: 48 * 60 * 60 * 1000,  // 48 hours
   WhyLeaving: 30 * 60 * 1000            // 30 minutes
 }
 

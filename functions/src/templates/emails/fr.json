@@ -1,0 +1,22 @@
+{
+  "FreeOptions": {
+    "subject": "3 façons gratuites de créer vos tournées",
+    "body": "Bonjour{{prenom}},\n\nPas de souci si vous n'avez pas pris l'essai.\n\nVous pouvez créer vos tournées sans nous :\n• Google Maps → limité à 10 stops\n• Excel + copier-coller → ça marche, mais long\n• Autres apps → souvent payantes aussi\n\nSi c'est autre chose qui vous a bloqué, dites-moi.\n\n— Harold, créateur de Easy Way"
+  },
+  "NoVisits": {
+    "subject": "Besoin d'un coup de main ?",
+    "body": "Bonjour{{prenom}},\n\nJ'ai vu que vous n'avez pas encore ajouté de visites.\n\nBloqué quelque part ? Dites-moi.\n\n— Harold, créateur de Easy Way"
+  },
+  "NoOptimization": {
+    "subject": "Vous avez ajouté des visites !",
+    "body": "Bonjour{{prenom}},\n\nSuper, vous avez ajouté vos premières visites !\n\nAvez-vous pensé à optimiser votre tournée ? Un clic et on vous fait gagner du temps.\n\nBesoin d'aide ? Répondez-moi.\n\n— Harold, créateur de Easy Way"
+  },
+  "WhyLeaving__unsubscribe": {
+    "subject": "Une question avant de partir",
+    "body": "Bonjour{{prenom}},\n\nJ'ai vu que vous avez arrêté votre abonnement.\n\nPas de souci — mais ça m'aiderait de comprendre pourquoi.\n\nRépondez-moi en 2 mots, je lis tout.\n\n— Harold, créateur de Easy Way"
+  },
+  "WhyLeaving__billing_error": {
+    "subject": "Un problème avec votre paiement",
+    "body": "Bonjour{{prenom}},\n\nJ'ai vu qu'il y a eu un souci avec votre paiement.\n\nSi c'est une erreur de carte ou un problème technique, n'hésitez pas à me répondre — je peux vous aider à débloquer la situation.\n\n— Harold, créateur de Easy Way"
+  }
+}

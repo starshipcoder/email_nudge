@@ -13,7 +13,7 @@ function createUser(overrides: Partial<User> = {}): User {
     onboarding_step_reached: 1,
     paywall_seen: false,
     paywall_passed: false,
-    routes_optimized: 0,
+    has_optimized_route: false,
     has_added_visits: false,
     trial_active: false,
     subscription_active: false,
@@ -109,27 +109,32 @@ describe('resolveSegment - QuickStart', () => {
   })
 })
 
-describe('resolveSegment - NeedHelp', () => {
-  it('returns no_visits when has_added_visits is false', () => {
-    const user = createUser({ has_added_visits: false })
-    expect(resolveSegment('NeedHelp', user)).toBe('NeedHelp__no_visits')
+describe('resolveSegment - NoVisits & NoOptimization', () => {
+  it('returns NoVisits for NoVisits email', () => {
+    const user = createUser()
+    expect(resolveSegment('NoVisits', user)).toBe('NoVisits')
   })
 
-  it('returns no_optimization when has visits but no optimization', () => {
-    const user = createUser({ has_added_visits: true, routes_optimized: 0 })
-    expect(resolveSegment('NeedHelp', user)).toBe('NeedHelp__no_optimization')
+  it('returns NoOptimization for NoOptimization email', () => {
+    const user = createUser()
+    expect(resolveSegment('NoOptimization', user)).toBe('NoOptimization')
   })
 })
 
 describe('resolveSegment - WhyLeaving', () => {
-  it('returns silent when no churn_reason', () => {
-    const user = createUser({ churned_at: new Date() })
-    expect(resolveSegment('WhyLeaving', user)).toBe('WhyLeaving__silent')
+  it('returns unsubscribe when churn_reason is unsubscribe', () => {
+    const user = createUser({ churned_at: new Date(), churn_reason: 'unsubscribe' })
+    expect(resolveSegment('WhyLeaving', user)).toBe('WhyLeaving__unsubscribe')
   })
 
-  it('returns with_feedback when churn_reason exists', () => {
-    const user = createUser({ churned_at: new Date(), churn_reason: 'Too expensive' })
-    expect(resolveSegment('WhyLeaving', user)).toBe('WhyLeaving__with_feedback')
+  it('returns billing_error when churn_reason is billing_error', () => {
+    const user = createUser({ churned_at: new Date(), churn_reason: 'billing_error' })
+    expect(resolveSegment('WhyLeaving', user)).toBe('WhyLeaving__billing_error')
+  })
+
+  it('defaults to unsubscribe when no churn_reason', () => {
+    const user = createUser({ churned_at: new Date() })
+    expect(resolveSegment('WhyLeaving', user)).toBe('WhyLeaving__unsubscribe')
   })
 })
 
@@ -138,22 +143,12 @@ describe('resolveSegment - Simple segments', () => {
     const user = createUser()
     expect(resolveSegment('FreeOptions', user)).toBe('FreeOptions')
   })
-
-  it('returns NeedHelpWith for NeedHelpWith email', () => {
-    const user = createUser()
-    expect(resolveSegment('NeedHelpWith', user)).toBe('NeedHelpWith')
-  })
-
-  it('returns TrialEndsSoon for TrialEndsSoon email', () => {
-    const user = createUser()
-    expect(resolveSegment('TrialEndsSoon', user)).toBe('TrialEndsSoon')
-  })
 })
 
 describe('shouldSendEmail - Kill Switch', () => {
   it('blocks emails when has_replied is true', () => {
     const user = createUser({ has_replied: true })
-    expect(shouldSendEmail('NeedHelp', user)).toEqual({
+    expect(shouldSendEmail('NoVisits', user)).toEqual({
       send: false,
       reason: 'User has replied - kill switch active'
     })
@@ -161,13 +156,9 @@ describe('shouldSendEmail - Kill Switch', () => {
 
   it('allows emails when has_replied is false', () => {
     const user = createUser({ has_replied: false })
-    expect(shouldSendEmail('NeedHelp', user)).toEqual({ send: true })
+    expect(shouldSendEmail('NoVisits', user)).toEqual({ send: true })
   })
 
-  it('allows TrialEndsSoon even when has_replied is true', () => {
-    const user = createUser({ has_replied: true })
-    expect(shouldSendEmail('TrialEndsSoon', user)).toEqual({ send: true })
-  })
 })
 
 describe('shouldSendEmail - WhyLeaving Dedup', () => {

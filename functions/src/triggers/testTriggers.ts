@@ -1,6 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https'
-import { RESEND_API_KEY } from '../services/emailService'
-import { generateTestEmail } from '../services/aiEmailGenerator'
+import { RESEND_API_KEY, ANTHROPIC_API_KEY } from '../services/emailService'
+import { generateEmail } from '../services/aiEmailGenerator'
 import { Resend } from 'resend'
 import { db } from '../index'
 import { EmailName, User } from '../types'
@@ -9,11 +9,11 @@ const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
 const TEST_RECIPIENT = 'harold+test@easyway-planner.com'
 
 /**
- * Test endpoint to manually trigger an email (without Anthropic)
+ * Test endpoint to manually trigger an email (with Anthropic AI)
  * Usage: GET /testSendEmail?userId=xxx&emailName=WhatsMissing
  */
 export const testSendEmail = onRequest(
-  { secrets: [RESEND_API_KEY] },
+  { secrets: [RESEND_API_KEY, ANTHROPIC_API_KEY] },
   async (req, res) => {
     const userId = req.query.userId as string
     const emailName = req.query.emailName as EmailName
@@ -22,7 +22,7 @@ export const testSendEmail = onRequest(
       res.status(400).json({
         error: 'Missing parameters',
         usage: '/testSendEmail?userId=xxx&emailName=WhatsMissing',
-        availableEmails: ['WhatsMissing', 'FreeOptions', 'QuickStart', 'NeedHelp', 'NeedHelpWith', 'TrialEndsSoon', 'WhyLeaving']
+        availableEmails: ['WhatsMissing', 'FreeOptions', 'QuickStart', 'NoVisits', 'NoOptimization', 'WhyLeaving']
       })
       return
     }
@@ -38,8 +38,8 @@ export const testSendEmail = onRequest(
     console.log(`[TEST] Sending ${emailName} to user ${userId}`)
 
     try {
-      // Generate test email (no Anthropic call)
-      const { subject, body } = generateTestEmail(user, emailName)
+      // Generate email with AI
+      const { subject, body } = await generateEmail(user, emailName)
 
       // Send via Resend
       const resend = new Resend(RESEND_API_KEY.value())
@@ -105,7 +105,7 @@ export const testResetUser = onRequest(
       paywall_seen: false,
       paywall_abandoned: false,
       has_added_visits: false,
-      routes_optimized: 0,
+      has_optimized_route: false,
       has_replied: false,
       email_whyleaving_sent: false,
       trial_active: false,
@@ -190,7 +190,7 @@ export const testCreateUser = onRequest(
       paywall_seen: false,
       paywall_abandoned: false,
       has_added_visits: false,
-      routes_optimized: 0,
+      has_optimized_route: false,
       has_replied: false,
       email_whyleaving_sent: false,
       trial_active: false,

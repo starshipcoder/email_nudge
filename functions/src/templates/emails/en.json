@@ -1,0 +1,22 @@
+{
+  "FreeOptions": {
+    "subject": "3 free ways to create your routes",
+    "body": "Hello{{prenom}},\n\nNo worries if you didn't start the trial.\n\nYou can create your routes without us:\n• Google Maps → limited to 10 stops\n• Excel + copy-paste → works, but slow\n• Other apps → often paid too\n\nIf something else blocked you, let me know.\n\n— Harold, creator of Easy Way"
+  },
+  "NoVisits": {
+    "subject": "Need a hand?",
+    "body": "Hello{{prenom}},\n\nI noticed you haven't added any visits yet.\n\nStuck somewhere? Let me know.\n\n— Harold, creator of Easy Way"
+  },
+  "NoOptimization": {
+    "subject": "You added visits!",
+    "body": "Hello{{prenom}},\n\nGreat, you added your first visits!\n\nHave you tried optimizing your route? One click and we save you time.\n\nNeed help? Reply to me.\n\n— Harold, creator of Easy Way"
+  },
+  "WhyLeaving__unsubscribe": {
+    "subject": "A quick question before you go",
+    "body": "Hello{{prenom}},\n\nI saw you cancelled your subscription.\n\nNo worries — but it would help me understand why.\n\nReply in 2 words, I read everything.\n\n— Harold, creator of Easy Way"
+  },
+  "WhyLeaving__billing_error": {
+    "subject": "An issue with your payment",
+    "body": "Hello{{prenom}},\n\nI noticed there was an issue with your payment.\n\nIf it's a card error or a technical problem, feel free to reply — I can help you sort it out.\n\n— Harold, creator of Easy Way"
+  }
+}

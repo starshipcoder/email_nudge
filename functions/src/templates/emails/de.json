@@ -1,0 +1,22 @@
+{
+  "FreeOptions": {
+    "subject": "3 kostenlose Wege, Ihre Routen zu erstellen",
+    "body": "Hallo{{prenom}},\n\nKein Problem, wenn Sie die Testversion nicht gestartet haben.\n\nSie können Ihre Routen auch ohne uns erstellen:\n• Google Maps → auf 10 Stopps begrenzt\n• Excel + Copy-Paste → funktioniert, aber langsam\n• Andere Apps → oft auch kostenpflichtig\n\nWenn Sie etwas anderes blockiert hat, sagen Sie mir Bescheid.\n\n— Harold, Gründer von Easy Way"
+  },
+  "NoVisits": {
+    "subject": "Brauchen Sie Hilfe?",
+    "body": "Hallo{{prenom}},\n\nIch habe gesehen, dass Sie noch keine Besuche hinzugefügt haben.\n\nIrgendwo hängengeblieben? Sagen Sie mir Bescheid.\n\n— Harold, Gründer von Easy Way"
+  },
+  "NoOptimization": {
+    "subject": "Sie haben Besuche hinzugefügt!",
+    "body": "Hallo{{prenom}},\n\nSuper, Sie haben Ihre ersten Besuche hinzugefügt!\n\nHaben Sie schon versucht, Ihre Route zu optimieren? Ein Klick und wir sparen Ihnen Zeit.\n\nBrauchen Sie Hilfe? Antworten Sie mir.\n\n— Harold, Gründer von Easy Way"
+  },
+  "WhyLeaving__unsubscribe": {
+    "subject": "Eine kurze Frage bevor Sie gehen",
+    "body": "Hallo{{prenom}},\n\nIch habe gesehen, dass Sie Ihr Abo gekündigt haben.\n\nKein Problem — aber es würde mir helfen zu verstehen warum.\n\nAntworten Sie in 2 Worten, ich lese alles.\n\n— Harold, Gründer von Easy Way"
+  },
+  "WhyLeaving__billing_error": {
+    "subject": "Ein Problem mit Ihrer Zahlung",
+    "body": "Hallo{{prenom}},\n\nIch habe gesehen, dass es ein Problem mit Ihrer Zahlung gab.\n\nWenn es ein Kartenfehler oder ein technisches Problem ist, antworten Sie mir gerne — ich kann Ihnen helfen, das zu lösen.\n\n— Harold, Gründer von Easy Way"
+  }
+}

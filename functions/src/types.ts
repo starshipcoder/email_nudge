@@ -28,7 +28,7 @@ export interface User {
   paywall_passed: boolean
 
   // Engagement
-  routes_optimized: number
+  has_optimized_route: boolean
   has_added_visits: boolean
   last_action_at?: Date
 
@@ -54,9 +54,8 @@ export type EmailName =
   | 'WhatsMissing'
   | 'FreeOptions'
   | 'QuickStart'
-  | 'NeedHelp'
-  | 'NeedHelpWith'
-  | 'TrialEndsSoon'
+  | 'NoVisits'
+  | 'NoOptimization'
   | 'WhyLeaving'
 
 export type Segment =
@@ -75,16 +74,13 @@ export type Segment =
   | 'QuickStart__tracking'
   | 'QuickStart__technician'
   | 'QuickStart__default'
-  // NeedHelp
-  | 'NeedHelp__no_visits'
-  | 'NeedHelp__no_optimization'
-  // NeedHelpWith
-  | 'NeedHelpWith'
-  // TrialEndsSoon
-  | 'TrialEndsSoon'
+  // NoVisits
+  | 'NoVisits'
+  // NoOptimization
+  | 'NoOptimization'
   // WhyLeaving
-  | 'WhyLeaving__silent'
-  | 'WhyLeaving__with_feedback'
+  | 'WhyLeaving__unsubscribe'
+  | 'WhyLeaving__billing_error'
 
 export interface EmailQueueItem {
   id?: string

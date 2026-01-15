@@ -236,8 +236,8 @@ Pour créer ta première tournée :
 Besoin d'aide ? Réponds-moi.${SIGNATURE}`
   },
 
-  // NeedHelp
-  'NeedHelp__no_visits': {
+  // NoVisits
+  'NoVisits': {
     subject: "Besoin d'un coup de main ?",
     body: `Hey{{prenom| }},
 
@@ -246,64 +246,36 @@ J'ai vu que t'as pas encore ajouté de visites.
 Bloqué quelque part ? Dis-moi.${SIGNATURE}`
   },
 
-  'NeedHelp__no_optimization': {
+  // NoOptimization
+  'NoOptimization': {
     subject: 'T\'as créé une tournée !',
     body: `Hey{{prenom| }},
 
-Nice, t'as créé ta première tournée !
+Nice, t'as ajouté des visites !
 
-T'as pensé à l'optimiser ? Un clic et on te fait gagner du temps.
+T'as pensé à optimiser ta tournée ? Un clic et on te fait gagner du temps.
 
 Besoin d'aide ? Réponds-moi.${SIGNATURE}`
   },
 
-  // NeedHelpWith
-  'NeedHelpWith': {
-    subject: 'Un coup de main sur {{primary_need_label}} ?',
-    body: `Hey{{prenom| }},
-
-T'as pas encore créé de tournée.
-
-Tu voulais :
-{{#each needs}}
-• {{need_label}}
-{{/each}}
-
-Besoin d'aide sur un de ces sujets ? Réponds-moi, je te guide.${SIGNATURE}`
-  },
-
-  // TrialEndsSoon
-  'TrialEndsSoon': {
-    subject: 'Ton essai se termine dans {{days_remaining}} jours',
-    body: `Hey{{prenom| }},
-
-Rappel friendly : ton essai Easy Way se termine dans {{days_remaining}} jours.
-
-Tu penses quoi de l'app ? Dis-moi en 2 mots.${SIGNATURE}`
-  },
-
   // WhyLeaving
-  'WhyLeaving__silent': {
+  'WhyLeaving__unsubscribe': {
     subject: 'Une question avant de partir',
-    body: `Hey{{prenom| }},
+    body: `Bonjour{{prenom| }},
 
-J'ai vu que t'as arrêté ton abonnement.
+J'ai vu que vous avez arrêté votre abonnement.
 
 Pas de souci — mais ça m'aiderait de comprendre pourquoi.
 
-Réponds-moi en 2 mots, je lis tout.${SIGNATURE}`
+Répondez-moi en 2 mots, je lis tout.${SIGNATURE}`
   },
 
-  'WhyLeaving__with_feedback': {
-    subject: 'Merci pour ton retour',
-    body: `Hey{{prenom| }},
+  'WhyLeaving__billing_error': {
+    subject: 'Un problème avec votre paiement',
+    body: `Bonjour{{prenom| }},
 
-Merci d'avoir pris le temps de donner ton avis.
+J'ai vu qu'il y a eu un souci avec votre paiement.
 
-Tu as mentionné : "{{churn_reason}}"
-
-Si tu veux développer, je suis là.
-
-Bonne continuation !${SIGNATURE}`
+Si c'est une erreur de carte ou un problème technique, n'hésitez pas à me répondre — je peux vous aider à débloquer la situation.${SIGNATURE}`
   }
 }

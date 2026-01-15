@@ -58,9 +58,20 @@ export const onRevenueCatWebhook = onRequest(
     const userId = userSnapshot.docs[0].id
     const isTestEvent = event.environment === 'SANDBOX' || event.is_sandbox === true
 
+    // Map RevenueCat cancellation reason
+    const cancellationReason = event.cancellation_reason
+    const churnReason = cancellationReason === 'UNSUBSCRIBE' ? 'unsubscribe'
+      : cancellationReason === 'BILLING_ERROR' ? 'billing_error'
+      : null
+
     switch (event.event) {
       case 'CANCELLATION':
-        await handleChurn(userId, isTestEvent)
+        // Only send WhyLeaving for UNSUBSCRIBE or BILLING_ERROR
+        if (churnReason) {
+          await handleChurn(userId, isTestEvent, churnReason)
+        } else {
+          console.log(`RevenueCat: Ignoring CANCELLATION with reason ${cancellationReason}`)
+        }
         break
 
       case 'EXPIRATION':
@@ -84,11 +95,12 @@ export const onRevenueCatWebhook = onRequest(
   }
 )
 
-async function handleChurn(userId: string, isTestEvent: boolean): Promise<void> {
-  console.log(`RevenueCat: User ${userId} churned${isTestEvent ? ' [TEST]' : ''}`)
+async function handleChurn(userId: string, isTestEvent: boolean, churnReason: string): Promise<void> {
+  console.log(`RevenueCat: User ${userId} churned (${churnReason})${isTestEvent ? ' [TEST]' : ''}`)
 
   await db.collection('users').doc(userId).update({
     churned_at: new Date(),
+    churn_reason: churnReason,
     subscription_active: false,
     trial_active: false,
     is_test_user: isTestEvent
