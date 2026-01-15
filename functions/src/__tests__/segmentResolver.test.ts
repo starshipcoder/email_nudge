@@ -45,39 +45,9 @@ describe('getPrimaryNeed', () => {
 })
 
 describe('resolveSegment - WhatsMissing', () => {
-  it('returns hotel segment when user has hotel need', () => {
+  it('returns WhatsMissing for any user', () => {
     const user = createUser({ needs: ['hotel_search', 'max_visits'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__hotel')
-  })
-
-  it('returns prospection segment when user has new_clients need', () => {
-    const user = createUser({ needs: ['new_clients'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__prospection')
-  })
-
-  it('returns complex segment when user has complex_routes need', () => {
-    const user = createUser({ needs: ['complex_routes'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__complex')
-  })
-
-  it('returns delivery segment for delivery role without priority needs', () => {
-    const user = createUser({ role: 'delivery', needs: ['max_visits'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__delivery')
-  })
-
-  it('returns technician segment for technician role', () => {
-    const user = createUser({ role: 'technician', needs: [] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__technician')
-  })
-
-  it('returns default segment for field_sales without priority needs', () => {
-    const user = createUser({ role: 'field_sales', needs: ['max_visits'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__default')
-  })
-
-  it('prioritizes need over role', () => {
-    const user = createUser({ role: 'delivery', needs: ['hotel_search'] })
-    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing__hotel')
+    expect(resolveSegment('WhatsMissing', user)).toBe('WhatsMissing')
   })
 })
 

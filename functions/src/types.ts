@@ -14,7 +14,7 @@ export type Locale = 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt' | 'nl'
 export interface User {
   id: string
   email: string
-  prenom?: string
+  first_name?: string
   role: Role
   needs: Need[]
   locale?: Locale
@@ -61,13 +61,8 @@ export type EmailName =
   | 'WhyLeaving'
 
 export type Segment =
-  // WhatsMissing
-  | 'WhatsMissing__hotel'
-  | 'WhatsMissing__prospection'
-  | 'WhatsMissing__complex'
-  | 'WhatsMissing__delivery'
-  | 'WhatsMissing__technician'
-  | 'WhatsMissing__default'
+  // WhatsMissing (single template)
+  | 'WhatsMissing'
   // FreeOptions
   | 'FreeOptions'
   // QuickStart (by role)

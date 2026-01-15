@@ -27,7 +27,7 @@ export function hasNeed(user: User, need: Need): boolean {
 export function resolveSegment(emailName: EmailName, user: User): Segment {
   switch (emailName) {
     case 'WhatsMissing':
-      return resolveWhatsMissing(user)
+      return 'WhatsMissing'
     case 'FreeOptions':
       return 'FreeOptions'
     case 'QuickStart':
@@ -41,16 +41,6 @@ export function resolveSegment(emailName: EmailName, user: User): Segment {
     default:
       throw new Error(`Unknown email name: ${emailName}`)
   }
-}
-
-function resolveWhatsMissing(user: User): Segment {
-  // Priority: need > role > default
-  if (hasNeed(user, 'hotel_search')) return 'WhatsMissing__hotel'
-  if (hasNeed(user, 'new_clients')) return 'WhatsMissing__prospection'
-  if (hasNeed(user, 'complex_routes')) return 'WhatsMissing__complex'
-  if (user.role === 'delivery') return 'WhatsMissing__delivery'
-  if (user.role === 'technician') return 'WhatsMissing__technician'
-  return 'WhatsMissing__default'
 }
 
 function resolveQuickStart(user: User): Segment {

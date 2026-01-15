@@ -1,6 +1,6 @@
 SUBJECT: Ein Problem mit Ihrer Zahlung
 
-Hallo{{prenom}},
+Hallo{{first_name}},
 
 Ich habe gesehen, dass es ein Problem mit Ihrer Zahlung gab.
 

@@ -1,6 +1,6 @@
 SUBJECT: Benvenuto su Easy Way!
 
-Buongiorno{{prenom}},
+Buongiorno{{first_name}},
 
 Felice di averla con noi!
 

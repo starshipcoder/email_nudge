@@ -1,123 +1,63 @@
-import { renderTemplate, getTemplateVariables } from '../templates'
-import { User } from '../types'
+import { renderEmailTemplate, isTemplateSegment } from '../templates/emailTemplates'
+import { Segment } from '../types'
 
-// Helper to create a test user
-function createUser(overrides: Partial<User> = {}): User {
-  return {
-    id: 'test-user-id',
-    email: 'test@example.com',
-    role: 'field_sales',
-    needs: [],
-    created_at: new Date(),
-    onboarding_complete: false,
-    paywall_blocked: false,
-    paywall_passed: false,
-    has_optimized_route: false,
-    has_added_visits: false,
-    trial_active: false,
-    subscription_active: false,
-    plan: 'free',
-    email_whyleaving_sent: false,
-    has_replied: false,
-    is_test_user: false,
-    ...overrides
-  }
-}
-
-describe('getTemplateVariables', () => {
-  it('extracts prenom from user', () => {
-    const user = createUser({ prenom: 'Jean' })
-    const vars = getTemplateVariables(user)
-    expect(vars.prenom).toBe('Jean')
+describe('renderEmailTemplate - Variable Replacement', () => {
+  it('replaces first_name in greeting', () => {
+    const { body } = renderEmailTemplate('WhatsMissing', 'fr', { first_name: 'Marie' })
+    expect(body).toContain('Bonjour Marie,')
   })
 
-  it('handles missing prenom', () => {
-    const user = createUser({ prenom: undefined })
-    const vars = getTemplateVariables(user)
-    expect(vars.prenom).toBeUndefined()
-  })
-
-  it('gets primary need label', () => {
-    const user = createUser({ needs: ['hotel_search', 'max_visits'] })
-    const vars = getTemplateVariables(user)
-    expect(vars.primary_need_label).toBe('trouver des hôtels')
-  })
-
-  it('gets all needs labels', () => {
-    const user = createUser({ needs: ['hotel_search', 'new_clients'] })
-    const vars = getTemplateVariables(user)
-    expect(vars.needs_labels).toEqual([
-      'trouver des hôtels',
-      'trouver de nouveaux clients'
-    ])
-  })
-
-  it('detects sales_director role', () => {
-    const user = createUser({ role: 'sales_director' })
-    const vars = getTemplateVariables(user)
-    expect(vars.is_sales_director).toBe(true)
-  })
-
-  it('merges extra variables', () => {
-    const user = createUser()
-    const vars = getTemplateVariables(user, { days_remaining: 2 })
-    expect(vars.days_remaining).toBe(2)
+  it('handles missing first_name gracefully', () => {
+    const { body } = renderEmailTemplate('WhatsMissing', 'fr', {})
+    expect(body).toContain('Bonjour,')
+    expect(body).not.toContain('Bonjour ,')
   })
 })
 
-describe('renderTemplate - Variable Replacement', () => {
-  it('replaces prenom in greeting', () => {
-    const { body } = renderTemplate('WhatsMissing__default', { prenom: 'Marie' })
-    expect(body).toContain('Hey Marie,')
-  })
-
-  it('handles missing prenom gracefully', () => {
-    const { body } = renderTemplate('WhatsMissing__default', {})
-    expect(body).toContain('Hey,')
-    expect(body).not.toContain('Hey ,')
-  })
-
-
-})
-
-
-
-describe('renderTemplate - Signature', () => {
-  it('includes Harold signature in all templates', () => {
-    const segments = [
-      'WhatsMissing__default',
+describe('renderEmailTemplate - Signature', () => {
+  it('includes Harold signature in all FR templates', () => {
+    const segments: Segment[] = [
+      'WhatsMissing',
       'FreeOptions',
       'NoVisits',
       'NoOptimization',
       'WhyLeaving__unsubscribe',
       'WhyLeaving__billing_error'
-    ] as const
+    ]
 
     segments.forEach(segment => {
-      const { body } = renderTemplate(segment, {})
+      const { body } = renderEmailTemplate(segment, 'fr', {})
       expect(body).toContain('Harold, créateur de Easy Way')
     })
   })
 })
 
-describe('renderTemplate - All Segments Exist', () => {
-  const allSegments = [
-    'WhatsMissing__hotel',
-    'WhatsMissing__prospection',
-    'WhatsMissing__complex',
-    'WhatsMissing__delivery',
-    'WhatsMissing__technician',
-    'WhatsMissing__default',
+describe('renderEmailTemplate - All Segments Exist', () => {
+  const allSegments: Segment[] = [
+    'WhatsMissing',
     'FreeOptions',
     'NoVisits',
     'NoOptimization',
     'WhyLeaving__unsubscribe',
-    'WhyLeaving__billing_error'
-  ] as const
+    'WhyLeaving__billing_error',
+    'QuickStart__delivery',
+    'QuickStart__field_sales',
+    'QuickStart__technician',
+    'QuickStart__sales_director',
+    'QuickStart__default'
+  ]
 
   allSegments.forEach(segment => {
     it(`renders ${segment} without error`, () => {
-      expect(() => renderTemplate(segment, {})).not.toThrow()
+      expect(() => renderEmailTemplate(segment, 'fr', {})).not.toThrow()
     })
+  })
+})
+
+describe('isTemplateSegment', () => {
+  it('returns true for template segments', () => {
+    expect(isTemplateSegment('WhatsMissing')).toBe(true)
+    expect(isTemplateSegment('FreeOptions')).toBe(true)
+    expect(isTemplateSegment('QuickStart__delivery')).toBe(true)
   })
 })

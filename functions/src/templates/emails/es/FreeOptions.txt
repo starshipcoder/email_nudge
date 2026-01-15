@@ -1,6 +1,6 @@
 SUBJECT: 3 formas gratuitas de crear sus rutas
 
-Hola{{prenom}},
+Hola{{first_name}},
 
 No pasa nada si no empezó la prueba.
 

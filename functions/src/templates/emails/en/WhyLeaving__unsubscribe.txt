@@ -1,6 +1,6 @@
 SUBJECT: A quick question before you go
 
-Hello{{prenom}},
+Hello{{first_name}},
 
 I saw you cancelled your subscription.
 

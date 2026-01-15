@@ -1,6 +1,6 @@
 SUBJECT: You added visits!
 
-Hello{{prenom}},
+Hello{{first_name}},
 
 Great, you added your first visits!
 

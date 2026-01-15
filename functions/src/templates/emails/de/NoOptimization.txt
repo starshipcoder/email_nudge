@@ -1,6 +1,6 @@
 SUBJECT: Sie haben Besuche hinzugefügt!
 
-Hallo{{prenom}},
+Hallo{{first_name}},
 
 Super, Sie haben Ihre ersten Besuche hinzugefügt!
 

@@ -1,0 +1,9 @@
+SUBJECT: A quick question
+
+Hello{{first_name}},
+
+You started setting up Easy Way but didn't finish.
+
+What was missing?
+
+Harold, creator of Easy Way

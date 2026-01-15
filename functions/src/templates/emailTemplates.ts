@@ -8,7 +8,7 @@ interface EmailTemplate {
 }
 
 // Simple templates (no dynamic need_closing)
-type SimpleTemplateKey = 'FreeOptions' | 'NoVisits' | 'NoOptimization' | 'WhyLeaving__unsubscribe' | 'WhyLeaving__billing_error'
+type SimpleTemplateKey = 'WhatsMissing' | 'FreeOptions' | 'NoVisits' | 'NoOptimization' | 'WhyLeaving__unsubscribe' | 'WhyLeaving__billing_error'
 
 // QuickStart templates (with dynamic need_closing)
 type QuickStartTemplateKey = 'QuickStart__delivery' | 'QuickStart__field_sales' | 'QuickStart__technician' | 'QuickStart__sales_director' | 'QuickStart__default'
@@ -17,6 +17,7 @@ type TemplateKey = SimpleTemplateKey | QuickStartTemplateKey
 
 // Segments that use templates (not AI)
 export const TEMPLATE_SEGMENTS: Segment[] = [
+  'WhatsMissing',
   'FreeOptions',
   'NoVisits',
   'NoOptimization',
@@ -126,7 +127,7 @@ function parseTemplate(content: string): EmailTemplate {
 }
 
 interface TemplateVariables {
-  prenom?: string
+  first_name?: string
   primaryNeed?: Need | null
 }
 
@@ -143,15 +144,15 @@ export function renderEmailTemplate(
   let subject = template.subject
   let body = template.body
 
-  // Replace {{prenom}} - "Bonjour Jean," or "Bonjour," if no name
-  if (variables.prenom) {
-    const prenomDisplay = ` ${variables.prenom}`
-    subject = subject.replace('{{prenom}}', prenomDisplay)
-    body = body.replace(/\{\{prenom\}\}/g, prenomDisplay)
+  // Replace {{first_name}} - "Bonjour Jean," or "Bonjour," if no name
+  if (variables.first_name) {
+    const nameDisplay = ` ${variables.first_name}`
+    subject = subject.replace('{{first_name}}', nameDisplay)
+    body = body.replace(/\{\{first_name\}\}/g, nameDisplay)
   } else {
-    // No prenom: "Bonjour{{prenom}}," becomes "Bonjour,"
-    subject = subject.replace('{{prenom}}', '')
-    body = body.replace(/\{\{prenom\}\}/g, '')
+    // No first_name: "Bonjour{{first_name}}," becomes "Bonjour,"
+    subject = subject.replace('{{first_name}}', '')
+    body = body.replace(/\{\{first_name\}\}/g, '')
   }
 
   // Replace {{need_closing}} for QuickStart templates

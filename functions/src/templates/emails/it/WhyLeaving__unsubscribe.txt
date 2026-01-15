@@ -1,6 +1,6 @@
 SUBJECT: Una domanda prima di andare
 
-Buongiorno{{prenom}},
+Buongiorno{{first_name}},
 
 Ho visto che ha cancellato il suo abbonamento.
 

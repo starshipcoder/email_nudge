@@ -1,6 +1,6 @@
 SUBJECT: Une question avant de partir
 
-Bonjour{{prenom}},
+Bonjour{{first_name}},
 
 J'ai vu que vous avez arrêté votre abonnement.
 

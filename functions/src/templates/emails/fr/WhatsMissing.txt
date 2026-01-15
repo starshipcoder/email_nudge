@@ -1,0 +1,9 @@
+SUBJECT: Une question rapide
+
+Bonjour{{first_name}},
+
+Vous avez commencé à configurer Easy Way mais vous n'êtes pas allé au bout.
+
+Qu'est-ce qui vous a manqué ?
+
+Harold, créateur de Easy Way

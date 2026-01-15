@@ -1,6 +1,6 @@
 SUBJECT: 3 kostenlose Wege, Ihre Routen zu erstellen
 
-Hallo{{prenom}},
+Hallo{{first_name}},
 
 Kein Problem, wenn Sie die Testversion nicht gestartet haben.
 

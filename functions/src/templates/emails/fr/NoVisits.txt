@@ -1,6 +1,6 @@
 SUBJECT: Besoin d'un coup de main ?
 
-Bonjour{{prenom}},
+Bonjour{{first_name}},
 
 J'ai vu que vous n'avez pas encore ajouté de visites.
 

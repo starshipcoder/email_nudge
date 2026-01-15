@@ -1,6 +1,6 @@
 SUBJECT: An issue with your payment
 
-Hello{{prenom}},
+Hello{{first_name}},
 
 I noticed there was an issue with your payment.
 

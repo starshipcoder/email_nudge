@@ -1,5 +1,5 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler'
-import { scheduleEmail, RESEND_API_KEY, ANTHROPIC_API_KEY } from '../services/emailService'
+import { scheduleEmail, RESEND_API_KEY } from '../services/emailService'
 import { db } from '../index'
 
 /**
@@ -9,7 +9,7 @@ import { db } from '../index'
 export const checkOnboardingDropped = onSchedule(
   {
     schedule: 'every 1 hours',
-    secrets: [RESEND_API_KEY, ANTHROPIC_API_KEY]
+    secrets: [RESEND_API_KEY]
   },
   async () => {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)

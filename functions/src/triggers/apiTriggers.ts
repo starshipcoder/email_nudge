@@ -12,7 +12,7 @@ const VALID_PLANS = ['free', 'trial', 'monthly', 'yearly']
 interface SyncUserRequest {
   revenuecat_id: string
   email?: string
-  prenom?: string
+  first_name?: string
   locale?: string
   role?: string
   needs?: string[]
@@ -68,12 +68,12 @@ export const syncUser = onRequest(
         updateData.email = data.email
       }
 
-      if (data.prenom !== undefined) {
-        if (typeof data.prenom !== 'string') {
-          res.status(400).json({ error: 'prenom must be a string' })
+      if (data.first_name !== undefined) {
+        if (typeof data.first_name !== 'string') {
+          res.status(400).json({ error: 'first_name must be a string' })
           return
         }
-        updateData.prenom = data.prenom
+        updateData.first_name = data.first_name
       }
 
       if (data.locale !== undefined) {

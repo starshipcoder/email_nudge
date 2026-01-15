@@ -1,6 +1,6 @@
 SUBJECT: Vous avez ajouté des visites !
 
-Bonjour{{prenom}},
+Bonjour{{first_name}},
 
 Super, vous avez ajouté vos premières visites !
 

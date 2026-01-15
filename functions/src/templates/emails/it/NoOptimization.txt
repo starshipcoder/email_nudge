@@ -1,6 +1,6 @@
 SUBJECT: Ha aggiunto delle visite!
 
-Buongiorno{{prenom}},
+Buongiorno{{first_name}},
 
 Fantastico, ha aggiunto le sue prime visite!
 

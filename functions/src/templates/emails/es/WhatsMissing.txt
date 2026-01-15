@@ -1,0 +1,9 @@
+SUBJECT: Una pregunta rápida
+
+Hola{{first_name}},
+
+Empezó a configurar Easy Way pero no terminó.
+
+¿Qué le faltó?
+
+Harold, creador de Easy Way

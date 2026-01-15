@@ -2,12 +2,11 @@ import { Resend } from 'resend'
 import { defineSecret, defineString } from 'firebase-functions/params'
 import { User, EmailName, Segment, EmailQueueItem, EmailLog } from '../types'
 import { resolveSegment, shouldSendEmail } from '../utils/segmentResolver'
-import { generateEmail, ANTHROPIC_API_KEY } from './aiEmailGenerator'
+import { generateEmail } from './emailGenerator'
 import { db } from '../index'
 
 // Define secrets for Cloud Functions
 export const RESEND_API_KEY = defineSecret('RESEND_API_KEY')
-export { ANTHROPIC_API_KEY }
 
 // Resend client (initialized lazily)
 let resendClient: Resend | null = null
@@ -154,9 +153,9 @@ export async function sendEmailNow(
     return
   }
 
-  // Resolve segment and generate email with AI
+  // Resolve segment and generate email
   const segment = resolveSegment(emailName, user)
-  const { subject, body } = await generateEmail(user, emailName, extraVariables)
+  const { subject, body } = generateEmail(user, emailName)
   const fullBody = body + getDebugFooter(user)
 
   // Send via Resend
@@ -216,8 +215,8 @@ export async function processEmailQueue(): Promise<void> {
         continue
       }
 
-      // Generate email with AI and send
-      const { subject, body } = await generateEmail(user, item.email_name, item.variables as Record<string, string | number>)
+      // Generate email and send
+      const { subject, body } = generateEmail(user, item.email_name)
       const fullBody = body + getDebugFooter(user)
       const toEmail = getRecipient(user)
 

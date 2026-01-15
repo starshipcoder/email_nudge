@@ -1,6 +1,6 @@
 SUBJECT: Need a hand?
 
-Hello{{prenom}},
+Hello{{first_name}},
 
 I noticed you haven't added any visits yet.
 

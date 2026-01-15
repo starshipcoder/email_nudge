@@ -1,6 +1,6 @@
 SUBJECT: Un problema con su pago
 
-Hola{{prenom}},
+Hola{{first_name}},
 
 Vi que hubo un problema con su pago.
 

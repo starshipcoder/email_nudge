@@ -1,6 +1,6 @@
 SUBJECT: Brauchen Sie Hilfe?
 
-Hallo{{prenom}},
+Hallo{{first_name}},
 
 Ich habe gesehen, dass Sie noch keine Besuche hinzugefügt haben.
 

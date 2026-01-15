@@ -1,6 +1,6 @@
 SUBJECT: Eine kurze Frage bevor Sie gehen
 
-Hallo{{prenom}},
+Hallo{{first_name}},
 
 Ich habe gesehen, dass Sie Ihr Abo gekündigt haben.
 

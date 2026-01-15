@@ -1,6 +1,6 @@
 SUBJECT: ¡Añadió visitas!
 
-Hola{{prenom}},
+Hola{{first_name}},
 
 ¡Genial, añadió sus primeras visitas!
 

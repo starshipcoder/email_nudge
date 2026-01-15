@@ -1,6 +1,6 @@
 SUBJECT: 3 free ways to create your routes
 
-Hello{{prenom}},
+Hello{{first_name}},
 
 No worries if you didn't start the trial.
 

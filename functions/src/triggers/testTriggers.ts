@@ -1,6 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https'
-import { RESEND_API_KEY, ANTHROPIC_API_KEY } from '../services/emailService'
-import { generateEmail } from '../services/aiEmailGenerator'
+import { RESEND_API_KEY } from '../services/emailService'
+import { generateEmail } from '../services/emailGenerator'
 import { Resend } from 'resend'
 import { db } from '../index'
 import { EmailName, User } from '../types'
@@ -9,11 +9,11 @@ const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
 const TEST_RECIPIENT = 'harold+test@easyway-planner.com'
 
 /**
- * Test endpoint to manually trigger an email (with Anthropic AI)
+ * Test endpoint to manually trigger an email
  * Usage: GET /testSendEmail?userId=xxx&emailName=WhatsMissing
  */
 export const testSendEmail = onRequest(
-  { secrets: [RESEND_API_KEY, ANTHROPIC_API_KEY] },
+  { secrets: [RESEND_API_KEY] },
   async (req, res) => {
     const userId = req.query.userId as string
     const emailName = req.query.emailName as EmailName
@@ -38,8 +38,8 @@ export const testSendEmail = onRequest(
     console.log(`[TEST] Sending ${emailName} to user ${userId}`)
 
     try {
-      // Generate email with AI
-      const { subject, body } = await generateEmail(user, emailName)
+      // Generate email
+      const { subject, body } = generateEmail(user, emailName)
 
       // Send via Resend
       const resend = new Resend(RESEND_API_KEY.value())

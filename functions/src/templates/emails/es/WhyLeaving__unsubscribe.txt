@@ -1,6 +1,6 @@
 SUBJECT: Una pregunta antes de irse
 
-Hola{{prenom}},
+Hola{{first_name}},
 
 Vi que canceló su suscripción.
 

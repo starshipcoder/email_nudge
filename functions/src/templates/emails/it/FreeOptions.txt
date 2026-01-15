@@ -1,6 +1,6 @@
 SUBJECT: 3 modi gratuiti per creare i suoi percorsi
 
-Buongiorno{{prenom}},
+Buongiorno{{first_name}},
 
 Nessun problema se non ha iniziato la prova.
 

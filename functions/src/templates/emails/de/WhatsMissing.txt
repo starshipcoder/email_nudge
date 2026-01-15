@@ -1,0 +1,9 @@
+SUBJECT: Eine kurze Frage
+
+Hallo{{first_name}},
+
+Sie haben angefangen Easy Way einzurichten, aber nicht abgeschlossen.
+
+Was hat Ihnen gefehlt?
+
+Harold, Gründer von Easy Way

@@ -1,6 +1,6 @@
 SUBJECT: Ha bisogno di una mano?
 
-Buongiorno{{prenom}},
+Buongiorno{{first_name}},
 
 Ho visto che non ha ancora aggiunto visite.
 
