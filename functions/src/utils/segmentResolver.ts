@@ -65,9 +65,9 @@ function resolveQuickStart(user: User): Segment {
 }
 
 function resolveNeedHelp(user: User): Segment {
-  if (user.routes_created === 0) return 'NeedHelp__no_route'
-  if (user.routes_optimized === 0) return 'NeedHelp__no_optimization'
-  return 'NeedHelp__no_route' // fallback
+  if (!user.has_added_visits) return 'NeedHelp__no_visits'
+  if ((user.routes_optimized || 0) === 0) return 'NeedHelp__no_optimization'
+  return 'NeedHelp__no_visits' // fallback
 }
 
 function resolveWhyLeaving(user: User): Segment {
@@ -79,6 +79,11 @@ function resolveWhyLeaving(user: User): Segment {
  * Check if an email should be sent based on kill switch and dedup rules
  */
 export function shouldSendEmail(emailName: EmailName, user: User): { send: boolean; reason?: string } {
+  // No email address - can't send
+  if (!user.email) {
+    return { send: false, reason: 'No email address (legacy user)' }
+  }
+
   // Kill switch: has_replied stops all emails except TrialEndsSoon
   if (emailName !== 'TrialEndsSoon' && user.has_replied) {
     return { send: false, reason: 'User has replied - kill switch active' }

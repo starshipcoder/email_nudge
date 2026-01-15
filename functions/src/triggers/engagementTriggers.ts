@@ -1,96 +1,34 @@
-import * as functions from 'firebase-functions'
-import * as admin from 'firebase-admin'
+import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { cancelPendingEmails } from '../services/emailService'
 
-const db = admin.firestore()
-
 /**
- * Trigger: User creates a route
- * Action: Cancel pending NeedHelp and NeedHelpWith emails
+ * Trigger: User state changes that affect email sequence
  */
-export const onRouteCreated = functions.analytics
-  .event('route_created')
-  .onLog(async (event) => {
-    const userId = event.user?.userId
-    if (!userId) {
-      console.error('No userId in route_created event')
-      return
-    }
+export const onUserEngagementChanged = onDocumentUpdated('users/{userId}', async (event) => {
+  const before = event.data?.before.data()
+  const after = event.data?.after.data()
+  const userId = event.params.userId
 
-    console.log(`User ${userId} created a route`)
+  if (!before || !after) return
 
-    // Update user stats
-    await db.collection('users').doc(userId).update({
-      routes_created: admin.firestore.FieldValue.increment(1),
-      last_action_at: new Date()
-    })
+  // User optimized first route or added visits - cancel pending NeedHelp emails
+  const wasInactive = !before.has_added_visits && (before.routes_optimized || 0) === 0
+  const isNowActive = after.has_added_visits || (after.routes_optimized || 0) > 0
 
-    // Cancel pending "no route" emails
+  if (wasInactive && isNowActive) {
+    console.log(`User ${userId} is now active (routes_optimized: ${after.routes_optimized}, has_added_visits: ${after.has_added_visits}) - cancelling pending emails`)
     await cancelPendingEmails(userId, ['NeedHelp', 'NeedHelpWith'])
-  })
+  }
 
-/**
- * Trigger: User optimizes a route
- * Action: Update stats
- */
-export const onRouteOptimized = functions.analytics
-  .event('route_optimized')
-  .onLog(async (event) => {
-    const userId = event.user?.userId
-    if (!userId) {
-      console.error('No userId in route_optimized event')
-      return
-    }
-
-    console.log(`User ${userId} optimized a route`)
-
-    await db.collection('users').doc(userId).update({
-      routes_optimized: admin.firestore.FieldValue.increment(1),
-      last_action_at: new Date()
-    })
-  })
-
-/**
- * Trigger: User adds a prospect
- * Action: Update stats
- */
-export const onProspectAdded = functions.analytics
-  .event('prospect_added')
-  .onLog(async (event) => {
-    const userId = event.user?.userId
-    if (!userId) {
-      console.error('No userId in prospect_added event')
-      return
-    }
-
-    await db.collection('users').doc(userId).update({
-      prospects_added: admin.firestore.FieldValue.increment(1),
-      last_action_at: new Date()
-    })
-  })
-
-/**
- * Trigger: User replies to an email (webhook from email service or manual flag)
- * Action: Set has_replied to stop sequence
- */
-export const onUserReplied = functions.firestore
-  .document('users/{userId}')
-  .onUpdate(async (change, context) => {
-    const before = change.before.data()
-    const after = change.after.data()
-    const userId = context.params.userId
-
-    if (!before.has_replied && after.has_replied) {
-      console.log(`User ${userId} replied - kill switch activated`)
-      // Cancel all pending emails except TrialEndsSoon
-      await cancelPendingEmails(userId, [
-        'WhatsMissing',
-        'FreeOptions',
-        'NeedHelp',
-        'NeedHelpWith',
-        'WhyLeaving'
-      ])
-    }
-
-    return null
-  })
+  // User replied - kill switch
+  if (!before.has_replied && after.has_replied) {
+    console.log(`User ${userId} replied - kill switch activated`)
+    await cancelPendingEmails(userId, [
+      'WhatsMissing',
+      'FreeOptions',
+      'NeedHelp',
+      'NeedHelpWith',
+      'WhyLeaving'
+    ])
+  }
+})

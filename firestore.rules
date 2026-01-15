@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // L'app peut lire/écrire uniquement son propre document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // email_queue et email_logs : seulement le backend (Admin SDK)
+    match /email_queue/{docId} {
+      allow read, write: if false;
+    }
+
+    match /email_logs/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

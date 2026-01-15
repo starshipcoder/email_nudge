@@ -9,12 +9,16 @@ export type Need =
   | 'multi_day'
   | 'client_tracking'
 
+export type Locale = 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+
 export interface User {
   id: string
   email: string
   prenom?: string
   role: Role
   needs: Need[]
+  locale?: Locale
+  revenuecat_id?: string
   created_at: Date
 
   // Funnel
@@ -24,9 +28,8 @@ export interface User {
   paywall_passed: boolean
 
   // Engagement
-  routes_created: number
   routes_optimized: number
-  prospects_added: number
+  has_added_visits: boolean
   last_action_at?: Date
 
   // Subscription
@@ -73,7 +76,7 @@ export type Segment =
   | 'QuickStart__technician'
   | 'QuickStart__default'
   // NeedHelp
-  | 'NeedHelp__no_route'
+  | 'NeedHelp__no_visits'
   | 'NeedHelp__no_optimization'
   // NeedHelpWith
   | 'NeedHelpWith'

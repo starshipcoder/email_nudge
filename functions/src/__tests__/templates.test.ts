@@ -13,9 +13,8 @@ function createUser(overrides: Partial<User> = {}): User {
     onboarding_step_reached: 1,
     paywall_seen: false,
     paywall_passed: false,
-    routes_created: 0,
     routes_optimized: 0,
-    prospects_added: 0,
+    has_added_visits: false,
     trial_active: false,
     subscription_active: false,
     plan: 'free',
@@ -128,7 +127,7 @@ describe('renderTemplate - Signature', () => {
       'WhatsMissing__default',
       'FreeOptions',
       'QuickStart__default',
-      'NeedHelp__no_route',
+      'NeedHelp__no_visits',
       'TrialEndsSoon',
       'WhyLeaving__silent'
     ] as const
@@ -154,7 +153,7 @@ describe('renderTemplate - All Segments Exist', () => {
     'QuickStart__tracking',
     'QuickStart__technician',
     'QuickStart__default',
-    'NeedHelp__no_route',
+    'NeedHelp__no_visits',
     'NeedHelp__no_optimization',
     'NeedHelpWith',
     'TrialEndsSoon',

@@ -1,8 +1,8 @@
-# Easy Way - Email Nudge System
+# Email Nudge - Spécification Technique
 
-## Overview
+## Vue d'ensemble
 
-Système d'emails automatisés pour engager les utilisateurs Easy Way à chaque étape de leur parcours.
+Système d'emails automatisés pour Easy Way, basé sur le comportement utilisateur. Les emails sont générés par IA (Claude Haiku) et personnalisés selon le profil utilisateur.
 
 **Objectifs :**
 - Collecter du feedback (pas juste relancer)
@@ -15,574 +15,358 @@ Système d'emails automatisés pour engager les utilisateurs Easy Way à chaque 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                     FIREBASE                        │
-│  - Firestore (users, email_queue, email_logs)      │
-│  - Analytics (events)                               │
-│  - Cloud Functions (triggers & scheduling)          │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│                   REVENUECAT                        │
-│  - Webhooks (subscription_cancel, trial_started)   │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│                     RESEND                          │
-│  - Envoi emails                                     │
-│  - From: harold@easyway.app                        │
-└─────────────────────────────────────────────────────┘
+┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
+│   App iOS   │────▶│  Firestore       │────▶│  Cloud      │
+│   /Android  │     │  (email-nudge)   │     │  Functions  │
+└─────────────┘     └──────────────────┘     └──────┬──────┘
+                                                     │
+┌─────────────┐                                      │
+│  RevenueCat │──────────────────────────────────────┤
+│  Webhooks   │                                      │
+└─────────────┘                                      ▼
+                                              ┌──────────────┐
+                                              │   Anthropic  │
+                                              │   (Haiku)    │
+                                              └──────┬───────┘
+                                                     │
+                                                     ▼
+                                              ┌──────────────┐
+                                              │    Resend    │
+                                              └──────────────┘
 ```
+
+**Base Firestore** : `email-nudge` (base nommée, pas default)
 
 ---
 
-## Sub-Segments
+## Events attendus de l'app
 
-### Roles
+| Champ | Type | Quand |
+|-------|------|-------|
+| `email` | string | Premier écran onboarding |
+| `locale` | string | Premier écran (device locale : fr, en, es, de, it, pt, nl) |
+| `onboarding_started_at` | Timestamp | Premier écran onboarding |
+| `role` | string | Pendant onboarding |
+| `needs` | string[] | Pendant onboarding |
+| `onboarding_complete` | boolean | Fin onboarding (true) |
+| `paywall_seen` | boolean | Paywall affiché (true) |
+| `paywall_abandoned` | boolean | User ferme paywall sans action (true) |
+| `has_added_visits` | boolean | User a ajouté au moins une visite (true) |
+| `routes_optimized` | number | +1 à chaque optimisation |
 
-| Sub-segment | Condition |
-|-------------|-----------|
-| `delivery` | role = livreur |
-| `field_sales` | role = commercial_terrain |
-| `technician` | role = technicien |
-| `sales_director` | role = directeur_commercial (traité comme field_sales + mention partage) |
-| `role_other` | role = autre |
+### Valeurs possibles
 
-### Needs (Priority Order)
+**role** :
+- `delivery`
+- `field_sales`
+- `technician`
+- `sales_director`
+- `other`
 
-| Priority | Sub-segment | Condition | Label FR |
-|----------|-------------|-----------|----------|
-| 1 | `hotel` | besoins contains "hotel_search" | "les hôtels" |
-| 2 | `prospection` | besoins contains "new_clients" | "la prospection" |
-| 3 | `complex` | besoins contains "complex_routes" | "les tournées complexes" |
-| 4 | `max_visits` | besoins contains "max_visits" | "tes visites" |
-| 5 | `multi_day` | besoins contains "multi_day" | "la planification" |
-| 6 | `tracking` | besoins contains "client_tracking" | "le suivi clients" |
+**needs** :
+- `max_visits`
+- `client_tracking`
+- `complex_routes`
+- `multi_day`
+- `hotel_search`
+- `new_clients`
 
-### Engagement
-
-| Sub-segment | Condition |
-|-------------|-----------|
-| `no_route` | routes_created = 0 |
-| `has_route` | routes_created >= 1 |
-| `no_optimization` | routes_optimized = 0 |
-
-### Churn
-
-| Sub-segment | Condition |
-|-------------|-----------|
-| `churned_silent` | churned + churn_reason = null |
-| `churned_with_feedback` | churned + churn_reason exists |
-
----
-
-## Emails
-
-### 1. WhatsMissing
-
-**Trigger :** Abandon onboarding
-**Timing :** 1h après
-**Objectif :** Comprendre ce qui a manqué
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `WhatsMissing__hotel` | need=hotel | "Une question sur les hôtels" |
-| `WhatsMissing__prospection` | need=prospection | "Une question sur la prospection" |
-| `WhatsMissing__complex` | need=complex | "Une question sur tes tournées" |
-| `WhatsMissing__delivery` | role=delivery | "Une question sur tes livraisons" |
-| `WhatsMissing__technician` | role=technician | "Une question sur tes interventions" |
-| `WhatsMissing__default` | fallback | "Une question rapide" |
-
-**Template WhatsMissing__hotel :**
-```
-Objet : Une question sur les hôtels
-
-Hey{{prenom| }},
-
-Tu cherchais un truc pour trouver des hôtels sur tes trajets ?
-
-Dis-moi ce qui t'a manqué — je lis tout.
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhatsMissing__prospection :**
-```
-Objet : Une question sur la prospection
-
-Hey{{prenom| }},
-
-Tu cherchais à trouver de nouveaux clients plus facilement ?
-
-Qu'est-ce qui t'a manqué ? Réponds-moi en 2 mots.
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhatsMissing__complex :**
-```
-Objet : Une question sur tes tournées
-
-Hey{{prenom| }},
-
-Tu voulais créer des tournées multi-stops ?
-
-Dis-moi ce qui a coincé.
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhatsMissing__delivery :**
-```
-Objet : Une question sur tes livraisons
-
-Hey{{prenom| }},
-
-Tu cherchais à optimiser tes tournées de livraison ?
-
-Qu'est-ce qui t'a bloqué ?
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhatsMissing__technician :**
-```
-Objet : Une question sur tes interventions
-
-Hey{{prenom| }},
-
-Tu cherchais à mieux organiser tes interventions terrain ?
-
-Dis-moi ce qui a manqué.
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhatsMissing__default :**
-```
-Objet : Une question rapide
-
-Hey{{prenom| }},
-
-T'as commencé à configurer Easy Way mais t'es pas allé au bout.
-
-Qu'est-ce qui t'a manqué ?
-
-— Harold, créateur de Easy Way
-```
+**locale** :
+- `fr` (français - défaut)
+- `en` (anglais)
+- `es` (espagnol)
+- `de` (allemand)
+- `it` (italien)
+- `pt` (portugais)
+- `nl` (néerlandais)
 
 ---
 
-### 2. FreeOptions
+## Géré automatiquement (backend)
 
-**Trigger :** Paywall bloqué (quitte sans passer)
-**Timing :** 10 min après
-**Objectif :** Transparence + collecter feedback
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `FreeOptions` | paywall_blocked | "3 façons gratuites de créer tes tournées" |
-
-**Template FreeOptions :**
-```
-Objet : 3 façons gratuites de créer tes tournées
-
-Hey{{prenom| }},
-
-Pas de souci si t'as pas pris l'essai.
-
-Tu peux créer tes tournées sans nous :
-• Google Maps → limité à 10 stops
-• Excel + copier-coller → ça marche, mais long
-• Autres apps → souvent payantes aussi
-
-Si c'est autre chose qui t'a bloqué, dis-moi.
-
-— Harold, créateur de Easy Way
-```
-
----
-
-### 3. QuickStart
-
-**Trigger :** Paywall passé (trial ou paiement)
-**Timing :** Immédiat
-**Objectif :** Guider le premier pas
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `QuickStart__delivery` | role=delivery | "Prêt à optimiser tes livraisons" |
-| `QuickStart__prospection` | need=prospection | "Trouve tes prochains clients" |
-| `QuickStart__tracking` | need=tracking | "Tes clients, mieux organisés" |
-| `QuickStart__technician` | role=technician | "Tes interventions, optimisées" |
-| `QuickStart__default` | fallback | "Bienvenue sur Easy Way" |
-
-**Template QuickStart__delivery :**
-```
-Objet : Prêt à optimiser tes livraisons
-
-Hey{{prenom| }},
-
-Bienvenue sur Easy Way !
-
-Pour démarrer en 2 min :
-1. Ajoute tes adresses de livraison
-2. Clique sur "Optimiser"
-3. C'est parti
-
-{{#if role == sales_director}}
-💡 Tu peux aussi partager tes tournées avec ton équipe.
-{{/if}}
-
-Un souci ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
-**Template QuickStart__prospection :**
-```
-Objet : Trouve tes prochains clients
-
-Hey{{prenom| }},
-
-Bienvenue sur Easy Way !
-
-Pour démarrer :
-1. Importe tes prospects (CSV ou manuel)
-2. Crée une tournée de prospection
-3. Optimise ton trajet
-
-{{#if role == sales_director}}
-💡 Tu peux partager les tournées avec ton équipe.
-{{/if}}
-
-Besoin d'aide ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
-**Template QuickStart__tracking :**
-```
-Objet : Tes clients, mieux organisés
-
-Hey{{prenom| }},
-
-Bienvenue sur Easy Way !
-
-Pour démarrer :
-1. Importe tes clients existants
-2. Planifie tes visites
-3. Suis ton historique
-
-{{#if role == sales_director}}
-💡 Tu peux partager les tournées avec ton équipe.
-{{/if}}
-
-Un souci ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
-**Template QuickStart__technician :**
-```
-Objet : Tes interventions, optimisées
-
-Hey{{prenom| }},
-
-Bienvenue sur Easy Way !
-
-Pour démarrer :
-1. Ajoute tes interventions du jour
-2. Optimise ton trajet
-3. Gagne du temps sur la route
-
-Un problème ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
-**Template QuickStart__default :**
-```
-Objet : Bienvenue sur Easy Way
-
-Hey{{prenom| }},
-
-Content de t'avoir !
-
-Pour créer ta première tournée :
-1. Ajoute tes adresses
-2. Clique sur "Optimiser"
-3. C'est parti
-
-Besoin d'aide ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
----
-
-### 4. NeedHelp
-
-**Trigger :** 24h après paywall passé, aucune action significative
-**Timing :** 24h
-**Objectif :** Débloquer si stuck
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `NeedHelp__no_route` | routes_created = 0 | "Besoin d'un coup de main ?" |
-| `NeedHelp__no_optimization` | has_route + routes_optimized = 0 | "T'as créé une tournée !" |
-
-**Template NeedHelp__no_route :**
-```
-Objet : Besoin d'un coup de main ?
-
-Hey{{prenom| }},
-
-J'ai vu que t'as pas encore créé de tournée.
-
-Bloqué quelque part ? Dis-moi.
-
-— Harold, créateur de Easy Way
-```
-
-**Template NeedHelp__no_optimization :**
-```
-Objet : T'as créé une tournée !
-
-Hey{{prenom| }},
-
-Nice, t'as créé ta première tournée !
-
-T'as pensé à l'optimiser ? Un clic et on te fait gagner du temps.
-
-Besoin d'aide ? Réponds-moi.
-
-— Harold, créateur de Easy Way
-```
-
----
-
-### 5. NeedHelpWith
-
-**Trigger :** 48h après paywall passé, toujours pas de tournée
-**Timing :** 48h
-**Objectif :** Rappeler ses besoins, offrir aide
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `NeedHelpWith` | no_route + 48h | "Un coup de main sur {{primary_need_label}} ?" |
-
-**Template NeedHelpWith :**
-```
-Objet : Un coup de main sur {{primary_need_label}} ?
-
-Hey{{prenom| }},
-
-T'as pas encore créé de tournée.
-
-Tu voulais :
-{{#each needs}}
-• {{need_label}}
-{{/each}}
-
-Besoin d'aide sur un de ces sujets ? Réponds-moi, je te guide.
-
-— Harold, créateur de Easy Way
-```
-
----
-
-### 6. TrialEndsSoon
-
-**Trigger :** J-2 avant fin de trial
-**Timing :** 2 jours avant fin
-**Objectif :** Rappel friendly + feedback
-**Note :** TOUJOURS envoyé (même si has_replied)
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `TrialEndsSoon` | trial_ending | "Ton essai se termine dans {{days_remaining}} jours" |
-
-**Template TrialEndsSoon :**
-```
-Objet : Ton essai se termine dans {{days_remaining}} jours
-
-Hey{{prenom| }},
-
-Rappel friendly : ton essai Easy Way se termine dans {{days_remaining}} jours.
-
-Tu penses quoi de l'app ? Dis-moi en 2 mots.
-
-— Harold, créateur de Easy Way
-```
-
----
-
-### 7. WhyLeaving
-
-**Trigger :** Churn (cancel in-app ou RevenueCat webhook)
-**Timing :** 30 min après
-**Objectif :** Comprendre pourquoi
-**Note :** Déduplication via `email_whyleaving_sent` flag
-
-| Segment | Condition | Objet |
-|---------|-----------|-------|
-| `WhyLeaving__silent` | churned + no churn_reason | "Une question avant de partir" |
-| `WhyLeaving__with_feedback` | churned + churn_reason exists | "Merci pour ton retour" |
-
-**Template WhyLeaving__silent :**
-```
-Objet : Une question avant de partir
-
-Hey{{prenom| }},
-
-J'ai vu que t'as arrêté ton abonnement.
-
-Pas de souci — mais ça m'aiderait de comprendre pourquoi.
-
-Réponds-moi en 2 mots, je lis tout.
-
-— Harold, créateur de Easy Way
-```
-
-**Template WhyLeaving__with_feedback :**
-```
-Objet : Merci pour ton retour
-
-Hey{{prenom| }},
-
-Merci d'avoir pris le temps de donner ton avis.
-
-Tu as mentionné : "{{churn_reason}}"
-
-Si tu veux développer, je suis là.
-
-Bonne continuation !
-
-— Harold, créateur de Easy Way
-```
-
----
-
-## Récap Emails
-
-| # | Email | Trigger | Timing | Segments |
-|---|-------|---------|--------|----------|
-| 1 | WhatsMissing | Abandon onboarding | 1h | 6 |
-| 2 | FreeOptions | Paywall bloqué | 10min | 1 |
-| 3 | QuickStart | Paywall passé | Immédiat | 5 |
-| 4 | NeedHelp | Pas d'action | 24h | 2 |
-| 5 | NeedHelpWith | Toujours pas de route | 48h | 1 |
-| 6 | TrialEndsSoon | Fin trial proche | J-2 | 1 |
-| 7 | WhyLeaving | Churn | 30min | 2 |
-| **Total** | | | | **18** |
-
----
-
-## Timings Récap
-
-| Email | Timing |
+| Champ | Source |
 |-------|--------|
-| WhatsMissing | 1h |
-| FreeOptions | 10min |
-| QuickStart | Immédiat |
-| NeedHelp | 24h |
-| NeedHelpWith | 48h |
-| TrialEndsSoon | J-2 (TOUJOURS) |
-| WhyLeaving | 30min |
+| `onboarding_dropped` | Cron (1h après start sans complete) |
+| `trial_active` | RevenueCat webhook |
+| `trial_start_date` | RevenueCat webhook |
+| `trial_end_date` | RevenueCat webhook |
+| `subscription_active` | RevenueCat webhook |
+| `plan` | RevenueCat webhook |
+| `churned_at` | RevenueCat webhook |
 
 ---
 
-## Règles Système
+## Emails et déclencheurs
 
-### Kill Switch
-- Si `has_replied = true` → STOP séquence (sauf TrialEndsSoon)
-
-### Déduplication WhyLeaving
-- Deux sources possibles : Firebase event `user_cancelled` OU RevenueCat webhook
-- Flag `email_whyleaving_sent` pour éviter doublon
-- Premier event = email envoyé, deuxième = ignoré
-
-### Segment Priority
-- Need > Role pour les emails basés sur le contenu
-- Si plusieurs needs → prendre le plus prioritaire (hotel > prospection > complex > ...)
-
-### sales_director
-- Traité comme `field_sales`
-- Ajouter mention "partage de tournée" dans QuickStart
+| Email | Déclencheur | Délai | Segments |
+|-------|-------------|-------|----------|
+| **WhatsMissing** | `onboarding_dropped: true` (calculé) | 1h | hotel, prospection, complex, delivery, technician, default |
+| **FreeOptions** | `paywall_abandoned: true` | 10min | unique |
+| **QuickStart** | `trial_active: true` | immédiat | delivery, prospection, tracking, technician, default |
+| **NeedHelp** | `trial_active: true` | 24h | no_visits, no_optimization |
+| **NeedHelpWith** | `trial_active: true` | 48h | unique |
+| **TrialEndsSoon** | Cron quotidien 9h | J-2 | unique |
+| **WhyLeaving** | `churned_at` défini | 30min | silent, with_feedback |
 
 ---
 
-## Firebase Events
+## Logique de segmentation
 
-| Event | Quand | Déclenche |
-|-------|-------|-----------|
-| `onboarding_dropped` | Quitte avant fin onboarding | WhatsMissing (1h) |
-| `paywall_blocked` | Quitte au paywall | FreeOptions (10min) |
-| `paywall_passed` | Passe le paywall | QuickStart (immédiat) |
-| `trial_started` | Début trial | Schedule NeedHelp (24h), NeedHelpWith (48h) |
-| `route_created` | Crée une tournée | Cancel NeedHelp/NeedHelpWith si pending |
-| `route_optimized` | Optimise une tournée | - |
-| `user_cancelled` | Cancel in-app | WhyLeaving (30min) |
-
----
-
-## Firestore Collections
+### WhatsMissing (priorité : need > role)
 
 ```
-users/{user_id}
-  - email, prenom, role, needs[]
-  - onboarding_complete, paywall_seen, paywall_passed
-  - routes_created, routes_optimized, prospects_added
-  - trial_active, trial_start_date, trial_end_date
-  - churned_at, churn_reason
-  - email_whyleaving_sent, has_replied, is_test_user
+hotel_search      → WhatsMissing__hotel
+new_clients       → WhatsMissing__prospection
+complex_routes    → WhatsMissing__complex
+role=delivery     → WhatsMissing__delivery
+role=technician   → WhatsMissing__technician
+default           → WhatsMissing__default
+```
 
-email_queue/{queue_id}
-  - user_id, email_name, segment, send_at, variables
+### QuickStart (priorité : delivery > need > role)
 
-email_logs/{log_id}
-  - user_id, email_name, segment
-  - scheduled_at, sent_at, status, blocked_reason
-  - variables
+```
+role=delivery     → QuickStart__delivery
+new_clients       → QuickStart__prospection
+client_tracking   → QuickStart__tracking
+role=technician   → QuickStart__technician
+default           → QuickStart__default
+```
+
+### NeedHelp
+
+```
+has_added_visits=false    → NeedHelp__no_visits
+routes_optimized=0        → NeedHelp__no_optimization
+```
+
+### WhyLeaving
+
+```
+churn_reason exists   → WhyLeaving__with_feedback
+no churn_reason       → WhyLeaving__silent
 ```
 
 ---
 
-## Tests
+## Kill switches
 
-### Unit Tests
-- Segment resolution (priority, conditions)
-- Kill switch logic
-- Deduplication logic
-- Template variable rendering
-
-### Instrumented Tests
-- Full flow: event → Cloud Function → email sent
-- Timing delays (with test user time multiplier)
-- RevenueCat webhook handling
+| Condition | Action |
+|-----------|--------|
+| `has_replied: true` | Annule tous les emails (sauf TrialEndsSoon) |
+| `has_added_visits: true` OU `routes_optimized > 0` | Annule NeedHelp, NeedHelpWith |
+| `email_whyleaving_sent: true` | Bloque doublon WhyLeaving |
+| `email` manquant | Bloque tous les emails |
 
 ---
 
-## Service Email
+## Génération IA
 
-**Resend**
-- 3000 emails/mois gratuits
-- From: `harold@easyway.app`
-- Simple API, TypeScript SDK
+Chaque email est généré par Claude Haiku avec :
+- Langue selon `locale`
+- Contexte métier selon `role`
+- Besoins selon `needs`
+- Prénom extrait de l'email si non fourni (`jean.dupont@gmail.com` → Jean)
+
+**Coût estimé** : ~0.04 centimes/email
 
 ---
 
-## Next Steps
+## Cloud Functions
 
-1. [ ] Setup Firebase Cloud Functions
-2. [ ] Setup Resend account + domain verification
-3. [ ] Implement segment resolver
-4. [ ] Implement email templates
-5. [ ] Implement Cloud Functions triggers
-6. [ ] Write unit tests
-7. [ ] Write instrumented tests
-8. [ ] Test with test users
-9. [ ] Deploy
+| Fonction | Type | Description |
+|----------|------|-------------|
+| `checkOnboardingDropped` | Scheduled (1h) | Détecte abandons onboarding |
+| `onPaywallStateChanged` | Firestore trigger | Paywall abandonné, trial démarré |
+| `onUserEngagementChanged` | Firestore trigger | Annule emails si user actif |
+| `onUserChurned` | Firestore trigger | Planifie WhyLeaving |
+| `onRevenueCatWebhook` | HTTPS | Reçoit events RevenueCat |
+| `processQueue` | Scheduled (1min) | Envoie emails de la queue |
+| `checkTrialEnding` | Scheduled (9h daily) | Envoie TrialEndsSoon |
+
+---
+
+## Collections Firestore
+
+### `users/{userId}`
+
+```typescript
+{
+  // Identité
+  email: string
+  locale?: 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt' | 'nl'
+
+  // Profil
+  role: 'delivery' | 'field_sales' | 'technician' | 'sales_director' | 'other'
+  needs: string[]
+
+  // Onboarding
+  onboarding_started_at: Timestamp
+  onboarding_complete: boolean
+  onboarding_dropped: boolean  // calculé par backend
+
+  // Paywall
+  paywall_seen: boolean
+  paywall_abandoned: boolean
+
+  // Engagement
+  has_added_visits: boolean
+  routes_optimized: number
+
+  // Abonnement (via RevenueCat)
+  trial_active: boolean
+  trial_start_date?: Timestamp
+  trial_end_date?: Timestamp
+  subscription_active: boolean
+  plan?: 'trial' | 'monthly' | 'yearly'
+
+  // Churn (via RevenueCat)
+  churned_at?: Timestamp
+  churn_reason?: string
+
+  // Flags emails
+  has_replied: boolean
+  email_whyleaving_sent: boolean
+
+  // Test
+  is_test_user?: boolean
+}
+```
+
+### `email_queue/{id}`
+
+```typescript
+{
+  user_id: string
+  email_name: EmailName
+  segment: Segment
+  send_at: Timestamp
+  created_at: Timestamp
+  variables: Record<string, any>
+}
+```
+
+### `email_logs/{id}`
+
+```typescript
+{
+  user_id: string
+  email_name: EmailName
+  segment: Segment
+  scheduled_at: Timestamp
+  sent_at?: Timestamp
+  status: 'scheduled' | 'sent' | 'blocked' | 'error'
+  blocked_reason?: string
+}
+```
+
+---
+
+## Configuration
+
+### Secrets Firebase
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+firebase functions:secrets:set ANTHROPIC_API_KEY
+```
+
+### Environnement (dev/prod)
+
+```bash
+# Dev - tous les emails vont à harold+test@easyway-planner.com
+cp functions/.env.dev functions/.env
+firebase deploy --only functions
+
+# Prod - emails aux vrais users
+cp functions/.env.prod functions/.env
+firebase deploy --only functions
+```
+
+### Webhook RevenueCat
+
+```
+URL: https://us-central1-contact-on-map-flutter.cloudfunctions.net/onRevenueCatWebhook
+Events: TRIAL_STARTED, INITIAL_PURCHASE, RENEWAL, CANCELLATION, EXPIRATION
+```
+
+---
+
+## Intégration App (Dart/Flutter)
+
+```dart
+// Instance Firestore pour email-nudge
+final emailNudgeDb = FirebaseFirestore.instanceFor(
+  app: Firebase.app(),
+  databaseId: 'email-nudge',
+);
+
+// Premier écran onboarding
+await emailNudgeDb.collection('users').doc(userId).set({
+  'email': userEmail,
+  'locale': Platform.localeName.split('_')[0],  // 'fr', 'en', etc.
+  'onboarding_started_at': FieldValue.serverTimestamp(),
+  'onboarding_complete': false,
+  'onboarding_dropped': false,
+  'paywall_seen': false,
+  'paywall_abandoned': false,
+  'has_added_visits': false,
+  'routes_optimized': 0,
+  'has_replied': false,
+  'email_whyleaving_sent': false,
+});
+
+// Pendant onboarding
+await emailNudgeDb.collection('users').doc(userId).update({
+  'role': selectedRole,
+  'needs': selectedNeeds,
+});
+
+// Fin onboarding
+await emailNudgeDb.collection('users').doc(userId).update({
+  'onboarding_complete': true,
+});
+
+// Paywall affiché
+await emailNudgeDb.collection('users').doc(userId).update({
+  'paywall_seen': true,
+});
+
+// Paywall fermé sans action
+await emailNudgeDb.collection('users').doc(userId).update({
+  'paywall_abandoned': true,
+});
+
+// Visite ajoutée
+await emailNudgeDb.collection('users').doc(userId).update({
+  'has_added_visits': true,
+});
+
+// Route optimisée
+await emailNudgeDb.collection('users').doc(userId).update({
+  'routes_optimized': FieldValue.increment(1),
+});
+```
+
+---
+
+## Délais (mode test)
+
+En mode test (`is_test_user: true`), les délais sont réduits ×0.01 :
+
+| Email | Délai normal | Délai test |
+|-------|--------------|------------|
+| WhatsMissing | 1h | 36s |
+| FreeOptions | 10min | 6s |
+| NeedHelp | 24h | ~14min |
+| NeedHelpWith | 48h | ~29min |
+| WhyLeaving | 30min | 18s |
+
+---
+
+## Monitoring
+
+- **Logs** : https://console.firebase.google.com/project/contact-on-map-flutter/functions/logs
+- **Firestore** : https://console.firebase.google.com/project/contact-on-map-flutter/firestore/databases/email-nudge
+- **Resend** : https://resend.com/emails
+- **BCC** : Tous les emails sont copiés à harold@easyway-planner.com

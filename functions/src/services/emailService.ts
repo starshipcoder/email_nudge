@@ -1,13 +1,71 @@
 import { Resend } from 'resend'
-import * as admin from 'firebase-admin'
+import { defineSecret, defineString } from 'firebase-functions/params'
 import { User, EmailName, Segment, EmailQueueItem, EmailLog } from '../types'
 import { resolveSegment, shouldSendEmail } from '../utils/segmentResolver'
-import { renderTemplate, getTemplateVariables } from '../templates'
+import { generateEmail, ANTHROPIC_API_KEY } from './aiEmailGenerator'
+import { db } from '../index'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-const db = admin.firestore()
+// Define secrets for Cloud Functions
+export const RESEND_API_KEY = defineSecret('RESEND_API_KEY')
+export { ANTHROPIC_API_KEY }
 
-const FROM_EMAIL = 'Harold <harold@easyway.app>'
+// Resend client (initialized lazily)
+let resendClient: Resend | null = null
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(RESEND_API_KEY.value())
+  }
+  return resendClient
+}
+
+const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
+const BCC_EMAIL = 'harold@easyway-planner.com'
+const TEST_RECIPIENT = 'harold+test@easyway-planner.com'
+
+// Test emails that always go to TEST_RECIPIENT (even in prod)
+const TEST_EMAILS = [
+  'toto@toto.com',
+  'test@test.com',
+  'harold+test@easyway-planner.com'
+]
+
+// Environment: 'dev' = all emails go to TEST_RECIPIENT, 'prod' = normal behavior
+// Set in Google Cloud Console or via firebase functions:params:set ENV=prod
+const ENV_PARAM = defineString('ENV', { default: 'dev' })
+
+function getEnv(): string {
+  return ENV_PARAM.value()
+}
+
+function isTestEmail(email: string): boolean {
+  return TEST_EMAILS.includes(email.toLowerCase())
+}
+
+function getRecipient(user: { email: string; is_test_user?: boolean }): string {
+  if (getEnv() === 'dev') return TEST_RECIPIENT
+  if (user.is_test_user) return TEST_RECIPIENT
+  if (isTestEmail(user.email)) return TEST_RECIPIENT
+  return user.email
+}
+
+function getDebugFooter(user: User): string {
+  if (getEnv() !== 'dev') return ''
+
+  return `
+
+---
+[DEBUG - DEV MODE]
+User ID: ${user.id}
+Email: ${user.email}
+Role: ${user.role || 'non défini'}
+Needs: ${user.needs?.join(', ') || 'aucun'}
+Locale: ${user.locale || 'fr'}
+Trial active: ${user.trial_active}
+Subscription active: ${user.subscription_active}
+Has added visits: ${user.has_added_visits}
+Routes optimized: ${user.routes_optimized}
+`
+}
 
 // Delays in milliseconds
 const DELAYS: Record<EmailName, number> = {
@@ -57,12 +115,6 @@ export async function scheduleEmail(
   }
   const sendAt = new Date(Date.now() + delay)
 
-  // Get variables
-  const variables = {
-    ...getTemplateVariables(user),
-    ...extraVariables
-  }
-
   // Add to queue
   const queueItem: EmailQueueItem = {
     user_id: userId,
@@ -70,7 +122,7 @@ export async function scheduleEmail(
     segment,
     send_at: sendAt,
     created_at: new Date(),
-    variables: variables as Record<string, string | string[]>
+    variables: (extraVariables || {}) as Record<string, string | string[]>
   }
 
   await db.collection('email_queue').add(queueItem)
@@ -103,27 +155,25 @@ export async function sendEmailNow(
     return
   }
 
-  // Resolve segment and render
+  // Resolve segment and generate email with AI
   const segment = resolveSegment(emailName, user)
-  const variables = {
-    ...getTemplateVariables(user),
-    ...extraVariables
-  }
-  const { subject, body } = renderTemplate(segment, variables)
+  const { subject, body } = await generateEmail(user, emailName, extraVariables)
+  const fullBody = body + getDebugFooter(user)
 
   // Send via Resend
   try {
-    const toEmail = user.is_test_user ? 'harold+test@easyway.app' : user.email
+    const toEmail = getRecipient(user)
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to: toEmail,
-      subject,
-      text: body
+      bcc: BCC_EMAIL,
+      subject: getEnv() === 'dev' ? `[DEV] ${subject}` : subject,
+      text: fullBody
     })
 
     await logEmail(userId, emailName, 'sent', undefined, segment)
-    console.log(`Sent ${emailName} (${segment}) to ${toEmail}`)
+    console.log(`[${getEnv()}] Sent ${emailName} (${segment}) to ${toEmail}`)
 
     // Set WhyLeaving flag
     if (emailName === 'WhyLeaving') {
@@ -148,6 +198,7 @@ export async function processEmailQueue(): Promise<void> {
     .where('send_at', '<=', now)
     .get()
 
+  if (snapshot.docs.length === 0) return
   console.log(`Processing ${snapshot.docs.length} emails from queue`)
 
   for (const doc of snapshot.docs) {
@@ -166,19 +217,21 @@ export async function processEmailQueue(): Promise<void> {
         continue
       }
 
-      // Render and send
-      const { subject, body } = renderTemplate(item.segment, item.variables)
-      const toEmail = user.is_test_user ? 'harold+test@easyway.app' : user.email
+      // Generate email with AI and send
+      const { subject, body } = await generateEmail(user, item.email_name, item.variables as Record<string, string | number>)
+      const fullBody = body + getDebugFooter(user)
+      const toEmail = getRecipient(user)
 
-      await resend.emails.send({
+      await getResend().emails.send({
         from: FROM_EMAIL,
         to: toEmail,
-        subject,
-        text: body
+        bcc: BCC_EMAIL,
+        subject: getEnv() === 'dev' ? `[DEV] ${subject}` : subject,
+        text: fullBody
       })
 
       await logEmail(item.user_id, item.email_name, 'sent', undefined, item.segment)
-      console.log(`Sent queued ${item.email_name} (${item.segment}) to ${toEmail}`)
+      console.log(`[${getEnv()}] Sent queued ${item.email_name} (${item.segment}) to ${toEmail}`)
 
       // Set WhyLeaving flag
       if (item.email_name === 'WhyLeaving') {
@@ -226,14 +279,17 @@ async function logEmail(
   reason?: string,
   segment?: Segment
 ): Promise<void> {
-  const log: EmailLog = {
+  const log: Record<string, any> = {
     user_id: userId,
     email_name: emailName,
-    segment: segment || (emailName as unknown as Segment),
+    segment: segment || emailName,
     scheduled_at: new Date(),
     status,
-    blocked_reason: reason,
     variables: {}
+  }
+
+  if (reason) {
+    log.blocked_reason = reason
   }
 
   if (status === 'sent') {

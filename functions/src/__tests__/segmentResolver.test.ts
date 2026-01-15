@@ -13,9 +13,8 @@ function createUser(overrides: Partial<User> = {}): User {
     onboarding_step_reached: 1,
     paywall_seen: false,
     paywall_passed: false,
-    routes_created: 0,
     routes_optimized: 0,
-    prospects_added: 0,
+    has_added_visits: false,
     trial_active: false,
     subscription_active: false,
     plan: 'free',
@@ -111,13 +110,13 @@ describe('resolveSegment - QuickStart', () => {
 })
 
 describe('resolveSegment - NeedHelp', () => {
-  it('returns no_route when routes_created is 0', () => {
-    const user = createUser({ routes_created: 0 })
-    expect(resolveSegment('NeedHelp', user)).toBe('NeedHelp__no_route')
+  it('returns no_visits when has_added_visits is false', () => {
+    const user = createUser({ has_added_visits: false })
+    expect(resolveSegment('NeedHelp', user)).toBe('NeedHelp__no_visits')
   })
 
-  it('returns no_optimization when has route but no optimization', () => {
-    const user = createUser({ routes_created: 1, routes_optimized: 0 })
+  it('returns no_optimization when has visits but no optimization', () => {
+    const user = createUser({ has_added_visits: true, routes_optimized: 0 })
     expect(resolveSegment('NeedHelp', user)).toBe('NeedHelp__no_optimization')
   })
 })

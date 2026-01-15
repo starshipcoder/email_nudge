@@ -237,11 +237,11 @@ Besoin d'aide ? Réponds-moi.${SIGNATURE}`
   },
 
   // NeedHelp
-  'NeedHelp__no_route': {
+  'NeedHelp__no_visits': {
     subject: "Besoin d'un coup de main ?",
     body: `Hey{{prenom| }},
 
-J'ai vu que t'as pas encore créé de tournée.
+J'ai vu que t'as pas encore ajouté de visites.
 
 Bloqué quelque part ? Dis-moi.${SIGNATURE}`
   },

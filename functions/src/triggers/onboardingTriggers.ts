@@ -1,46 +1,42 @@
-import * as functions from 'firebase-functions'
-import * as admin from 'firebase-admin'
-import { scheduleEmail } from '../services/emailService'
-
-const db = admin.firestore()
+import { onSchedule } from 'firebase-functions/v2/scheduler'
+import { scheduleEmail, RESEND_API_KEY, ANTHROPIC_API_KEY } from '../services/emailService'
+import { db } from '../index'
 
 /**
- * Trigger: User drops out of onboarding
- * Action: Schedule WhatsMissing email (1h)
+ * Scheduled: Check for abandoned onboarding every hour
+ * Users who started onboarding > 1h ago and haven't completed → send WhatsMissing
  */
-export const onOnboardingDropped = functions.firestore
-  .document('users/{userId}')
-  .onUpdate(async (change, context) => {
-    const before = change.before.data()
-    const after = change.after.data()
-    const userId = context.params.userId
+export const checkOnboardingDropped = onSchedule(
+  {
+    schedule: 'every 1 hours',
+    secrets: [RESEND_API_KEY, ANTHROPIC_API_KEY]
+  },
+  async () => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
 
-    // Check if user just dropped onboarding
-    // Condition: was in onboarding (not complete) and now inactive
-    if (
-      !before.onboarding_dropped &&
-      after.onboarding_dropped &&
-      !after.onboarding_complete
-    ) {
-      console.log(`User ${userId} dropped onboarding at step ${after.onboarding_step_reached}`)
+    // Find users who:
+    // - Started onboarding > 1h ago
+    // - Haven't completed onboarding
+    // - Haven't been marked as dropped yet
+    const snapshot = await db
+      .collection('users')
+      .where('onboarding_started_at', '<=', oneHourAgo)
+      .where('onboarding_complete', '==', false)
+      .where('onboarding_dropped', '==', false)
+      .get()
+
+    console.log(`Found ${snapshot.docs.length} users with abandoned onboarding`)
+
+    for (const doc of snapshot.docs) {
+      const userId = doc.id
+
+      // Mark as dropped
+      await db.collection('users').doc(userId).update({
+        onboarding_dropped: true
+      })
+
+      console.log(`User ${userId} dropped onboarding - scheduling WhatsMissing`)
       await scheduleEmail(userId, 'WhatsMissing')
     }
-
-    return null
-  })
-
-/**
- * Alternative: Triggered by Analytics event
- */
-export const onOnboardingDroppedEvent = functions.analytics
-  .event('onboarding_dropped')
-  .onLog(async (event) => {
-    const userId = event.user?.userId
-    if (!userId) {
-      console.error('No userId in onboarding_dropped event')
-      return
-    }
-
-    console.log(`Analytics: User ${userId} dropped onboarding`)
-    await scheduleEmail(userId, 'WhatsMissing')
-  })
+  }
+)
