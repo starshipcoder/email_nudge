@@ -1,0 +1,11 @@
+SUBJECT: Ha aggiunto delle visite!
+
+Buongiorno{{prenom}},
+
+Fantastico, ha aggiunto le sue prime visite!
+
+Ha provato a ottimizzare il suo percorso? Un clic e le facciamo risparmiare tempo.
+
+Ha bisogno di aiuto? Mi risponda.
+
+— Harold, creatore di Easy Way

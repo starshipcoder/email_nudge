@@ -1,0 +1,11 @@
+SUBJECT: Sie haben Besuche hinzugefügt!
+
+Hallo{{prenom}},
+
+Super, Sie haben Ihre ersten Besuche hinzugefügt!
+
+Haben Sie schon versucht, Ihre Route zu optimieren? Ein Klick und wir sparen Ihnen Zeit.
+
+Brauchen Sie Hilfe? Antworten Sie mir.
+
+— Harold, Gründer von Easy Way

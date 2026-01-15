@@ -12,7 +12,8 @@
       "Bash(npm test)",
       "Bash(npm run build)",
       "Bash(npm install:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(firebase login:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,9 @@
+SUBJECT: Ha bisogno di una mano?
+
+Buongiorno{{prenom}},
+
+Ho visto che non ha ancora aggiunto visite.
+
+Bloccato da qualche parte? Me lo dica.
+
+— Harold, creatore di Easy Way

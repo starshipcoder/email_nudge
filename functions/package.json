@@ -4,7 +4,7 @@
   "description": "Easy Way Email Nudge System - Cloud Functions",
   "main": "lib/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/templates/emails lib/templates/",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

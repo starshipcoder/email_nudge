@@ -1,9 +1,6 @@
+import * as fs from 'fs'
+import * as path from 'path'
 import { Locale, Segment } from '../types'
-import * as fr from './emails/fr.json'
-import * as en from './emails/en.json'
-import * as es from './emails/es.json'
-import * as de from './emails/de.json'
-import * as it from './emails/it.json'
 
 interface EmailTemplate {
   subject: string
@@ -11,17 +8,6 @@ interface EmailTemplate {
 }
 
 type TemplateKey = 'FreeOptions' | 'NoVisits' | 'NoOptimization' | 'WhyLeaving__unsubscribe' | 'WhyLeaving__billing_error'
-
-const TEMPLATES: Record<Locale, Record<TemplateKey, EmailTemplate>> = {
-  fr: fr as Record<TemplateKey, EmailTemplate>,
-  en: en as Record<TemplateKey, EmailTemplate>,
-  es: es as Record<TemplateKey, EmailTemplate>,
-  de: de as Record<TemplateKey, EmailTemplate>,
-  it: it as Record<TemplateKey, EmailTemplate>,
-  // Fallback to English for unsupported languages
-  pt: en as Record<TemplateKey, EmailTemplate>,
-  nl: en as Record<TemplateKey, EmailTemplate>
-}
 
 // Segments that use templates (not AI)
 export const TEMPLATE_SEGMENTS: Segment[] = [
@@ -36,6 +22,55 @@ export function isTemplateSegment(segment: Segment): boolean {
   return TEMPLATE_SEGMENTS.includes(segment)
 }
 
+// Cache for loaded templates
+const templateCache: Map<string, EmailTemplate> = new Map()
+
+/**
+ * Load a template from file
+ */
+function loadTemplate(locale: Locale, templateName: TemplateKey): EmailTemplate {
+  const cacheKey = `${locale}/${templateName}`
+
+  if (templateCache.has(cacheKey)) {
+    return templateCache.get(cacheKey)!
+  }
+
+  // Try requested locale, fallback to 'en'
+  const locales = [locale, 'en']
+
+  for (const loc of locales) {
+    const filePath = path.join(__dirname, 'emails', loc, `${templateName}.txt`)
+
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8')
+      const template = parseTemplate(content)
+      templateCache.set(cacheKey, template)
+      return template
+    }
+  }
+
+  throw new Error(`Template not found: ${templateName} for locale ${locale}`)
+}
+
+/**
+ * Parse template file content
+ * Format:
+ * SUBJECT: ...
+ *
+ * body...
+ */
+function parseTemplate(content: string): EmailTemplate {
+  const subjectMatch = content.match(/^SUBJECT:\s*(.+)$/m)
+  if (!subjectMatch) {
+    throw new Error('Template missing SUBJECT line')
+  }
+
+  const subject = subjectMatch[1].trim()
+  const body = content.replace(/^SUBJECT:\s*.+\n+/m, '').trim()
+
+  return { subject, body }
+}
+
 interface TemplateVariables {
   prenom?: string
 }
@@ -48,12 +83,7 @@ export function renderEmailTemplate(
   locale: Locale,
   variables: TemplateVariables
 ): EmailTemplate {
-  const templates = TEMPLATES[locale] || TEMPLATES['en']
-  const template = templates[segment as TemplateKey]
-
-  if (!template) {
-    throw new Error(`Template not found for segment: ${segment}`)
-  }
+  const template = loadTemplate(locale, segment as TemplateKey)
 
   let subject = template.subject
   let body = template.body

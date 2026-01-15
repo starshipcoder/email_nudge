@@ -1,0 +1,11 @@
+SUBJECT: You added visits!
+
+Hello{{prenom}},
+
+Great, you added your first visits!
+
+Have you tried optimizing your route? One click and we save you time.
+
+Need help? Reply to me.
+
+— Harold, creator of Easy Way

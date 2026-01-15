@@ -1,0 +1,11 @@
+SUBJECT: Vous avez ajouté des visites !
+
+Bonjour{{prenom}},
+
+Super, vous avez ajouté vos premières visites !
+
+Avez-vous pensé à optimiser votre tournée ? Un clic et on vous fait gagner du temps.
+
+Besoin d'aide ? Répondez-moi.
+
+— Harold, créateur de Easy Way

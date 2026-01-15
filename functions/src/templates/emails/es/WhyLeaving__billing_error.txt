@@ -1,0 +1,9 @@
+SUBJECT: Un problema con su pago
+
+Hola{{prenom}},
+
+Vi que hubo un problema con su pago.
+
+Si es un error de tarjeta o un problema técnico, no dude en responderme — puedo ayudarle a resolverlo.
+
+— Harold, creador de Easy Way

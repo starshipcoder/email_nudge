@@ -1,0 +1,11 @@
+SUBJECT: Una domanda prima di andare
+
+Buongiorno{{prenom}},
+
+Ho visto che ha cancellato il suo abbonamento.
+
+Nessun problema — ma mi aiuterebbe capire perché.
+
+Mi risponda in 2 parole, leggo tutto.
+
+— Harold, creatore di Easy Way

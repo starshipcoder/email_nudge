@@ -1,0 +1,11 @@
+SUBJECT: Eine kurze Frage bevor Sie gehen
+
+Hallo{{prenom}},
+
+Ich habe gesehen, dass Sie Ihr Abo gekündigt haben.
+
+Kein Problem — aber es würde mir helfen zu verstehen warum.
+
+Antworten Sie in 2 Worten, ich lese alles.
+
+— Harold, Gründer von Easy Way

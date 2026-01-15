@@ -1,0 +1,9 @@
+SUBJECT: Need a hand?
+
+Hello{{prenom}},
+
+I noticed you haven't added any visits yet.
+
+Stuck somewhere? Let me know.
+
+— Harold, creator of Easy Way

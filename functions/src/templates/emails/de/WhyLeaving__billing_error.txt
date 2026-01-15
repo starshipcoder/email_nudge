@@ -1,0 +1,9 @@
+SUBJECT: Ein Problem mit Ihrer Zahlung
+
+Hallo{{prenom}},
+
+Ich habe gesehen, dass es ein Problem mit Ihrer Zahlung gab.
+
+Wenn es ein Kartenfehler oder ein technisches Problem ist, antworten Sie mir gerne — ich kann Ihnen helfen, das zu lösen.
+
+— Harold, Gründer von Easy Way

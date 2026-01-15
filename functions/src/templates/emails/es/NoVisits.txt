@@ -1,0 +1,9 @@
+SUBJECT: ¿Necesita ayuda?
+
+Hola{{prenom}},
+
+Vi que aún no ha añadido visitas.
+
+¿Atascado en algo? Cuénteme.
+
+— Harold, creador de Easy Way

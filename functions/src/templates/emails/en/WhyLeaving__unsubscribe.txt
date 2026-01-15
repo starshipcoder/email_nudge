@@ -1,0 +1,11 @@
+SUBJECT: A quick question before you go
+
+Hello{{prenom}},
+
+I saw you cancelled your subscription.
+
+No worries — but it would help me understand why.
+
+Reply in 2 words, I read everything.
+
+— Harold, creator of Easy Way

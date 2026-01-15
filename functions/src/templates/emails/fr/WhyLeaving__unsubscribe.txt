@@ -1,0 +1,11 @@
+SUBJECT: Une question avant de partir
+
+Bonjour{{prenom}},
+
+J'ai vu que vous avez arrêté votre abonnement.
+
+Pas de souci — mais ça m'aiderait de comprendre pourquoi.
+
+Répondez-moi en 2 mots, je lis tout.
+
+— Harold, créateur de Easy Way
