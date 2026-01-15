@@ -4,8 +4,8 @@ Hallo{{prenom}},
 
 Schön, dass Sie dabei sind!
 
-Sie sind im Außendienst, Sie wissen, wie es ist, von Termin zu Termin zu hetzen.
+Besuche organisieren, unnötige Fahrten vermeiden und den Zeitplan einhalten ist nie einfach.
 
 {{need_closing}}
 
-Harold
+Harold, Gründer von Easy Way

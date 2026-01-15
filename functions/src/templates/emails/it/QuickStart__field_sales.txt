@@ -4,8 +4,8 @@ Buongiorno{{prenom}},
 
 Felice di averla con noi!
 
-È sul campo, sa cosa significa correre da un appuntamento all'altro.
+Organizzare visite, evitare viaggi inutili e rispettare la propria agenda non è mai semplice.
 
 {{need_closing}}
 
-Harold
+Harold, creatore di Easy Way

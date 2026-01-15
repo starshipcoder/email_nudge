@@ -4,8 +4,8 @@ Hallo{{prenom}},
 
 Schön, dass Sie dabei sind!
 
-Sie sind Vertriebsleiter, Sie wissen, wie es ist, einen vollen Terminkalender zu haben.
+Easy Way wurde entwickelt, um Ihnen bei der Organisation Ihrer Außendienstbesuche zu helfen und Zeit bei Ihren Touren zu sparen.
 
 {{need_closing}}
 
-Harold
+Harold, Gründer von Easy Way

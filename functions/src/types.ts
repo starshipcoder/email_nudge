@@ -22,9 +22,11 @@ export interface User {
   created_at: Date
 
   // Funnel
+  onboarding_started_at?: Date
   onboarding_complete: boolean
-  onboarding_step_reached: number
-  paywall_seen: boolean
+  onboarding_completed_at?: Date
+  onboarding_dropped?: boolean // internal marker
+  paywall_blocked: boolean
   paywall_passed: boolean
 
   // Engagement

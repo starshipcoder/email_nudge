@@ -4,8 +4,8 @@ Hola{{prenom}},
 
 ¡Encantado de tenerle con nosotros!
 
-Es director comercial, sabe lo que es tener una agenda llena.
+Easy Way está diseñado para ayudarle a organizar sus visitas de campo y ahorrar tiempo en sus rutas.
 
 {{need_closing}}
 
-Harold
+Harold, creador de Easy Way

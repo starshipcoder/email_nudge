@@ -25,3 +25,6 @@ export { processQueue } from './triggers/scheduledTriggers'
 
 // Test triggers (remove in production)
 export { testSendEmail, testCreateUser, testResetUser, testDeleteUser } from './triggers/testTriggers'
+
+// API triggers (for mobile app)
+export { syncUser, getUser } from './triggers/apiTriggers'

@@ -4,8 +4,8 @@ Bonjour{{prenom}},
 
 Content de vous avoir parmi nous !
 
-Vous êtes sur le terrain, vous savez ce que c'est de courir entre les rendez-vous.
+Organiser des visites, éviter les allers-retours inutiles et tenir son planning n'est jamais simple.
 
 {{need_closing}}
 
-Harold
+Harold, créateur de Easy Way

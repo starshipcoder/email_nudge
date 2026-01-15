@@ -4,8 +4,8 @@ Hello{{prenom}},
 
 Great to have you with us!
 
-You're a sales director, you know what it's like to have a packed schedule.
+Easy Way is designed to help you organize your field visits and save time on your routes.
 
 {{need_closing}}
 
-Harold
+Harold, creator of Easy Way

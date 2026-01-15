@@ -4,8 +4,8 @@ Hola{{prenom}},
 
 ¡Encantado de tenerle con nosotros!
 
-Está en el terreno, sabe lo que es correr entre citas.
+Organizar visitas, evitar viajes innecesarios y cumplir con su agenda nunca es fácil.
 
 {{need_closing}}
 
-Harold
+Harold, creador de Easy Way

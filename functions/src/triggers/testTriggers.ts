@@ -102,8 +102,8 @@ export const testResetUser = onRequest(
       onboarding_started_at: new Date(),
       onboarding_complete: false,
       onboarding_dropped: false,
-      paywall_seen: false,
-      paywall_abandoned: false,
+      paywall_blocked: false,
+      paywall_passed: false,
       has_added_visits: false,
       has_optimized_route: false,
       has_replied: false,
@@ -187,14 +187,16 @@ export const testCreateUser = onRequest(
       onboarding_started_at: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2h ago
       onboarding_complete: false,
       onboarding_dropped: false,
-      paywall_seen: false,
-      paywall_abandoned: false,
+      paywall_blocked: false,
+      paywall_passed: false,
       has_added_visits: false,
       has_optimized_route: false,
       has_replied: false,
       email_whyleaving_sent: false,
       trial_active: false,
-      subscription_active: false
+      subscription_active: false,
+      plan: 'free',
+      is_test_user: true
     }
 
     await db.collection('users').doc(userId).set(testUser)

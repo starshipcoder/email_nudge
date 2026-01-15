@@ -4,8 +4,8 @@ Bonjour{{prenom}},
 
 Content de vous avoir parmi nous !
 
-Vous êtes directeur commercial, vous savez ce que c'est d'avoir un agenda bien rempli.
+Easy Way est conçu pour vous aider à organiser vos visites terrain et à gagner du temps sur vos tournées.
 
 {{need_closing}}
 
-Harold
+Harold, créateur de Easy Way

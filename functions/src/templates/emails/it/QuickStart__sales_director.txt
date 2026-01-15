@@ -4,8 +4,8 @@ Buongiorno{{prenom}},
 
 Felice di averla con noi!
 
-È direttore commerciale, sa cosa significa avere un'agenda piena.
+Easy Way è progettato per aiutarla a organizzare le sue visite sul campo e a risparmiare tempo sui suoi percorsi.
 
 {{need_closing}}
 
-Harold
+Harold, creatore di Easy Way

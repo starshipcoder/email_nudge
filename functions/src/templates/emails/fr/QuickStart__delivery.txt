@@ -8,4 +8,4 @@ Vous êtes livreur, vous savez ce que c'est de jongler entre les adresses et le 
 
 {{need_closing}}
 
-Harold
+Harold, créateur de Easy Way

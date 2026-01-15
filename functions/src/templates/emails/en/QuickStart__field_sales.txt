@@ -4,8 +4,8 @@ Hello{{prenom}},
 
 Great to have you with us!
 
-You're out in the field, you know what it's like to rush between appointments.
+Organizing visits, avoiding unnecessary back-and-forth trips and sticking to your schedule is never easy.
 
 {{need_closing}}
 
-Harold
+Harold, creator of Easy Way
