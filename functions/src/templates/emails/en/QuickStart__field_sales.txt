@@ -1,0 +1,11 @@
+SUBJECT: Welcome to Easy Way!
+
+Hello{{prenom}},
+
+Great to have you with us!
+
+You're out in the field, you know what it's like to rush between appointments.
+
+{{need_closing}}
+
+Harold

@@ -1,0 +1,11 @@
+SUBJECT: Willkommen bei Easy Way!
+
+Hallo{{prenom}},
+
+Schön, dass Sie dabei sind!
+
+Sie sind Vertriebsleiter, Sie wissen, wie es ist, einen vollen Terminkalender zu haben.
+
+{{need_closing}}
+
+Harold

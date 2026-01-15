@@ -1,0 +1,7 @@
+hotel_search: Per aiutarla a trovare il miglior hotel, non è la funzione più evidente nell'app ma i commerciali che la usano sono entusiasti del risparmio di tempo. Se ha qualche problema, mi contatti.
+new_clients: Se ha qualche problema con la prospezione o i suoi percorsi, mi contatti.
+complex_routes: Se ha qualche problema a pianificare i suoi percorsi, mi contatti.
+max_visits: Se ha qualche problema a ottimizzare i suoi percorsi, mi contatti.
+multi_day: Se ha qualche problema a pianificare su più giorni, mi contatti.
+client_tracking: Se ha qualche problema a seguire i suoi clienti, mi contatti.
+default: Se ha qualche problema, mi contatti.

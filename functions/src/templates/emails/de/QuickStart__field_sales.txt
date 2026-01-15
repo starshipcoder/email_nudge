@@ -1,0 +1,11 @@
+SUBJECT: Willkommen bei Easy Way!
+
+Hallo{{prenom}},
+
+Schön, dass Sie dabei sind!
+
+Sie sind im Außendienst, Sie wissen, wie es ist, von Termin zu Termin zu hetzen.
+
+{{need_closing}}
+
+Harold

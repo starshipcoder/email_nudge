@@ -1,0 +1,11 @@
+SUBJECT: Willkommen bei Easy Way!
+
+Hallo{{prenom}},
+
+Schön, dass Sie dabei sind!
+
+Sie sind Techniker, Sie wissen, wie es ist, Einsätze quer durch die Stadt aneinanderzureihen.
+
+{{need_closing}}
+
+Harold

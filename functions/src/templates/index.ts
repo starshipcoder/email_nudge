@@ -153,87 +153,70 @@ Tu peux créer tes tournées sans nous :
 Si c'est autre chose qui t'a bloqué, dis-moi.${SIGNATURE}`
   },
 
-  // QuickStart
+  // QuickStart (by role) - now loaded from separate files
   'QuickStart__delivery': {
-    subject: 'Prêt à optimiser tes livraisons',
-    body: `Hey{{prenom| }},
+    subject: 'Bienvenue sur Easy Way !',
+    body: `Bonjour{{prenom| }},
 
-Bienvenue sur Easy Way !
+Content de vous avoir parmi nous !
 
-Pour démarrer en 2 min :
-1. Ajoute tes adresses de livraison
-2. Clique sur "Optimiser"
-3. C'est parti
+Vous êtes livreur, vous savez ce que c'est de jongler entre les adresses et le temps qui file.
 
-{{#if role == sales_director}}
-💡 Tu peux aussi partager tes tournées avec ton équipe.
-{{/if}}
+Si vous avez le moindre problème, contactez-moi.
 
-Un souci ? Réponds-moi.${SIGNATURE}`
+Harold`
   },
 
-  'QuickStart__prospection': {
-    subject: 'Trouve tes prochains clients',
-    body: `Hey{{prenom| }},
+  'QuickStart__field_sales': {
+    subject: 'Bienvenue sur Easy Way !',
+    body: `Bonjour{{prenom| }},
 
-Bienvenue sur Easy Way !
+Content de vous avoir parmi nous !
 
-Pour démarrer :
-1. Importe tes prospects (CSV ou manuel)
-2. Crée une tournée de prospection
-3. Optimise ton trajet
+Vous êtes sur le terrain, vous savez ce que c'est de courir entre les rendez-vous.
 
-{{#if role == sales_director}}
-💡 Tu peux partager les tournées avec ton équipe.
-{{/if}}
+Si vous avez le moindre problème, contactez-moi.
 
-Besoin d'aide ? Réponds-moi.${SIGNATURE}`
-  },
-
-  'QuickStart__tracking': {
-    subject: 'Tes clients, mieux organisés',
-    body: `Hey{{prenom| }},
-
-Bienvenue sur Easy Way !
-
-Pour démarrer :
-1. Importe tes clients existants
-2. Planifie tes visites
-3. Suis ton historique
-
-{{#if role == sales_director}}
-💡 Tu peux partager les tournées avec ton équipe.
-{{/if}}
-
-Un souci ? Réponds-moi.${SIGNATURE}`
+Harold`
   },
 
   'QuickStart__technician': {
-    subject: 'Tes interventions, optimisées',
-    body: `Hey{{prenom| }},
+    subject: 'Bienvenue sur Easy Way !',
+    body: `Bonjour{{prenom| }},
 
-Bienvenue sur Easy Way !
+Content de vous avoir parmi nous !
 
-Pour démarrer :
-1. Ajoute tes interventions du jour
-2. Optimise ton trajet
-3. Gagne du temps sur la route
+Vous êtes technicien, vous savez ce que c'est d'enchaîner les interventions aux quatre coins de la ville.
 
-Un problème ? Réponds-moi.${SIGNATURE}`
+Si vous avez le moindre problème, contactez-moi.
+
+Harold`
+  },
+
+  'QuickStart__sales_director': {
+    subject: 'Bienvenue sur Easy Way !',
+    body: `Bonjour{{prenom| }},
+
+Content de vous avoir parmi nous !
+
+Vous êtes directeur commercial, vous savez ce que c'est d'avoir un agenda bien rempli.
+
+Si vous avez le moindre problème, contactez-moi.
+
+Harold`
   },
 
   'QuickStart__default': {
-    subject: 'Bienvenue sur Easy Way',
-    body: `Hey{{prenom| }},
+    subject: 'Bienvenue sur Easy Way !',
+    body: `Bonjour{{prenom| }},
 
-Content de t'avoir !
+Content de vous avoir parmi nous !
 
-Pour créer ta première tournée :
-1. Ajoute tes adresses
-2. Clique sur "Optimiser"
-3. C'est parti
+Vous êtes souvent sur la route, vous savez ce que c'est d'optimiser ses déplacements.
 
-Besoin d'aide ? Réponds-moi.${SIGNATURE}`
+Si vous avez le moindre problème, contactez-moi.
+
+Harold`
   },
 
   // NoVisits

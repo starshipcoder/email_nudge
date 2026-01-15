@@ -1,0 +1,7 @@
+hotel_search: Para ayudarle a encontrar el mejor hotel, no es la función más obvia de la app pero los comerciales que la usan están encantados con el ahorro de tiempo. Si tiene algún problema, contácteme.
+new_clients: Si tiene algún problema con la prospección o sus rutas, contácteme.
+complex_routes: Si tiene algún problema para planificar sus rutas, contácteme.
+max_visits: Si tiene algún problema para optimizar sus rutas, contácteme.
+multi_day: Si tiene algún problema para planificar en varios días, contácteme.
+client_tracking: Si tiene algún problema para seguir a sus clientes, contácteme.
+default: Si tiene algún problema, contácteme.

@@ -4,8 +4,8 @@ Hola{{prenom}},
 
 Vi que canceló su suscripción.
 
-No pasa nada — pero me ayudaría entender por qué.
+No pasa nada - pero me ayudaría entender por qué.
 
 Responda en 2 palabras, leo todo.
 
-— Harold, creador de Easy Way
+- Harold, creador de Easy Way

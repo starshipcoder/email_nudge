@@ -1,0 +1,11 @@
+SUBJECT: Benvenuto su Easy Way!
+
+Buongiorno{{prenom}},
+
+Felice di averla con noi!
+
+È sul campo, sa cosa significa correre da un appuntamento all'altro.
+
+{{need_closing}}
+
+Harold

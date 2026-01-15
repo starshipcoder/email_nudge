@@ -88,14 +88,9 @@ describe('resolveSegment - QuickStart', () => {
     expect(resolveSegment('QuickStart', user)).toBe('QuickStart__delivery')
   })
 
-  it('returns prospection segment for new_clients need', () => {
-    const user = createUser({ needs: ['new_clients'] })
-    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__prospection')
-  })
-
-  it('returns tracking segment for client_tracking need', () => {
-    const user = createUser({ needs: ['client_tracking'] })
-    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__tracking')
+  it('returns field_sales segment for field_sales role', () => {
+    const user = createUser({ role: 'field_sales' })
+    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__field_sales')
   })
 
   it('returns technician segment for technician role', () => {
@@ -103,9 +98,14 @@ describe('resolveSegment - QuickStart', () => {
     expect(resolveSegment('QuickStart', user)).toBe('QuickStart__technician')
   })
 
-  it('prioritizes delivery role over need', () => {
-    const user = createUser({ role: 'delivery', needs: ['new_clients'] })
-    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__delivery')
+  it('returns sales_director segment for sales_director role', () => {
+    const user = createUser({ role: 'sales_director' })
+    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__sales_director')
+  })
+
+  it('returns default segment for other role', () => {
+    const user = createUser({ role: 'other' })
+    expect(resolveSegment('QuickStart', user)).toBe('QuickStart__default')
   })
 })
 

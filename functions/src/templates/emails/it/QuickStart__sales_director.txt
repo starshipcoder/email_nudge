@@ -1,0 +1,11 @@
+SUBJECT: Benvenuto su Easy Way!
+
+Buongiorno{{prenom}},
+
+Felice di averla con noi!
+
+È direttore commerciale, sa cosa significa avere un'agenda piena.
+
+{{need_closing}}
+
+Harold

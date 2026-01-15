@@ -68,11 +68,11 @@ export type Segment =
   | 'WhatsMissing__default'
   // FreeOptions
   | 'FreeOptions'
-  // QuickStart
+  // QuickStart (by role)
   | 'QuickStart__delivery'
-  | 'QuickStart__prospection'
-  | 'QuickStart__tracking'
+  | 'QuickStart__field_sales'
   | 'QuickStart__technician'
+  | 'QuickStart__sales_director'
   | 'QuickStart__default'
   // NoVisits
   | 'NoVisits'

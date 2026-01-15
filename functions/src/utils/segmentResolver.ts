@@ -54,11 +54,11 @@ function resolveWhatsMissing(user: User): Segment {
 }
 
 function resolveQuickStart(user: User): Segment {
-  // Priority: role=delivery > need > role > default
+  // Based on role
   if (user.role === 'delivery') return 'QuickStart__delivery'
-  if (hasNeed(user, 'new_clients')) return 'QuickStart__prospection'
-  if (hasNeed(user, 'client_tracking')) return 'QuickStart__tracking'
+  if (user.role === 'field_sales') return 'QuickStart__field_sales'
   if (user.role === 'technician') return 'QuickStart__technician'
+  if (user.role === 'sales_director') return 'QuickStart__sales_director'
   return 'QuickStart__default'
 }
 

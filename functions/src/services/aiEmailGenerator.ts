@@ -15,21 +15,17 @@ function getAnthropic(): Anthropic {
 }
 
 // Contexte et objectif par type d'email (uniquement pour emails générés par IA)
-type AIEmailName = 'WhatsMissing' | 'QuickStart'
+type AIEmailName = 'WhatsMissing'
 
 const EMAIL_CONFIG: Record<AIEmailName, { context: string; goal: string }> = {
   WhatsMissing: {
     context: "L'utilisateur a commencé l'onboarding mais l'a abandonné sans finir.",
     goal: "Comprendre ce qui lui a manqué ou bloqué. Proposer de l'aide."
-  },
-  QuickStart: {
-    context: "L'utilisateur vient de commencer son essai gratuit.",
-    goal: "L'aider à démarrer rapidement. Donner 1-2 conseils pratiques selon son métier."
   }
 }
 
 // Emails qui utilisent l'IA
-const AI_EMAILS: EmailName[] = ['WhatsMissing', 'QuickStart']
+const AI_EMAILS: EmailName[] = ['WhatsMissing']
 
 function isAIEmail(emailName: EmailName): emailName is AIEmailName {
   return AI_EMAILS.includes(emailName)
@@ -230,15 +226,17 @@ export async function generateEmail(
   const locale = user.locale || 'fr'
   const segment = resolveSegment(emailName, user)
 
-  // Use template for simple emails
+  // Use template for simple emails and QuickStart
   if (isTemplateSegment(segment)) {
     const firstName = getFirstName(user)
+    const primaryNeed = user.needs?.[0] || null
     return renderEmailTemplate(segment, locale, {
-      prenom: firstName || undefined
+      prenom: firstName || undefined,
+      primaryNeed
     })
   }
 
-  // Use AI for WhatsMissing and QuickStart
+  // Use AI for WhatsMissing only
   if (!isAIEmail(emailName)) {
     throw new Error(`No template or AI config for email: ${emailName}`)
   }

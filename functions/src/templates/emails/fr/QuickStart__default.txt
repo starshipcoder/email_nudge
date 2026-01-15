@@ -1,0 +1,11 @@
+SUBJECT: Bienvenue sur Easy Way !
+
+Bonjour{{prenom}},
+
+Content de vous avoir parmi nous !
+
+Vous êtes souvent sur la route, vous savez ce que c'est d'optimiser ses déplacements.
+
+{{need_closing}}
+
+Harold

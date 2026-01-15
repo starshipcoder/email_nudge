@@ -1,0 +1,7 @@
+hotel_search: Pour vous aider à trouver le meilleur hotel, c'est pas le plus évident dans l'application mais les commerciaux qui l'utilisent sont ravi du gain de temps, si vous avez le moindre problème, contactez-moi. 
+new_clients: Si vous avez le moindre problème avec la prospection ou vos tournées, contactez-moi.
+complex_routes: Si vous avez le moindre problème pour planifier vos tournées, contactez-moi.
+max_visits: Si vous avez le moindre problème pour optimiser vos tournées, contactez-moi.
+multi_day: Si vous avez le moindre problème pour planifier sur plusieurs jours, contactez-moi.
+client_tracking: Si vous avez le moindre problème pour suivre vos clients, contactez-moi.
+default: Si vous avez le moindre problème, contactez-moi.

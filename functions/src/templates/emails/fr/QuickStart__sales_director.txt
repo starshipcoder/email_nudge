@@ -1,0 +1,11 @@
+SUBJECT: Bienvenue sur Easy Way !
+
+Bonjour{{prenom}},
+
+Content de vous avoir parmi nous !
+
+Vous êtes directeur commercial, vous savez ce que c'est d'avoir un agenda bien rempli.
+
+{{need_closing}}
+
+Harold

@@ -1,0 +1,7 @@
+hotel_search: Um Ihnen zu helfen, das beste Hotel zu finden - es ist nicht die offensichtlichste Funktion in der App, aber Vertriebler, die sie nutzen, lieben die Zeitersparnis. Bei Problemen kontaktieren Sie mich.
+new_clients: Bei Problemen mit der Akquise oder Ihren Routen, kontaktieren Sie mich.
+complex_routes: Bei Problemen mit der Routenplanung, kontaktieren Sie mich.
+max_visits: Bei Problemen mit der Optimierung Ihrer Routen, kontaktieren Sie mich.
+multi_day: Bei Problemen mit der mehrtägigen Planung, kontaktieren Sie mich.
+client_tracking: Bei Problemen mit der Kundenverfolgung, kontaktieren Sie mich.
+default: Bei Problemen, kontaktieren Sie mich.

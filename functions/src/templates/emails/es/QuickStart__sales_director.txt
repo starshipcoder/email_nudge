@@ -1,0 +1,11 @@
+SUBJECT: ¡Bienvenido a Easy Way!
+
+Hola{{prenom}},
+
+¡Encantado de tenerle con nosotros!
+
+Es director comercial, sabe lo que es tener una agenda llena.
+
+{{need_closing}}
+
+Harold

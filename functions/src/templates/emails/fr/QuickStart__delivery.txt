@@ -1,0 +1,11 @@
+SUBJECT: Bienvenue sur Easy Way !
+
+Bonjour{{prenom}},
+
+Content de vous avoir parmi nous !
+
+Vous êtes livreur, vous savez ce que c'est de jongler entre les adresses et le temps qui file.
+
+{{need_closing}}
+
+Harold

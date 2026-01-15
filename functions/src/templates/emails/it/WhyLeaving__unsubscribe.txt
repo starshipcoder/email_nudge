@@ -4,8 +4,8 @@ Buongiorno{{prenom}},
 
 Ho visto che ha cancellato il suo abbonamento.
 
-Nessun problema — ma mi aiuterebbe capire perché.
+Nessun problema - ma mi aiuterebbe capire perché.
 
 Mi risponda in 2 parole, leggo tutto.
 
-— Harold, creatore di Easy Way
+- Harold, creatore di Easy Way

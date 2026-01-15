@@ -8,4 +8,4 @@ Hola{{prenom}},
 
 ¿Necesita ayuda? Respóndame.
 
-— Harold, creador de Easy Way
+- Harold, creador de Easy Way

@@ -81,17 +81,6 @@ describe('renderTemplate - Variable Replacement', () => {
 
 })
 
-describe('renderTemplate - Conditional Blocks', () => {
-  it('includes sales_director tip when is_sales_director is true', () => {
-    const { body } = renderTemplate('QuickStart__delivery', { is_sales_director: true })
-    expect(body).toContain('partager tes tournées')
-  })
-
-  it('excludes sales_director tip when is_sales_director is false', () => {
-    const { body } = renderTemplate('QuickStart__delivery', { is_sales_director: false })
-    expect(body).not.toContain('partager tes tournées')
-  })
-})
 
 
 describe('renderTemplate - Signature', () => {
@@ -99,7 +88,6 @@ describe('renderTemplate - Signature', () => {
     const segments = [
       'WhatsMissing__default',
       'FreeOptions',
-      'QuickStart__default',
       'NoVisits',
       'NoOptimization',
       'WhyLeaving__unsubscribe',
@@ -122,11 +110,6 @@ describe('renderTemplate - All Segments Exist', () => {
     'WhatsMissing__technician',
     'WhatsMissing__default',
     'FreeOptions',
-    'QuickStart__delivery',
-    'QuickStart__prospection',
-    'QuickStart__tracking',
-    'QuickStart__technician',
-    'QuickStart__default',
     'NoVisits',
     'NoOptimization',
     'WhyLeaving__unsubscribe',

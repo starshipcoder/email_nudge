@@ -1,0 +1,11 @@
+SUBJECT: Benvenuto su Easy Way!
+
+Buongiorno{{prenom}},
+
+Felice di averla con noi!
+
+È un tecnico, sa cosa significa concatenare interventi in giro per la città.
+
+{{need_closing}}
+
+Harold

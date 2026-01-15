@@ -1,0 +1,7 @@
+hotel_search: To help you find the best hotel, it's not the most obvious feature in the app but sales reps who use it love the time savings. If you have any trouble, contact me.
+new_clients: If you have any trouble with prospecting or your routes, contact me.
+complex_routes: If you have any trouble planning your routes, contact me.
+max_visits: If you have any trouble optimizing your routes, contact me.
+multi_day: If you have any trouble planning over multiple days, contact me.
+client_tracking: If you have any trouble tracking your clients, contact me.
+default: If you have any trouble, contact me.

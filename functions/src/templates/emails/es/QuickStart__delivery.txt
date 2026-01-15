@@ -1,0 +1,11 @@
+SUBJECT: ¡Bienvenido a Easy Way!
+
+Hola{{prenom}},
+
+¡Encantado de tenerle con nosotros!
+
+Es repartidor, sabe lo que es hacer malabarismos con las direcciones y el tiempo que vuela.
+
+{{need_closing}}
+
+Harold
