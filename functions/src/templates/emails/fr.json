@@ -1,7 +1,7 @@
 {
   "FreeOptions": {
     "subject": "3 façons gratuites de créer vos tournées",
-    "body": "Bonjour{{prenom}},\n\nPas de souci si vous n'avez pas pris l'essai.\n\nVous pouvez créer vos tournées sans nous :\n• Google Maps → limité à 10 stops\n• Excel + copier-coller → ça marche, mais long\n• Autres apps → souvent payantes aussi\n\nSi c'est autre chose qui vous a bloqué, dites-moi.\n\n— Harold, créateur de Easy Way"
+    "body": "Bonjour{{prenom}},\n\nPas de souci si vous n'avez pas pris l'essai.\n\nVous pouvez créer vos tournées sans nous :\n• MapQuest Route Planner → jusqu'à 26 stops (https://www.mapquest.com/routeplanner)\n• RouteXL → jusqu'à 20 stops (https://www.routexl.com/)\n• Google My Maps → pour mapper votre territoire (https://www.google.com/maps/d/)\n\nSi c'est autre chose qui vous a bloqué, dites-moi.\n\n— Harold, créateur de Easy Way"
   },
   "NoVisits": {
     "subject": "Besoin d'un coup de main ?",

@@ -1,7 +1,7 @@
 {
   "FreeOptions": {
     "subject": "3 free ways to create your routes",
-    "body": "Hello{{prenom}},\n\nNo worries if you didn't start the trial.\n\nYou can create your routes without us:\n• Google Maps → limited to 10 stops\n• Excel + copy-paste → works, but slow\n• Other apps → often paid too\n\nIf something else blocked you, let me know.\n\n— Harold, creator of Easy Way"
+    "body": "Hello{{prenom}},\n\nNo worries if you didn't start the trial.\n\nYou can create your routes without us:\n• MapQuest Route Planner → up to 26 stops (https://www.mapquest.com/routeplanner)\n• RouteXL → up to 20 stops (https://www.routexl.com/)\n• Google My Maps → to map your territory (https://www.google.com/maps/d/)\n\nIf something else blocked you, let me know.\n\n— Harold, creator of Easy Way"
   },
   "NoVisits": {
     "subject": "Need a hand?",

@@ -1,7 +1,7 @@
 {
   "FreeOptions": {
     "subject": "3 kostenlose Wege, Ihre Routen zu erstellen",
-    "body": "Hallo{{prenom}},\n\nKein Problem, wenn Sie die Testversion nicht gestartet haben.\n\nSie können Ihre Routen auch ohne uns erstellen:\n• Google Maps → auf 10 Stopps begrenzt\n• Excel + Copy-Paste → funktioniert, aber langsam\n• Andere Apps → oft auch kostenpflichtig\n\nWenn Sie etwas anderes blockiert hat, sagen Sie mir Bescheid.\n\n— Harold, Gründer von Easy Way"
+    "body": "Hallo{{prenom}},\n\nKein Problem, wenn Sie die Testversion nicht gestartet haben.\n\nSie können Ihre Routen auch ohne uns erstellen:\n• MapQuest Route Planner → bis zu 26 Stopps (https://www.mapquest.com/routeplanner)\n• RouteXL → bis zu 20 Stopps (https://www.routexl.com/)\n• Google My Maps → um Ihr Gebiet zu kartieren (https://www.google.com/maps/d/)\n\nWenn Sie etwas anderes blockiert hat, sagen Sie mir Bescheid.\n\n— Harold, Gründer von Easy Way"
   },
   "NoVisits": {
     "subject": "Brauchen Sie Hilfe?",

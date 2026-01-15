@@ -1,7 +1,7 @@
 {
   "FreeOptions": {
     "subject": "3 formas gratuitas de crear sus rutas",
-    "body": "Hola{{prenom}},\n\nNo pasa nada si no empezó la prueba.\n\nPuede crear sus rutas sin nosotros:\n• Google Maps → limitado a 10 paradas\n• Excel + copiar-pegar → funciona, pero lento\n• Otras apps → a menudo de pago también\n\nSi algo más le bloqueó, dígamelo.\n\n— Harold, creador de Easy Way"
+    "body": "Hola{{prenom}},\n\nNo pasa nada si no empezó la prueba.\n\nPuede crear sus rutas sin nosotros:\n• MapQuest Route Planner → hasta 26 paradas (https://www.mapquest.com/routeplanner)\n• RouteXL → hasta 20 paradas (https://www.routexl.com/)\n• Google My Maps → para mapear su territorio (https://www.google.com/maps/d/)\n\nSi algo más le bloqueó, dígamelo.\n\n— Harold, creador de Easy Way"
   },
   "NoVisits": {
     "subject": "¿Necesita ayuda?",
