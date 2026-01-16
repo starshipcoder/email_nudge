@@ -1,7 +1,30 @@
 import { onRequest } from 'firebase-functions/v2/https'
+import { defineSecret } from 'firebase-functions/params'
 import { db } from '../index'
 import { Role, Need, Locale } from '../types'
 import { FieldValue } from 'firebase-admin/firestore'
+
+// API Key for mobile app authentication
+export const EMAIL_NUDGE_API_KEY = defineSecret('EMAIL_NUDGE_API_KEY')
+
+/**
+ * Verify API key from request header
+ */
+function verifyApiKey(req: any, res: any): boolean {
+  const apiKey = req.headers['x-api-key']
+
+  if (!apiKey) {
+    res.status(401).json({ error: 'Missing X-API-Key header' })
+    return false
+  }
+
+  if (apiKey !== EMAIL_NUDGE_API_KEY.value()) {
+    res.status(403).json({ error: 'Invalid API key' })
+    return false
+  }
+
+  return true
+}
 
 // Valid values for validation
 const VALID_ROLES: Role[] = ['delivery', 'field_sales', 'technician', 'sales_director', 'other']
@@ -37,8 +60,11 @@ interface SyncUserRequest {
  * Body: { revenuecat_id: "...", ... }
  */
 export const syncUser = onRequest(
-  { cors: true },
+  { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
   async (req, res) => {
+    // Verify API key
+    if (!verifyApiKey(req, res)) return
+
     // Only accept POST
     if (req.method !== 'POST') {
       res.status(405).json({ error: 'Method not allowed', allowedMethods: ['POST'] })
@@ -217,8 +243,11 @@ export const syncUser = onRequest(
  * GET /getUser?userId=xxx
  */
 export const getUser = onRequest(
-  { cors: true },
+  { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
   async (req, res) => {
+    // Verify API key
+    if (!verifyApiKey(req, res)) return
+
     const userId = req.query.userId as string
 
     if (!userId) {
