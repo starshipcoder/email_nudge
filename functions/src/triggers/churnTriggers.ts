@@ -7,7 +7,12 @@ import { db } from '../index'
  * Trigger: User churns (detected via Firestore update)
  * Action: Schedule WhyLeaving email (30min)
  */
-export const onUserChurned = onDocumentUpdated('users/{userId}', async (event) => {
+export const onUserChurned = onDocumentUpdated(
+  {
+    document: 'users/{userId}',
+    database: 'email-nudge'
+  },
+  async (event) => {
   const before = event.data?.before.data()
   const after = event.data?.after.data()
   const userId = event.params.userId

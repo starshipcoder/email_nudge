@@ -28,6 +28,214 @@ function verifyApiKey(req: any, res: any): boolean {
 
 // Valid values for validation
 const VALID_ROLES: Role[] = ['delivery', 'field_sales', 'technician', 'sales_director', 'other']
+
+// Email delays in milliseconds (production)
+const EMAIL_DELAYS: Record<string, number> = {
+  WhatsMissing: 60 * 60 * 1000,        // 1 hour after onboarding_started_at
+  FreeOptions: 10 * 60 * 1000,          // 10 minutes after paywall_blocked
+  QuickStart: 0,                         // Immediate after paywall_passed
+  NoVisits: 24 * 60 * 60 * 1000,        // 24 hours after paywall_passed
+  NoOptimization: 48 * 60 * 60 * 1000,  // 48 hours after first visit
+  WhyLeaving: 30 * 60 * 1000            // 30 minutes after churn
+}
+
+// Delays for test users (all ~5 seconds)
+const TEST_EMAIL_DELAYS: Record<string, number> = {
+  WhatsMissing: 5 * 1000,      // 5 seconds
+  FreeOptions: 5 * 1000,       // 5 seconds
+  QuickStart: 0,               // Immediate
+  NoVisits: 5 * 1000,          // 5 seconds
+  NoOptimization: 5 * 1000,    // 5 seconds
+  WhyLeaving: 5 * 1000         // 5 seconds
+}
+
+function getDelay(emailName: string, isTestUser: boolean): number {
+  if (isTestUser) {
+    return TEST_EMAIL_DELAYS[emailName] || 0
+  }
+  return EMAIL_DELAYS[emailName] || 0
+}
+
+interface UserStatus {
+  current_stage: string
+  next_email: string | null
+  next_email_reason: string | null
+  next_email_at: string | null
+  blockers: string[]
+  is_test_user: boolean
+}
+
+/**
+ * Compute user status and next expected email
+ */
+function computeUserStatus(userData: Record<string, any>): UserStatus {
+  const isTestUser = userData.is_test_user === true
+  const blockers: string[] = []
+
+  // Check kill switches
+  if (userData.has_replied) {
+    blockers.push('has_replied: true (kill switch active)')
+  }
+  if (!userData.email) {
+    blockers.push('email: missing')
+  }
+
+  // If blocked, no emails will be sent
+  if (blockers.length > 0) {
+    return {
+      current_stage: 'blocked',
+      next_email: null,
+      next_email_reason: null,
+      next_email_at: null,
+      blockers,
+      is_test_user: isTestUser
+    }
+  }
+
+  // Determine current stage and next email
+
+  // Stage 1: Onboarding not complete
+  if (!userData.onboarding_complete) {
+    const startedAt = userData.onboarding_started_at?.toDate?.()?.getTime() ||
+                      userData.onboarding_started_at?.getTime?.() ||
+                      (userData.onboarding_started_at ? new Date(userData.onboarding_started_at).getTime() : null)
+
+    if (!startedAt) {
+      return {
+        current_stage: 'waiting_onboarding_start',
+        next_email: 'WhatsMissing',
+        next_email_reason: 'Waiting for onboarding_started_at to be set',
+        next_email_at: null,
+        blockers: [],
+        is_test_user: isTestUser
+      }
+    }
+
+    if (!userData.onboarding_dropped) {
+      const delay = getDelay('WhatsMissing', isTestUser)
+      const sendAt = new Date(startedAt + delay)
+      return {
+        current_stage: 'onboarding_in_progress',
+        next_email: 'WhatsMissing',
+        next_email_reason: `onboarding_started_at: ${new Date(startedAt).toISOString()}, onboarding_complete: false`,
+        next_email_at: sendAt.toISOString(),
+        blockers: [],
+        is_test_user: isTestUser
+      }
+    }
+
+    // Already dropped, WhatsMissing should be queued/sent
+    return {
+      current_stage: 'onboarding_dropped',
+      next_email: null,
+      next_email_reason: 'WhatsMissing already scheduled/sent',
+      next_email_at: null,
+      blockers: [],
+      is_test_user: isTestUser
+    }
+  }
+
+  // Stage 2: Onboarding complete, paywall decision pending
+  if (!userData.paywall_passed && !userData.paywall_blocked) {
+    return {
+      current_stage: 'paywall_pending',
+      next_email: null,
+      next_email_reason: 'Waiting for paywall_passed or paywall_blocked',
+      next_email_at: null,
+      blockers: [],
+      is_test_user: isTestUser
+    }
+  }
+
+  // Stage 2a: Paywall blocked (didn't start trial)
+  if (userData.paywall_blocked && !userData.paywall_passed) {
+    const delayMs = getDelay('FreeOptions', isTestUser)
+    const delayStr = isTestUser ? `${Math.round(delayMs / 1000)}s` : '10min'
+    return {
+      current_stage: 'paywall_blocked',
+      next_email: 'FreeOptions',
+      next_email_reason: 'paywall_blocked: true, paywall_passed: false',
+      next_email_at: `immediate (${delayStr} delay)`,
+      blockers: [],
+      is_test_user: isTestUser
+    }
+  }
+
+  // Stage 3: Paywall passed (trial/subscription started)
+  if (userData.paywall_passed) {
+    // QuickStart sent immediately
+
+    // Check engagement
+    if (!userData.has_added_visits) {
+      const delayMs = getDelay('NoVisits', isTestUser)
+      const delayStr = isTestUser ? `~${Math.round(delayMs / 60000)}min` : '24h'
+      return {
+        current_stage: 'trial_no_visits',
+        next_email: 'NoVisits',
+        next_email_reason: 'paywall_passed: true, has_added_visits: false',
+        next_email_at: `${delayStr} after paywall_passed`,
+        blockers: [],
+        is_test_user: isTestUser
+      }
+    }
+
+    if (!userData.has_optimized_route) {
+      const delayMs = getDelay('NoOptimization', isTestUser)
+      const delayStr = isTestUser ? `~${Math.round(delayMs / 60000)}min` : '48h'
+      return {
+        current_stage: 'trial_no_optimization',
+        next_email: 'NoOptimization',
+        next_email_reason: 'has_added_visits: true, has_optimized_route: false',
+        next_email_at: `${delayStr} after first visit`,
+        blockers: [],
+        is_test_user: isTestUser
+      }
+    }
+
+    // Engaged user
+    return {
+      current_stage: 'engaged',
+      next_email: null,
+      next_email_reason: 'User is engaged (has visits + optimized route)',
+      next_email_at: null,
+      blockers: [],
+      is_test_user: isTestUser
+    }
+  }
+
+  // Churned user
+  if (userData.churned_at) {
+    if (userData.email_whyleaving_sent) {
+      return {
+        current_stage: 'churned',
+        next_email: null,
+        next_email_reason: 'WhyLeaving already sent',
+        next_email_at: null,
+        blockers: [],
+        is_test_user: isTestUser
+      }
+    }
+    const delayMs = getDelay('WhyLeaving', isTestUser)
+    const delayStr = isTestUser ? `${Math.round(delayMs / 1000)}s` : '30min'
+    return {
+      current_stage: 'churned',
+      next_email: 'WhyLeaving',
+      next_email_reason: 'churned_at is set, email_whyleaving_sent: false',
+      next_email_at: `${delayStr} after churn`,
+      blockers: [],
+      is_test_user: isTestUser
+    }
+  }
+
+  return {
+    current_stage: 'unknown',
+    next_email: null,
+    next_email_reason: null,
+    next_email_at: null,
+    blockers: [],
+    is_test_user: isTestUser
+  }
+}
 const VALID_NEEDS: Need[] = ['hotel_search', 'new_clients', 'complex_routes', 'max_visits', 'multi_day', 'client_tracking']
 const VALID_LOCALES: Locale[] = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl']
 const VALID_PLANS = ['free', 'trial', 'monthly', 'yearly']
@@ -42,7 +250,6 @@ interface SyncUserRequest {
   onboarding_started_at?: string
   onboarding_complete?: boolean
   onboarding_completed_at?: string
-  paywall_blocked?: boolean
   paywall_passed?: boolean
   visit_added?: boolean
   has_optimized_route?: boolean
@@ -52,6 +259,8 @@ interface SyncUserRequest {
   trial_end_date?: string
   plan?: string
   is_test_user?: boolean
+  dry_run?: boolean
+  has_replied?: boolean
 }
 
 /**
@@ -141,9 +350,10 @@ export const syncUser = onRequest(
       }
 
       // Boolean fields
+      // Note: paywall_blocked is calculated by backend (cron), not sent by app
       const booleanFields = [
-        'onboarding_complete', 'paywall_blocked', 'paywall_passed',
-        'has_optimized_route', 'subscription_active', 'trial_active', 'is_test_user'
+        'onboarding_complete', 'paywall_passed',
+        'has_optimized_route', 'subscription_active', 'trial_active', 'is_test_user', 'dry_run', 'has_replied'
       ] as const
 
       for (const field of booleanFields) {
@@ -287,6 +497,148 @@ export const getUser = onRequest(
       console.error(`[getUser] Error:`, error)
       res.status(500).json({
         error: 'Failed to get user',
+        details: String(error)
+      })
+    }
+  }
+)
+
+/**
+ * Get user status (for debugging/monitoring)
+ * GET /getStatus?userId=xxx
+ */
+export const getStatus = onRequest(
+  { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
+  async (req, res) => {
+    // Verify API key
+    if (!verifyApiKey(req, res)) return
+
+    const userId = req.query.userId as string
+
+    if (!userId) {
+      res.status(400).json({
+        error: 'Missing userId parameter',
+        usage: '/getStatus?userId=xxx'
+      })
+      return
+    }
+
+    try {
+      const userDoc = await db.collection('users').doc(userId).get()
+
+      if (!userDoc.exists) {
+        res.status(404).json({ error: `User ${userId} not found` })
+        return
+      }
+
+      const userData = userDoc.data()!
+
+      // Compute status
+      const status = computeUserStatus(userData)
+
+      // Get pending emails from queue
+      const queueSnapshot = await db
+        .collection('email_queue')
+        .where('user_id', '==', userId)
+        .get()
+
+      const pendingEmails = queueSnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          email_name: data.email_name,
+          segment: data.segment,
+          send_at: data.send_at?.toDate?.() ? data.send_at.toDate().toISOString() : data.send_at
+        }
+      })
+
+      // Get recent email logs
+      const logsSnapshot = await db
+        .collection('email_logs')
+        .where('user_id', '==', userId)
+        .orderBy('scheduled_at', 'desc')
+        .limit(10)
+        .get()
+
+      const recentEmails = logsSnapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          email_name: data.email_name,
+          segment: data.segment,
+          status: data.status,
+          scheduled_at: data.scheduled_at?.toDate?.() ? data.scheduled_at.toDate().toISOString() : data.scheduled_at,
+          sent_at: data.sent_at?.toDate?.() ? data.sent_at.toDate().toISOString() : data.sent_at,
+          blocked_reason: data.blocked_reason
+        }
+      })
+
+      res.json({
+        success: true,
+        userId,
+        status,
+        pending_emails: pendingEmails,
+        recent_emails: recentEmails,
+        user_data: {
+          email: userData.email,
+          first_name: userData.first_name,
+          role: userData.role,
+          locale: userData.locale,
+          onboarding_complete: userData.onboarding_complete,
+          onboarding_dropped: userData.onboarding_dropped,
+          paywall_blocked: userData.paywall_blocked,
+          paywall_passed: userData.paywall_passed,
+          has_added_visits: userData.has_added_visits,
+          has_optimized_route: userData.has_optimized_route,
+          has_replied: userData.has_replied,
+          is_test_user: userData.is_test_user
+        }
+      })
+    } catch (error) {
+      console.error(`[getStatus] Error:`, error)
+      res.status(500).json({
+        error: 'Failed to get status',
+        details: String(error)
+      })
+    }
+  }
+)
+
+/**
+ * Get all emails in the queue (for debugging)
+ * GET /getQueue
+ */
+export const getQueue = onRequest(
+  { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
+  async (req, res) => {
+    // Verify API key
+    if (!verifyApiKey(req, res)) return
+
+    try {
+      const snapshot = await db
+        .collection('email_queue')
+        .orderBy('send_at', 'asc')
+        .get()
+
+      const queue = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          user_id: data.user_id,
+          email_name: data.email_name,
+          segment: data.segment,
+          send_at: data.send_at?.toDate?.() ? data.send_at.toDate().toISOString() : data.send_at,
+          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at
+        }
+      })
+
+      res.json({
+        success: true,
+        count: queue.length,
+        queue
+      })
+    } catch (error) {
+      console.error(`[getQueue] Error:`, error)
+      res.status(500).json({
+        error: 'Failed to get queue',
         details: String(error)
       })
     }

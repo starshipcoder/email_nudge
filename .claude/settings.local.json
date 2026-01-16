@@ -15,7 +15,8 @@
       "Bash(firebase deploy:*)",
       "Bash(firebase login:*)",
       "Bash(find:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(firebase functions:log:*)"
     ],
     "deny": [],
     "ask": []

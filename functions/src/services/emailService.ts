@@ -47,6 +47,13 @@ function getRecipient(user: { email: string; is_test_user?: boolean }): string {
   return user.email
 }
 
+/**
+ * Check if user is in dry_run mode (no emails sent, just logged)
+ */
+function isDryRun(user: { dry_run?: boolean }): boolean {
+  return user.dry_run === true
+}
+
 function getDebugFooter(user: User): string {
   if (getEnv() !== 'dev') return ''
 
@@ -66,7 +73,7 @@ Has optimized route: ${user.has_optimized_route}
 `
 }
 
-// Delays in milliseconds
+// Delays in milliseconds (production)
 const DELAYS: Record<EmailName, number> = {
   WhatsMissing: 60 * 60 * 1000,        // 1 hour
   FreeOptions: 10 * 60 * 1000,          // 10 minutes
@@ -76,8 +83,15 @@ const DELAYS: Record<EmailName, number> = {
   WhyLeaving: 30 * 60 * 1000            // 30 minutes
 }
 
-// Test user time multiplier (1 hour -> 36 seconds)
-const TEST_TIME_MULTIPLIER = 0.01
+// Delays for test users (all ~5 seconds)
+const TEST_DELAYS: Record<EmailName, number> = {
+  WhatsMissing: 5 * 1000,      // 5 seconds
+  FreeOptions: 5 * 1000,       // 5 seconds
+  QuickStart: 0,               // Immediate
+  NoVisits: 5 * 1000,          // 5 seconds
+  NoOptimization: 5 * 1000,    // 5 seconds
+  WhyLeaving: 5 * 1000         // 5 seconds
+}
 
 /**
  * Schedule an email to be sent later
@@ -106,11 +120,8 @@ export async function scheduleEmail(
   // Resolve segment
   const segment = resolveSegment(emailName, user)
 
-  // Calculate send time
-  let delay = DELAYS[emailName]
-  if (user.is_test_user) {
-    delay = delay * TEST_TIME_MULTIPLIER
-  }
+  // Calculate send time (use TEST_DELAYS for test users)
+  const delay = user.is_test_user ? TEST_DELAYS[emailName] : DELAYS[emailName]
   const sendAt = new Date(Date.now() + delay)
 
   // Add to queue
@@ -157,6 +168,14 @@ export async function sendEmailNow(
   const segment = resolveSegment(emailName, user)
   const { subject, body } = generateEmail(user, emailName)
   const fullBody = body + getDebugFooter(user)
+
+  // Check dry_run mode
+  if (isDryRun(user)) {
+    await logEmail(userId, emailName, 'dry_run', 'dry_run mode enabled', segment)
+    console.log(`[DRY_RUN] Would send ${emailName} (${segment}) to ${user.email}`)
+    console.log(`[DRY_RUN] Subject: ${subject}`)
+    return
+  }
 
   // Send via Resend
   try {
@@ -215,9 +234,20 @@ export async function processEmailQueue(): Promise<void> {
         continue
       }
 
-      // Generate email and send
+      // Generate email
       const { subject, body } = generateEmail(user, item.email_name)
       const fullBody = body + getDebugFooter(user)
+
+      // Check dry_run mode
+      if (isDryRun(user)) {
+        await logEmail(item.user_id, item.email_name, 'dry_run', 'dry_run mode enabled', item.segment)
+        console.log(`[DRY_RUN] Would send queued ${item.email_name} (${item.segment}) to ${user.email}`)
+        console.log(`[DRY_RUN] Subject: ${subject}`)
+        await doc.ref.delete()
+        continue
+      }
+
+      // Send via Resend
       const toEmail = getRecipient(user)
 
       await getResend().emails.send({

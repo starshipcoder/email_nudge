@@ -14,21 +14,34 @@ export const checkOnboardingDropped = onSchedule(
   async () => {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
 
-    // Find users who:
-    // - Started onboarding > 1h ago
-    // - Haven't completed onboarding
-    // - Haven't been marked as dropped yet
+    // Find users who haven't completed onboarding and aren't dropped yet
+    // Filter by time in memory to avoid composite index requirement
     const snapshot = await db
       .collection('users')
-      .where('onboarding_started_at', '<=', oneHourAgo)
       .where('onboarding_complete', '==', false)
       .where('onboarding_dropped', '==', false)
       .get()
 
-    console.log(`Found ${snapshot.docs.length} users with abandoned onboarding`)
+    // Filter by onboarding_started_at in memory
+    const usersToProcess = snapshot.docs.filter(doc => {
+      const data = doc.data()
+      const startedAt = data.onboarding_started_at?.toDate?.()?.getTime() ||
+                        data.onboarding_started_at?.getTime?.() ||
+                        (data.onboarding_started_at ? new Date(data.onboarding_started_at).getTime() : null)
+      return startedAt && startedAt <= oneHourAgo.getTime()
+    })
 
-    for (const doc of snapshot.docs) {
+    console.log(`Found ${usersToProcess.length} users with abandoned onboarding`)
+
+    for (const doc of usersToProcess) {
       const userId = doc.id
+      const userData = doc.data()
+
+      // Skip if user has kill switch active
+      if (userData.has_replied) {
+        console.log(`User ${userId} skipped (has_replied)`)
+        continue
+      }
 
       // Mark as dropped
       await db.collection('users').doc(userId).update({

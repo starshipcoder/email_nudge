@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Système d'emails automatisés pour Easy Way, basé sur le comportement utilisateur. Les emails sont générés par IA (Claude Haiku) et personnalisés selon le profil utilisateur.
+Système d'emails automatisés pour Easy Way, basé sur le comportement utilisateur. Les emails utilisent des templates personnalisés selon le profil utilisateur.
 
 **Objectifs :**
 - Collecter du feedback (pas juste relancer)
@@ -16,45 +16,149 @@ Système d'emails automatisés pour Easy Way, basé sur le comportement utilisat
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
-│   App iOS   │────▶│  Firestore       │────▶│  Cloud      │
-│   /Android  │     │  (email-nudge)   │     │  Functions  │
+│   App iOS   │────▶│  Cloud Functions │────▶│  Firestore  │
+│   /Android  │     │  (API HTTP)      │     │ (email-nudge)│
 └─────────────┘     └──────────────────┘     └──────┬──────┘
-                                                     │
-┌─────────────┐                                      │
-│  RevenueCat │──────────────────────────────────────┤
-│  Webhooks   │                                      │
-└─────────────┘                                      ▼
-                                              ┌──────────────┐
-                                              │   Anthropic  │
-                                              │   (Haiku)    │
-                                              └──────┬───────┘
-                                                     │
-                                                     ▼
-                                              ┌──────────────┐
-                                              │    Resend    │
-                                              └──────────────┘
+                                                    │
+┌─────────────┐                                     │
+│  RevenueCat │─────────────────────────────────────┤
+│  Webhooks   │                                     │
+└─────────────┘                                     ▼
+                                             ┌──────────────┐
+                                             │    Resend    │
+                                             └──────────────┘
 ```
 
 **Base Firestore** : `email-nudge` (base nommée, pas default)
 
 ---
 
-## Events attendus de l'app
+## API Endpoints
 
-| Champ | Type | Quand |
-|-------|------|-------|
-| `email` | string | Premier écran onboarding |
-| `locale` | string | Premier écran (device locale : fr, en, es, de, it, pt, nl) |
-| `onboarding_started_at` | Timestamp | Premier écran onboarding |
-| `role` | string | Pendant onboarding |
-| `needs` | string[] | Pendant onboarding |
-| `onboarding_complete` | boolean | Fin onboarding (true) |
-| `paywall_seen` | boolean | Paywall affiché (true) |
-| `paywall_abandoned` | boolean | User ferme paywall sans action (true) |
-| `has_added_visits` | boolean | User a ajouté au moins une visite (true) |
-| `routes_optimized` | number | +1 à chaque optimisation |
+### Base URL
+```
+https://us-central1-contact-on-map-flutter.cloudfunctions.net
+```
 
-### Valeurs possibles
+### Authentification
+Toutes les requêtes doivent inclure le header :
+```
+X-API-Key: <EMAIL_NUDGE_API_KEY>
+```
+
+### 1. `POST /syncUser`
+Synchronise les données utilisateur depuis l'app.
+
+**Body (JSON) :**
+```json
+{
+  "revenuecat_id": "$RCAnonymousID:xxx",
+  "email": "user@example.com",
+  "first_name": "Jean",
+  "locale": "fr",
+  "role": "field_sales",
+  "needs": ["max_visits", "complex_routes"],
+  "onboarding_started_at": "2025-01-15T10:30:00Z",
+  "onboarding_complete": true,
+  "paywall_passed": true,
+  "visit_added": true,
+  "has_optimized_route": true,
+  "trial_active": true,
+  "trial_start_date": "2025-01-15T10:35:00Z",
+  "trial_end_date": "2025-01-22T10:35:00Z",
+  "subscription_active": false,
+  "plan": "monthly",
+  "is_test_user": false
+}
+```
+
+Seul `revenuecat_id` est obligatoire. Les autres champs sont optionnels (merge).
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "userId": "$RCAnonymousID:xxx",
+  "created": false
+}
+```
+
+### 2. `GET /getUser?userId=xxx`
+Récupère les données brutes d'un utilisateur.
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "user": { ... }
+}
+```
+
+### 3. `GET /getStatus?userId=xxx`
+Récupère le status complet d'un utilisateur (debug/monitoring).
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "userId": "$RCAnonymousID:xxx",
+  "status": {
+    "current_stage": "onboarding_in_progress",
+    "next_email": "WhatsMissing",
+    "next_email_reason": "onboarding_started_at: 2025-01-15T10:30:00Z, onboarding_complete: false",
+    "next_email_at": "2025-01-15T11:30:00Z",
+    "blockers": [],
+    "is_test_user": false
+  },
+  "pending_emails": [],
+  "recent_emails": [],
+  "user_data": { ... }
+}
+```
+
+**Stages possibles :**
+- `waiting_onboarding_start` - Pas encore commencé
+- `onboarding_in_progress` - En cours, WhatsMissing prévu
+- `onboarding_dropped` - Abandonné, WhatsMissing envoyé
+- `paywall_pending` - Onboarding OK, attente décision paywall
+- `paywall_blocked` - N'a pas pris le trial, FreeOptions prévu
+- `trial_no_visits` - Trial mais pas de visites, NoVisits prévu
+- `trial_no_optimization` - Visites mais pas optimisé, NoOptimization prévu
+- `engaged` - Utilisateur actif, pas d'email
+- `churned` - Churné, WhyLeaving prévu/envoyé
+- `blocked` - Kill switch actif (has_replied ou pas d'email)
+
+### 4. `GET /getQueue`
+Liste tous les emails en attente d'envoi.
+
+**Réponse :**
+```json
+{
+  "success": true,
+  "count": 2,
+  "queue": [
+    {
+      "id": "abc123",
+      "user_id": "$RCAnonymousID:xxx",
+      "email_name": "WhatsMissing",
+      "segment": "WhatsMissing",
+      "send_at": "2025-01-15T11:30:00Z",
+      "created_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Codes d'erreur
+- `401` - Missing X-API-Key header
+- `403` - Invalid API key
+- `400` - Paramètres invalides
+- `404` - User not found
+- `500` - Erreur serveur
+
+---
+
+## Valeurs valides
 
 **role** :
 - `delivery`
@@ -80,71 +184,82 @@ Système d'emails automatisés pour Easy Way, basé sur le comportement utilisat
 - `pt` (portugais)
 - `nl` (néerlandais)
 
----
-
-## Géré automatiquement (backend)
-
-| Champ | Source |
-|-------|--------|
-| `onboarding_dropped` | Cron (1h après start sans complete) |
-| `trial_active` | RevenueCat webhook |
-| `trial_start_date` | RevenueCat webhook |
-| `trial_end_date` | RevenueCat webhook |
-| `subscription_active` | RevenueCat webhook |
-| `plan` | RevenueCat webhook |
-| `churned_at` | RevenueCat webhook |
+**plan** :
+- `free`
+- `trial`
+- `monthly`
+- `yearly`
 
 ---
 
 ## Emails et déclencheurs
 
-| Email | Déclencheur | Délai | Segments |
-|-------|-------------|-------|----------|
-| **WhatsMissing** | `onboarding_dropped: true` (calculé) | 1h | hotel, prospection, complex, delivery, technician, default |
-| **FreeOptions** | `paywall_abandoned: true` | 10min | unique |
-| **QuickStart** | `trial_active: true` | immédiat | delivery, prospection, tracking, technician, default |
-| **NeedHelp** | `trial_active: true` | 24h | no_visits, no_optimization |
-| **NeedHelpWith** | `trial_active: true` | 48h | unique |
-| **TrialEndsSoon** | Cron quotidien 9h | J-2 | unique |
-| **WhyLeaving** | `churned_at` défini | 30min | silent, with_feedback |
+| Email | Déclencheur | Délai |
+|-------|-------------|-------|
+| **WhatsMissing** | `onboarding_dropped: true` (calculé par backend après 1h sans `onboarding_complete`) | 1h |
+| **FreeOptions** | `paywall_blocked: true` (calculé par backend après 24h sans `paywall_passed`) | 10min |
+| **QuickStart** | `paywall_passed: true` (user continue après le paywall) | immédiat |
+| **NoVisits** | `paywall_passed: true` sans visite | 24h |
+| **NoOptimization** | `has_added_visits: true` sans optimisation | 48h |
+| **WhyLeaving** | `churned_at` défini | 30min |
+
+### Logique Paywall
+
+```
+┌─────────────────┐
+│  Onboarding     │
+│  complete       │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│    Paywall      │
+│    affiché      │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐  ┌──────────────────┐
+│ User  │  │ User continue    │
+│ quitte│  │ (trial ou abo)   │
+│       │  └────────┬─────────┘
+└───┬───┘           │
+    │               ▼
+    │          paywall_passed: true
+    │          → QuickStart immédiat
+    │          → NoVisits après 24h
+    │          → NoOptimization après 48h
+    │
+    ▼
+ Timeout backend (24h)
+ → paywall_blocked: true (auto)
+ → FreeOptions après 10min
+```
+
+**Important** : L'app envoie `paywall_passed: true` quand le user continue après le paywall (trial ou achat). Le backend détecte automatiquement les abandons via timeout.
 
 ---
 
 ## Logique de segmentation
 
-### WhatsMissing (priorité : need > role)
+### QuickStart (par role)
 
 ```
-hotel_search      → WhatsMissing__hotel
-new_clients       → WhatsMissing__prospection
-complex_routes    → WhatsMissing__complex
-role=delivery     → WhatsMissing__delivery
-role=technician   → WhatsMissing__technician
-default           → WhatsMissing__default
+role=delivery        → QuickStart__delivery
+role=field_sales     → QuickStart__field_sales
+role=technician      → QuickStart__technician
+role=sales_director  → QuickStart__sales_director
+default              → QuickStart__default
 ```
 
-### QuickStart (priorité : delivery > need > role)
-
-```
-role=delivery     → QuickStart__delivery
-new_clients       → QuickStart__prospection
-client_tracking   → QuickStart__tracking
-role=technician   → QuickStart__technician
-default           → QuickStart__default
-```
-
-### NeedHelp
-
-```
-has_added_visits=false    → NeedHelp__no_visits
-routes_optimized=0        → NeedHelp__no_optimization
-```
+Le template QuickStart inclut un `{{need_closing}}` dynamique basé sur le premier need de l'utilisateur.
 
 ### WhyLeaving
 
 ```
-churn_reason exists   → WhyLeaving__with_feedback
-no churn_reason       → WhyLeaving__silent
+churn_reason=billing_error   → WhyLeaving__billing_error
+default                      → WhyLeaving__unsubscribe
 ```
 
 ---
@@ -153,22 +268,11 @@ no churn_reason       → WhyLeaving__silent
 
 | Condition | Action |
 |-----------|--------|
-| `has_replied: true` | Annule tous les emails (sauf TrialEndsSoon) |
-| `has_added_visits: true` OU `routes_optimized > 0` | Annule NeedHelp, NeedHelpWith |
+| `has_replied: true` | Annule tous les emails |
+| `has_added_visits: true` | Annule NoVisits |
+| `has_optimized_route: true` | Annule NoOptimization |
 | `email_whyleaving_sent: true` | Bloque doublon WhyLeaving |
 | `email` manquant | Bloque tous les emails |
-
----
-
-## Génération IA
-
-Chaque email est généré par Claude Haiku avec :
-- Langue selon `locale`
-- Contexte métier selon `role`
-- Besoins selon `needs`
-- Prénom extrait de l'email si non fourni (`jean.dupont@gmail.com` → Jean)
-
-**Coût estimé** : ~0.04 centimes/email
 
 ---
 
@@ -176,13 +280,17 @@ Chaque email est généré par Claude Haiku avec :
 
 | Fonction | Type | Description |
 |----------|------|-------------|
+| `syncUser` | HTTPS POST | Sync données user depuis l'app |
+| `getUser` | HTTPS GET | Récupère données user |
+| `getStatus` | HTTPS GET | Status détaillé user |
+| `getQueue` | HTTPS GET | Liste emails en attente |
 | `checkOnboardingDropped` | Scheduled (1h) | Détecte abandons onboarding |
-| `onPaywallStateChanged` | Firestore trigger | Paywall abandonné, trial démarré |
+| `checkPaywallBlocked` | Scheduled (1h) | Détecte abandons au paywall (après 24h) |
+| `onPaywallStateChanged` | Firestore trigger | Paywall blocked/passed |
 | `onUserEngagementChanged` | Firestore trigger | Annule emails si user actif |
 | `onUserChurned` | Firestore trigger | Planifie WhyLeaving |
 | `onRevenueCatWebhook` | HTTPS | Reçoit events RevenueCat |
-| `processQueue` | Scheduled (1min) | Envoie emails de la queue |
-| `checkTrialEnding` | Scheduled (9h daily) | Envoie TrialEndsSoon |
+| `processQueue` | Scheduled (5min) | Envoie emails de la queue |
 
 ---
 
@@ -193,7 +301,9 @@ Chaque email est généré par Claude Haiku avec :
 ```typescript
 {
   // Identité
+  revenuecat_id: string
   email: string
+  first_name?: string
   locale?: 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt' | 'nl'
 
   // Profil
@@ -201,24 +311,24 @@ Chaque email est généré par Claude Haiku avec :
   needs: string[]
 
   // Onboarding
-  onboarding_started_at: Timestamp
+  onboarding_started_at?: Timestamp
   onboarding_complete: boolean
   onboarding_dropped: boolean  // calculé par backend
 
   // Paywall
-  paywall_seen: boolean
-  paywall_abandoned: boolean
+  paywall_blocked: boolean
+  paywall_passed: boolean
 
   // Engagement
   has_added_visits: boolean
-  routes_optimized: number
+  has_optimized_route: boolean
 
   // Abonnement (via RevenueCat)
   trial_active: boolean
   trial_start_date?: Timestamp
   trial_end_date?: Timestamp
   subscription_active: boolean
-  plan?: 'trial' | 'monthly' | 'yearly'
+  plan?: 'free' | 'trial' | 'monthly' | 'yearly'
 
   // Churn (via RevenueCat)
   churned_at?: Timestamp
@@ -268,20 +378,14 @@ Chaque email est généré par Claude Haiku avec :
 
 ```bash
 firebase functions:secrets:set RESEND_API_KEY
-firebase functions:secrets:set ANTHROPIC_API_KEY
+firebase functions:secrets:set EMAIL_NUDGE_API_KEY
 ```
 
 ### Environnement (dev/prod)
 
-```bash
-# Dev - tous les emails vont à harold+test@easyway-planner.com
-cp functions/.env.dev functions/.env
-firebase deploy --only functions
-
-# Prod - emails aux vrais users
-cp functions/.env.prod functions/.env
-firebase deploy --only functions
-```
+Variable `ENV` dans Firebase :
+- `dev` - tous les emails vont à harold+test@easyway-planner.com
+- `prod` - emails aux vrais users
 
 ### Webhook RevenueCat
 
@@ -295,56 +399,75 @@ Events: TRIAL_STARTED, INITIAL_PURCHASE, RENEWAL, CANCELLATION, EXPIRATION
 ## Intégration App (Dart/Flutter)
 
 ```dart
-// Instance Firestore pour email-nudge
-final emailNudgeDb = FirebaseFirestore.instanceFor(
-  app: Firebase.app(),
-  databaseId: 'email-nudge',
-);
+class EmailNudgeRepository {
+  final String baseUrl = 'https://us-central1-contact-on-map-flutter.cloudfunctions.net';
+  final String apiKey = 'YOUR_API_KEY';
+
+  Future<void> syncUser(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/syncUser'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+      },
+      body: jsonEncode(data),
+    );
+    // Handle response
+  }
+
+  Future<Map<String, dynamic>> getStatus(String userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/getStatus?userId=$userId'),
+      headers: {'X-API-Key': apiKey},
+    );
+    return jsonDecode(response.body);
+  }
+}
+
+// Usage
+final emailNudge = EmailNudgeRepository();
 
 // Premier écran onboarding
-await emailNudgeDb.collection('users').doc(userId).set({
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
   'email': userEmail,
-  'locale': Platform.localeName.split('_')[0],  // 'fr', 'en', etc.
-  'onboarding_started_at': FieldValue.serverTimestamp(),
-  'onboarding_complete': false,
-  'onboarding_dropped': false,
-  'paywall_seen': false,
-  'paywall_abandoned': false,
-  'has_added_visits': false,
-  'routes_optimized': 0,
-  'has_replied': false,
-  'email_whyleaving_sent': false,
+  'locale': Platform.localeName.split('_')[0],
+  'onboarding_started_at': DateTime.now().toIso8601String(),
 });
 
 // Pendant onboarding
-await emailNudgeDb.collection('users').doc(userId).update({
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
   'role': selectedRole,
   'needs': selectedNeeds,
 });
 
 // Fin onboarding
-await emailNudgeDb.collection('users').doc(userId).update({
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
   'onboarding_complete': true,
 });
 
-// Paywall affiché
-await emailNudgeDb.collection('users').doc(userId).update({
-  'paywall_seen': true,
+// User continue après le paywall (trial démarré ou achat)
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
+  'paywall_passed': true,
 });
 
-// Paywall fermé sans action
-await emailNudgeDb.collection('users').doc(userId).update({
-  'paywall_abandoned': true,
-});
+// NOTE: Ne pas envoyer paywall_blocked depuis l'app
+// Le backend détecte automatiquement les abandons via timeout
+// (onboarding_complete: true sans paywall_passed après X heures)
 
 // Visite ajoutée
-await emailNudgeDb.collection('users').doc(userId).update({
-  'has_added_visits': true,
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
+  'visit_added': true,
 });
 
 // Route optimisée
-await emailNudgeDb.collection('users').doc(userId).update({
-  'routes_optimized': FieldValue.increment(1),
+await emailNudge.syncUser({
+  'revenuecat_id': revenueCatId,
+  'has_optimized_route': true,
 });
 ```
 
@@ -358,8 +481,8 @@ En mode test (`is_test_user: true`), les délais sont réduits ×0.01 :
 |-------|--------------|------------|
 | WhatsMissing | 1h | 36s |
 | FreeOptions | 10min | 6s |
-| NeedHelp | 24h | ~14min |
-| NeedHelpWith | 48h | ~29min |
+| NoVisits | 24h | ~14min |
+| NoOptimization | 48h | ~29min |
 | WhyLeaving | 30min | 18s |
 
 ---

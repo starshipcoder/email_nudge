@@ -11,7 +11,7 @@ export const db = getFirestore('email-nudge')
 export { checkOnboardingDropped } from './triggers/onboardingTriggers'
 
 // Paywall triggers
-export { onPaywallStateChanged } from './triggers/paywallTriggers'
+export { onPaywallStateChanged, checkPaywallBlocked } from './triggers/paywallTriggers'
 
 // Engagement triggers
 export { onUserEngagementChanged } from './triggers/engagementTriggers'
@@ -24,7 +24,16 @@ export { processQueue } from './triggers/scheduledTriggers'
 // export { checkTrialEnding } from './triggers/scheduledTriggers' // Désactivé pour l'instant
 
 // Test triggers (remove in production)
-export { testSendEmail, testCreateUser, testResetUser, testDeleteUser } from './triggers/testTriggers'
+export {
+  testSendEmail,
+  testCreateUser,
+  testResetUser,
+  testDeleteUser,
+  testTriggerCron,
+  testTriggerOnboardingCron,
+  testTriggerPaywallCron,
+  testTriggerQueueProcessor
+} from './triggers/testTriggers'
 
 // API triggers (for mobile app)
-export { syncUser, getUser } from './triggers/apiTriggers'
+export { syncUser, getUser, getStatus, getQueue } from './triggers/apiTriggers'

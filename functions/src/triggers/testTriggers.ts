@@ -213,3 +213,153 @@ export const testCreateUser = onRequest(
     })
   }
 )
+
+/**
+ * Test endpoint to manually trigger the onboarding dropped cron
+ * Usage: GET /testTriggerOnboardingCron
+ */
+export const testTriggerOnboardingCron = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+
+    // Find users who haven't completed onboarding and aren't dropped yet
+    // Then filter by time in memory to avoid composite index requirement
+    const snapshot = await db
+      .collection('users')
+      .where('onboarding_complete', '==', false)
+      .where('onboarding_dropped', '==', false)
+      .get()
+
+    // Filter by onboarding_started_at in memory
+    const usersToProcess = snapshot.docs.filter(doc => {
+      const data = doc.data()
+      const startedAt = data.onboarding_started_at?.toDate?.()?.getTime() ||
+                        data.onboarding_started_at?.getTime?.() ||
+                        (data.onboarding_started_at ? new Date(data.onboarding_started_at).getTime() : null)
+      return startedAt && startedAt <= oneHourAgo.getTime()
+    })
+
+    const results: { userId: string; status: string }[] = []
+
+    for (const doc of usersToProcess) {
+      const userId = doc.id
+      const userData = doc.data()
+
+      // Skip if user has kill switch active
+      if (userData.has_replied) {
+        results.push({ userId, status: 'skipped (has_replied)' })
+        continue
+      }
+
+      // Mark as dropped
+      await db.collection('users').doc(userId).update({
+        onboarding_dropped: true
+      })
+
+      // Schedule email
+      const { scheduleEmail } = await import('../services/emailService')
+      await scheduleEmail(userId, 'WhatsMissing')
+
+      results.push({ userId, status: 'WhatsMissing scheduled' })
+    }
+
+    res.json({
+      success: true,
+      message: `Found ${usersToProcess.length} users with abandoned onboarding`,
+      usersProcessed: results,
+      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
+    })
+  }
+)
+
+// Keep old name for backwards compatibility
+export const testTriggerCron = testTriggerOnboardingCron
+
+/**
+ * Test endpoint to manually trigger the paywall blocked cron
+ * Usage: GET /testTriggerPaywallCron
+ */
+export const testTriggerPaywallCron = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+    // Find users who:
+    // - Completed onboarding
+    // - Haven't passed paywall
+    // - Haven't been marked as blocked yet
+    const snapshot = await db
+      .collection('users')
+      .where('onboarding_complete', '==', true)
+      .where('paywall_passed', '==', false)
+      .where('paywall_blocked', '==', false)
+      .get()
+
+    // Filter by time (can't do inequality on two fields in Firestore)
+    const usersToProcess = snapshot.docs.filter(doc => {
+      const data = doc.data()
+      const completedAt = data.onboarding_completed_at?.toDate?.()?.getTime() ||
+                          data.onboarding_completed_at?.getTime?.() ||
+                          (data.onboarding_completed_at ? new Date(data.onboarding_completed_at).getTime() : null)
+
+      // Fallback to last_action_at
+      const fallbackAt = data.last_action_at?.toDate?.()?.getTime() ||
+                         data.last_action_at?.getTime?.() ||
+                         (data.last_action_at ? new Date(data.last_action_at).getTime() : null)
+
+      const checkTime = completedAt || fallbackAt
+      return checkTime && checkTime <= twentyFourHoursAgo.getTime()
+    })
+
+    const results: { userId: string; status: string }[] = []
+
+    for (const doc of usersToProcess) {
+      const userId = doc.id
+      const userData = doc.data()
+
+      // Skip if user has kill switch active
+      if (userData.has_replied) {
+        results.push({ userId, status: 'skipped (has_replied)' })
+        continue
+      }
+
+      // Mark as blocked
+      await db.collection('users').doc(userId).update({
+        paywall_blocked: true
+      })
+
+      // Schedule email
+      const { scheduleEmail } = await import('../services/emailService')
+      await scheduleEmail(userId, 'FreeOptions')
+
+      results.push({ userId, status: 'FreeOptions scheduled' })
+    }
+
+    res.json({
+      success: true,
+      message: `Found ${usersToProcess.length} users blocked at paywall`,
+      usersProcessed: results,
+      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
+    })
+  }
+)
+
+/**
+ * Test endpoint to manually trigger the queue processor
+ * Usage: GET /testTriggerQueueProcessor
+ */
+export const testTriggerQueueProcessor = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    const { processEmailQueue } = await import('../services/emailService')
+
+    await processEmailQueue()
+
+    res.json({
+      success: true,
+      message: 'Queue processor triggered',
+      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
+    })
+  }
+)

@@ -4,7 +4,12 @@ import { cancelPendingEmails } from '../services/emailService'
 /**
  * Trigger: User state changes that affect email sequence
  */
-export const onUserEngagementChanged = onDocumentUpdated('users/{userId}', async (event) => {
+export const onUserEngagementChanged = onDocumentUpdated(
+  {
+    document: 'users/{userId}',
+    database: 'email-nudge'
+  },
+  async (event) => {
   const before = event.data?.before.data()
   const after = event.data?.after.data()
   const userId = event.params.userId

@@ -49,6 +49,7 @@ export interface User {
   email_whyleaving_sent: boolean
   has_replied: boolean
   is_test_user: boolean
+  dry_run?: boolean  // For testing: logs emails but doesn't send them
 }
 
 // Email types
@@ -96,7 +97,7 @@ export interface EmailLog {
   segment: Segment
   scheduled_at: Date
   sent_at?: Date
-  status: 'scheduled' | 'sent' | 'blocked' | 'error'
+  status: 'scheduled' | 'sent' | 'blocked' | 'error' | 'dry_run'
   blocked_reason?: string
   variables: Record<string, string | string[]>
 }
