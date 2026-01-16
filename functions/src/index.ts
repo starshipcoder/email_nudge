@@ -7,21 +7,14 @@ admin.initializeApp()
 // Use named database
 export const db = getFirestore('email-nudge')
 
-// Onboarding triggers
-export { checkOnboardingDropped } from './triggers/onboardingTriggers'
+// Scheduled triggers (main cron for all emails)
+export { checkAndSendEmails } from './triggers/scheduledTriggers'
 
-// Paywall triggers
-export { onPaywallStateChanged, checkPaywallBlocked } from './triggers/paywallTriggers'
+// Paywall triggers (only QuickStart on paywall_passed)
+export { onPaywallStateChanged } from './triggers/paywallTriggers'
 
-// Engagement triggers
-export { onUserEngagementChanged } from './triggers/engagementTriggers'
-
-// Churn triggers
+// Churn triggers (WhyLeaving via RevenueCat)
 export { onUserChurned, onRevenueCatWebhook } from './triggers/churnTriggers'
-
-// Scheduled triggers
-export { processQueue } from './triggers/scheduledTriggers'
-// export { checkTrialEnding } from './triggers/scheduledTriggers' // Désactivé pour l'instant
 
 // Test triggers (remove in production)
 export {
@@ -30,10 +23,8 @@ export {
   testResetUser,
   testDeleteUser,
   testTriggerCron,
-  testTriggerOnboardingCron,
-  testTriggerPaywallCron,
-  testTriggerQueueProcessor
+  getEmailLogs
 } from './triggers/testTriggers'
 
 // API triggers (for mobile app)
-export { syncUser, getUser, getStatus, getQueue } from './triggers/apiTriggers'
+export { syncUser, getUser, getStatus } from './triggers/apiTriggers'

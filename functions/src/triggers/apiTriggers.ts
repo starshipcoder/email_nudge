@@ -29,31 +29,31 @@ function verifyApiKey(req: any, res: any): boolean {
 // Valid values for validation
 const VALID_ROLES: Role[] = ['delivery', 'field_sales', 'technician', 'sales_director', 'other']
 
-// Email delays in milliseconds (production)
-const EMAIL_DELAYS: Record<string, number> = {
+// Timeouts for production (in milliseconds)
+const TIMEOUTS: Record<string, number> = {
   WhatsMissing: 60 * 60 * 1000,        // 1 hour after onboarding_started_at
-  FreeOptions: 10 * 60 * 1000,          // 10 minutes after paywall_blocked
+  FreeOptions: 10 * 60 * 1000,          // 10 minutes after onboarding_completed_at
   QuickStart: 0,                         // Immediate after paywall_passed
-  NoVisits: 24 * 60 * 60 * 1000,        // 24 hours after paywall_passed
-  NoOptimization: 48 * 60 * 60 * 1000,  // 48 hours after first visit
+  NoVisits: 24 * 60 * 60 * 1000,        // 24 hours after paywall_passed_at
+  NoOptimization: 48 * 60 * 60 * 1000,  // 48 hours after visit_added_at
   WhyLeaving: 30 * 60 * 1000            // 30 minutes after churn
 }
 
-// Delays for test users (all ~5 seconds)
-const TEST_EMAIL_DELAYS: Record<string, number> = {
-  WhatsMissing: 5 * 1000,      // 5 seconds
-  FreeOptions: 5 * 1000,       // 5 seconds
-  QuickStart: 0,               // Immediate
-  NoVisits: 5 * 1000,          // 5 seconds
-  NoOptimization: 5 * 1000,    // 5 seconds
-  WhyLeaving: 5 * 1000         // 5 seconds
+// Timeouts for test users (30 seconds each)
+const TEST_TIMEOUTS: Record<string, number> = {
+  WhatsMissing: 30 * 1000,
+  FreeOptions: 30 * 1000,
+  QuickStart: 0,
+  NoVisits: 30 * 1000,
+  NoOptimization: 30 * 1000,
+  WhyLeaving: 30 * 1000
 }
 
-function getDelay(emailName: string, isTestUser: boolean): number {
+function getTimeout(emailName: string, isTestUser: boolean): number {
   if (isTestUser) {
-    return TEST_EMAIL_DELAYS[emailName] || 0
+    return TEST_TIMEOUTS[emailName] || 0
   }
-  return EMAIL_DELAYS[emailName] || 0
+  return TIMEOUTS[emailName] || 0
 }
 
 interface UserStatus {
@@ -112,7 +112,7 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
     }
 
     if (!userData.onboarding_dropped) {
-      const delay = getDelay('WhatsMissing', isTestUser)
+      const delay = getTimeout('WhatsMissing', isTestUser)
       const sendAt = new Date(startedAt + delay)
       return {
         current_stage: 'onboarding_in_progress',
@@ -149,7 +149,7 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
 
   // Stage 2a: Paywall blocked (didn't start trial)
   if (userData.paywall_blocked && !userData.paywall_passed) {
-    const delayMs = getDelay('FreeOptions', isTestUser)
+    const delayMs = getTimeout('FreeOptions', isTestUser)
     const delayStr = isTestUser ? `${Math.round(delayMs / 1000)}s` : '10min'
     return {
       current_stage: 'paywall_blocked',
@@ -167,7 +167,7 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
 
     // Check engagement
     if (!userData.has_added_visits) {
-      const delayMs = getDelay('NoVisits', isTestUser)
+      const delayMs = getTimeout('NoVisits', isTestUser)
       const delayStr = isTestUser ? `~${Math.round(delayMs / 60000)}min` : '24h'
       return {
         current_stage: 'trial_no_visits',
@@ -180,7 +180,7 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
     }
 
     if (!userData.has_optimized_route) {
-      const delayMs = getDelay('NoOptimization', isTestUser)
+      const delayMs = getTimeout('NoOptimization', isTestUser)
       const delayStr = isTestUser ? `~${Math.round(delayMs / 60000)}min` : '48h'
       return {
         current_stage: 'trial_no_optimization',
@@ -215,7 +215,7 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
         is_test_user: isTestUser
       }
     }
-    const delayMs = getDelay('WhyLeaving', isTestUser)
+    const delayMs = getTimeout('WhyLeaving', isTestUser)
     const delayStr = isTestUser ? `${Math.round(delayMs / 1000)}s` : '30min'
     return {
       current_stage: 'churned',
@@ -261,6 +261,9 @@ interface SyncUserRequest {
   is_test_user?: boolean
   dry_run?: boolean
   has_replied?: boolean
+  // Test-only: offset in seconds from server time for date fields
+  // e.g., -120 means "2 minutes ago" relative to server time
+  _test_time_offset_seconds?: number
 }
 
 /**
@@ -376,6 +379,10 @@ export const syncUser = onRequest(
       }
 
       // Date fields (convert ISO string to Firestore Timestamp)
+      // If _test_time_offset_seconds is provided, use server time + offset instead of the provided date
+      const testOffset = data._test_time_offset_seconds
+      const useServerTimeOffset = typeof testOffset === 'number'
+
       const dateFields = {
         onboarding_started_at: 'onboarding_started_at',
         onboarding_completed_at: 'onboarding_completed_at',
@@ -390,10 +397,18 @@ export const syncUser = onRequest(
             res.status(400).json({ error: `${inputField} must be an ISO date string` })
             return
           }
-          const date = new Date(value)
-          if (isNaN(date.getTime())) {
-            res.status(400).json({ error: `${inputField} is not a valid date` })
-            return
+
+          let date: Date
+          if (useServerTimeOffset) {
+            // For tests: use server time + offset (ignoring the provided date value)
+            // This ensures timestamps are relative to server time, not client time
+            date = new Date(Date.now() + testOffset * 1000)
+          } else {
+            date = new Date(value)
+            if (isNaN(date.getTime())) {
+              res.status(400).json({ error: `${inputField} is not a valid date` })
+              return
+            }
           }
           updateData[dbField] = date
         }
@@ -602,45 +617,3 @@ export const getStatus = onRequest(
   }
 )
 
-/**
- * Get all emails in the queue (for debugging)
- * GET /getQueue
- */
-export const getQueue = onRequest(
-  { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
-  async (req, res) => {
-    // Verify API key
-    if (!verifyApiKey(req, res)) return
-
-    try {
-      const snapshot = await db
-        .collection('email_queue')
-        .orderBy('send_at', 'asc')
-        .get()
-
-      const queue = snapshot.docs.map(doc => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          user_id: data.user_id,
-          email_name: data.email_name,
-          segment: data.segment,
-          send_at: data.send_at?.toDate?.() ? data.send_at.toDate().toISOString() : data.send_at,
-          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at
-        }
-      })
-
-      res.json({
-        success: true,
-        count: queue.length,
-        queue
-      })
-    } catch (error) {
-      console.error(`[getQueue] Error:`, error)
-      res.status(500).json({
-        error: 'Failed to get queue',
-        details: String(error)
-      })
-    }
-  }
-)

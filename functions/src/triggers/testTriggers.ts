@@ -1,5 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https'
-import { RESEND_API_KEY } from '../services/emailService'
+import { RESEND_API_KEY, sendEmailNow } from '../services/emailService'
 import { generateEmail } from '../services/emailGenerator'
 import { Resend } from 'resend'
 import { db } from '../index'
@@ -7,6 +7,22 @@ import { EmailName, User } from '../types'
 
 const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
 const TEST_RECIPIENT = 'harold+test@easyway-planner.com'
+
+// Timeouts for production (in milliseconds)
+const TIMEOUTS = {
+  onboarding: 60 * 60 * 1000,         // 1 hour
+  paywall: 10 * 60 * 1000,            // 10 minutes
+  noVisits: 24 * 60 * 60 * 1000,      // 24 hours
+  noOptimization: 48 * 60 * 60 * 1000 // 48 hours
+}
+
+// Timeouts for test users (in milliseconds)
+const TEST_TIMEOUTS = {
+  onboarding: 30 * 1000,      // 30 seconds
+  paywall: 30 * 1000,         // 30 seconds
+  noVisits: 30 * 1000,        // 30 seconds
+  noOptimization: 30 * 1000   // 30 seconds
+}
 
 /**
  * Test endpoint to manually trigger an email
@@ -27,7 +43,6 @@ export const testSendEmail = onRequest(
       return
     }
 
-    // Check user exists
     const userDoc = await db.collection('users').doc(userId).get()
     if (!userDoc.exists) {
       res.status(404).json({ error: `User ${userId} not found` })
@@ -35,13 +50,9 @@ export const testSendEmail = onRequest(
     }
 
     const user = { id: userId, ...userDoc.data() } as User
-    console.log(`[TEST] Sending ${emailName} to user ${userId}`)
 
     try {
-      // Generate email
       const { subject, body } = generateEmail(user, emailName)
-
-      // Send via Resend
       const resend = new Resend(RESEND_API_KEY.value())
       const result = await resend.emails.send({
         from: FROM_EMAIL,
@@ -49,8 +60,6 @@ export const testSendEmail = onRequest(
         subject,
         text: body
       })
-
-      console.log(`[TEST] Resend result:`, JSON.stringify(result))
 
       res.json({
         success: true,
@@ -60,7 +69,6 @@ export const testSendEmail = onRequest(
         resendId: result.data?.id
       })
     } catch (error) {
-      console.error(`[TEST] Error:`, error)
       res.status(500).json({
         error: 'Failed to send email',
         details: String(error)
@@ -70,7 +78,7 @@ export const testSendEmail = onRequest(
 )
 
 /**
- * Test endpoint to reset a user (delete and recreate, or just reset fields)
+ * Test endpoint to reset a user
  * Usage: GET /testResetUser?userId=xxx
  */
 export const testResetUser = onRequest(
@@ -83,12 +91,6 @@ export const testResetUser = onRequest(
         usage: '/testResetUser?userId=xxx'
       })
       return
-    }
-
-    // Delete email_queue entries for this user
-    const queueSnapshot = await db.collection('email_queue').where('user_id', '==', userId).get()
-    for (const doc of queueSnapshot.docs) {
-      await doc.ref.delete()
     }
 
     // Delete email_logs entries for this user
@@ -104,9 +106,15 @@ export const testResetUser = onRequest(
       onboarding_dropped: false,
       paywall_blocked: false,
       paywall_passed: false,
+      paywall_passed_at: null,
       has_added_visits: false,
+      visit_added_at: null,
       has_optimized_route: false,
       has_replied: false,
+      email_whatsmissing_sent: false,
+      email_freeoptions_sent: false,
+      email_novisits_sent: false,
+      email_nooptimization_sent: false,
       email_whyleaving_sent: false,
       trial_active: false,
       subscription_active: false,
@@ -120,13 +128,7 @@ export const testResetUser = onRequest(
     res.json({
       success: true,
       message: `User ${userId} reset`,
-      deletedQueueItems: queueSnapshot.docs.length,
-      deletedLogItems: logsSnapshot.docs.length,
-      testUrls: {
-        sendWhatsMissing: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=WhatsMissing`,
-        sendFreeOptions: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=FreeOptions`,
-        sendQuickStart: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=QuickStart`
-      }
+      deletedLogItems: logsSnapshot.docs.length
     })
   }
 )
@@ -147,12 +149,6 @@ export const testDeleteUser = onRequest(
       return
     }
 
-    // Delete email_queue entries for this user
-    const queueSnapshot = await db.collection('email_queue').where('user_id', '==', userId).get()
-    for (const doc of queueSnapshot.docs) {
-      await doc.ref.delete()
-    }
-
     // Delete email_logs entries for this user
     const logsSnapshot = await db.collection('email_logs').where('user_id', '==', userId).get()
     for (const doc of logsSnapshot.docs) {
@@ -165,7 +161,6 @@ export const testDeleteUser = onRequest(
     res.json({
       success: true,
       message: `User ${userId} deleted`,
-      deletedQueueItems: queueSnapshot.docs.length,
       deletedLogItems: logsSnapshot.docs.length
     })
   }
@@ -192,6 +187,10 @@ export const testCreateUser = onRequest(
       has_added_visits: false,
       has_optimized_route: false,
       has_replied: false,
+      email_whatsmissing_sent: false,
+      email_freeoptions_sent: false,
+      email_novisits_sent: false,
+      email_nooptimization_sent: false,
       email_whyleaving_sent: false,
       trial_active: false,
       subscription_active: false,
@@ -204,162 +203,170 @@ export const testCreateUser = onRequest(
     res.json({
       success: true,
       userId,
-      user: testUser,
-      testUrls: {
-        sendWhatsMissing: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=WhatsMissing`,
-        sendFreeOptions: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=FreeOptions`,
-        sendQuickStart: `https://us-central1-contact-on-map-flutter.cloudfunctions.net/testSendEmail?userId=${userId}&emailName=QuickStart`
-      }
+      user: testUser
     })
   }
 )
 
 /**
- * Test endpoint to manually trigger the onboarding dropped cron
- * Usage: GET /testTriggerOnboardingCron
+ * Test endpoint to manually trigger the cron logic
+ * This runs the same logic as checkAndSendEmails but returns results
+ * Usage: GET /testTriggerCron
  */
-export const testTriggerOnboardingCron = onRequest(
+export const testTriggerCron = onRequest(
   { secrets: [RESEND_API_KEY] },
   async (req, res) => {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    const now = Date.now()
+    const results: { userId: string; email: string; status: string }[] = []
+    const debug: { userId: string; reason: string; details?: Record<string, unknown> }[] = []
 
-    // Find users who haven't completed onboarding and aren't dropped yet
-    // Then filter by time in memory to avoid composite index requirement
-    const snapshot = await db
-      .collection('users')
-      .where('onboarding_complete', '==', false)
-      .where('onboarding_dropped', '==', false)
-      .get()
+    const snapshot = await db.collection('users').get()
 
-    // Filter by onboarding_started_at in memory
-    const usersToProcess = snapshot.docs.filter(doc => {
-      const data = doc.data()
-      const startedAt = data.onboarding_started_at?.toDate?.()?.getTime() ||
-                        data.onboarding_started_at?.getTime?.() ||
-                        (data.onboarding_started_at ? new Date(data.onboarding_started_at).getTime() : null)
-      return startedAt && startedAt <= oneHourAgo.getTime()
-    })
-
-    const results: { userId: string; status: string }[] = []
-
-    for (const doc of usersToProcess) {
+    for (const doc of snapshot.docs) {
       const userId = doc.id
-      const userData = doc.data()
+      const user = doc.data()
 
-      // Skip if user has kill switch active
-      if (userData.has_replied) {
-        results.push({ userId, status: 'skipped (has_replied)' })
+      // Skip if kill switch active
+      if (user.has_replied || !user.email) {
+        debug.push({ userId, reason: 'skipped: has_replied or no email' })
         continue
       }
 
-      // Mark as dropped
-      await db.collection('users').doc(userId).update({
-        onboarding_dropped: true
-      })
+      const isTestUser = user.is_test_user === true
+      const timeouts = isTestUser ? TEST_TIMEOUTS : TIMEOUTS
 
-      // Schedule email
-      const { scheduleEmail } = await import('../services/emailService')
-      await scheduleEmail(userId, 'WhatsMissing')
+      // 1. Check WhatsMissing (onboarding abandoned)
+      if (!user.onboarding_complete && !user.email_whatsmissing_sent) {
+        const rawStartedAt = user.onboarding_started_at
+        const startedAt = rawStartedAt?.toDate?.()?.getTime() ||
+                          rawStartedAt?.getTime?.() ||
+                          (rawStartedAt ? new Date(rawStartedAt).getTime() : null)
 
-      results.push({ userId, status: 'WhatsMissing scheduled' })
+        const elapsed = startedAt ? now - startedAt : null
+        const timeout = timeouts.onboarding
+
+        if (startedAt && elapsed! > timeout) {
+          console.log(`[TestCron] User ${userId}: sending WhatsMissing`)
+          await sendEmailNow(userId, 'WhatsMissing')
+          await db.collection('users').doc(userId).update({
+            onboarding_dropped: true,
+            email_whatsmissing_sent: true
+          })
+          results.push({ userId, email: 'WhatsMissing', status: 'sent' })
+          continue
+        } else {
+          debug.push({
+            userId,
+            reason: 'WhatsMissing: timeout not reached',
+            details: {
+              rawType: typeof rawStartedAt,
+              hasToDate: typeof rawStartedAt?.toDate === 'function',
+              hasGetTime: typeof rawStartedAt?.getTime === 'function',
+              startedAt,
+              elapsed,
+              timeout,
+              now
+            }
+          })
+        }
+      }
+
+      // 2. Check FreeOptions (paywall abandoned)
+      if (user.onboarding_complete && !user.paywall_passed && !user.email_freeoptions_sent) {
+        const completedAt = user.onboarding_completed_at?.toDate?.()?.getTime() ||
+                            user.onboarding_completed_at?.getTime?.() ||
+                            (user.onboarding_completed_at ? new Date(user.onboarding_completed_at).getTime() : null)
+
+        if (completedAt && (now - completedAt) > timeouts.paywall) {
+          console.log(`[TestCron] User ${userId}: sending FreeOptions`)
+          await sendEmailNow(userId, 'FreeOptions')
+          await db.collection('users').doc(userId).update({
+            paywall_blocked: true,
+            email_freeoptions_sent: true
+          })
+          results.push({ userId, email: 'FreeOptions', status: 'sent' })
+          continue
+        }
+      }
+
+      // 3. Check NoVisits (trial but no visits)
+      if (user.paywall_passed && !user.has_added_visits && !user.email_novisits_sent) {
+        const passedAt = user.paywall_passed_at?.toDate?.()?.getTime() ||
+                         user.paywall_passed_at?.getTime?.() ||
+                         (user.paywall_passed_at ? new Date(user.paywall_passed_at).getTime() : null)
+
+        if (passedAt && (now - passedAt) > timeouts.noVisits) {
+          console.log(`[TestCron] User ${userId}: sending NoVisits`)
+          await sendEmailNow(userId, 'NoVisits')
+          await db.collection('users').doc(userId).update({
+            email_novisits_sent: true
+          })
+          results.push({ userId, email: 'NoVisits', status: 'sent' })
+          continue
+        }
+      }
+
+      // 4. Check NoOptimization (has visits but no optimization)
+      if (user.has_added_visits && !user.has_optimized_route && !user.email_nooptimization_sent) {
+        const visitAddedAt = user.visit_added_at?.toDate?.()?.getTime() ||
+                             user.visit_added_at?.getTime?.() ||
+                             (user.visit_added_at ? new Date(user.visit_added_at).getTime() : null)
+
+        if (visitAddedAt && (now - visitAddedAt) > timeouts.noOptimization) {
+          console.log(`[TestCron] User ${userId}: sending NoOptimization`)
+          await sendEmailNow(userId, 'NoOptimization')
+          await db.collection('users').doc(userId).update({
+            email_nooptimization_sent: true
+          })
+          results.push({ userId, email: 'NoOptimization', status: 'sent' })
+        }
+      }
     }
 
     res.json({
       success: true,
-      message: `Found ${usersToProcess.length} users with abandoned onboarding`,
-      usersProcessed: results,
-      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
+      message: `Cron executed, ${results.length} emails sent`,
+      results,
+      debug
     })
   }
 )
 
-// Keep old name for backwards compatibility
-export const testTriggerCron = testTriggerOnboardingCron
-
 /**
- * Test endpoint to manually trigger the paywall blocked cron
- * Usage: GET /testTriggerPaywallCron
+ * Get email logs for a user
+ * Usage: GET /getEmailLogs?userId=xxx
  */
-export const testTriggerPaywallCron = onRequest(
-  { secrets: [RESEND_API_KEY] },
+export const getEmailLogs = onRequest(
   async (req, res) => {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const userId = req.query.userId as string
 
-    // Find users who:
-    // - Completed onboarding
-    // - Haven't passed paywall
-    // - Haven't been marked as blocked yet
-    const snapshot = await db
-      .collection('users')
-      .where('onboarding_complete', '==', true)
-      .where('paywall_passed', '==', false)
-      .where('paywall_blocked', '==', false)
-      .get()
+    if (!userId) {
+      // Return all recent logs
+      const logsSnapshot = await db.collection('email_logs')
+        .orderBy('scheduled_at', 'desc')
+        .limit(50)
+        .get()
 
-    // Filter by time (can't do inequality on two fields in Firestore)
-    const usersToProcess = snapshot.docs.filter(doc => {
-      const data = doc.data()
-      const completedAt = data.onboarding_completed_at?.toDate?.()?.getTime() ||
-                          data.onboarding_completed_at?.getTime?.() ||
-                          (data.onboarding_completed_at ? new Date(data.onboarding_completed_at).getTime() : null)
+      const logs = logsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
 
-      // Fallback to last_action_at
-      const fallbackAt = data.last_action_at?.toDate?.()?.getTime() ||
-                         data.last_action_at?.getTime?.() ||
-                         (data.last_action_at ? new Date(data.last_action_at).getTime() : null)
-
-      const checkTime = completedAt || fallbackAt
-      return checkTime && checkTime <= twentyFourHoursAgo.getTime()
-    })
-
-    const results: { userId: string; status: string }[] = []
-
-    for (const doc of usersToProcess) {
-      const userId = doc.id
-      const userData = doc.data()
-
-      // Skip if user has kill switch active
-      if (userData.has_replied) {
-        results.push({ userId, status: 'skipped (has_replied)' })
-        continue
-      }
-
-      // Mark as blocked
-      await db.collection('users').doc(userId).update({
-        paywall_blocked: true
-      })
-
-      // Schedule email
-      const { scheduleEmail } = await import('../services/emailService')
-      await scheduleEmail(userId, 'FreeOptions')
-
-      results.push({ userId, status: 'FreeOptions scheduled' })
+      res.json({ success: true, count: logs.length, logs })
+      return
     }
 
-    res.json({
-      success: true,
-      message: `Found ${usersToProcess.length} users blocked at paywall`,
-      usersProcessed: results,
-      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
-    })
-  }
-)
+    // Return logs for specific user
+    const logsSnapshot = await db.collection('email_logs')
+      .where('user_id', '==', userId)
+      .orderBy('scheduled_at', 'desc')
+      .get()
 
-/**
- * Test endpoint to manually trigger the queue processor
- * Usage: GET /testTriggerQueueProcessor
- */
-export const testTriggerQueueProcessor = onRequest(
-  { secrets: [RESEND_API_KEY] },
-  async (req, res) => {
-    const { processEmailQueue } = await import('../services/emailService')
+    const logs = logsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
 
-    await processEmailQueue()
-
-    res.json({
-      success: true,
-      message: 'Queue processor triggered',
-      checkQueue: 'https://us-central1-contact-on-map-flutter.cloudfunctions.net/getQueue'
-    })
+    res.json({ success: true, userId, count: logs.length, logs })
   }
 )
