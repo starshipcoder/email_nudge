@@ -1,11 +1,14 @@
-SUBJECT: A quick question before you go
+SUBJECT: One word before you go?
 
-Hello{{first_name}},
+Hey{{first_name}},
 
-I saw you cancelled your subscription.
+You're leaving Easy Way - what was the issue?
+→ Too expensive
+→ Don't use it anymore
+→ Missing a feature
+→ Found something better
+→ Other
 
-No worries - but it would help me understand why.
-
-Reply in 2 words, I read everything.
+One word is enough, I read everything.
 
 Harold, creator of Easy Way

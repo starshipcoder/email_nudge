@@ -1,9 +1,15 @@
-SUBJECT: Un problème avec votre paiement
+SUBJECT: Problème de paiement ?
 
 Bonjour{{first_name}},
 
-J'ai vu qu'il y a eu un souci avec votre paiement.
+Il y a eu un souci avec votre paiement.
 
-Si c'est une erreur de carte ou un problème technique, n'hésitez pas à me répondre - je peux vous aider à débloquer la situation.
+C'est quoi ?
+→ Carte expirée
+→ Problème de solde
+→ Je veux annuler
+→ Erreur technique
+
+Je peux vous aider à régler ça rapidement.
 
 Harold, créateur de Easy Way

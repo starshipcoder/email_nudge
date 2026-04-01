@@ -10,6 +10,12 @@ export const db = getFirestore('email-nudge')
 // Scheduled triggers (main cron for all emails)
 export { checkAndSendEmails } from './triggers/scheduledTriggers'
 
+// Daily recap trigger (send recap to Harold every morning)
+export { sendDailyEmailRecap } from './triggers/dailyRecapTrigger'
+
+// Weekly recap trigger (send recap every Monday morning)
+export { sendWeeklyEmailRecap } from './triggers/weeklyRecapTrigger'
+
 // Paywall triggers (only QuickStart on paywall_passed)
 export { onPaywallStateChanged } from './triggers/paywallTriggers'
 
@@ -23,7 +29,11 @@ export {
   testResetUser,
   testDeleteUser,
   testTriggerCron,
-  getEmailLogs
+  getEmailLogs,
+  getEnvInfo,
+  testDailyRecap,
+  testWeeklyRecap,
+  testChurnAlert
 } from './triggers/testTriggers'
 
 // API triggers (for mobile app)

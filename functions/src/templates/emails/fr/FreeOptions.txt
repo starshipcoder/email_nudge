@@ -1,17 +1,16 @@
-SUBJECT: Pas d'essai ? Voici 3 outils gratuits pour vos tournées
+SUBJECT: 3 outils gratuits pour vos tournées
 
 Bonjour{{first_name}},
 
-Pas de souci si vous n'avez pas pris l'essai 🙂
+Pas pris l'essai ? Pas de souci 🙂
 
-Vous pouvez créer vos tournées sans Easy Way :
-• MapQuest Route Planner → jusqu'à 26 stops
-  https://www.mapquest.com/routeplanner
-• RouteXL → jusqu'à 20 stops
-  https://www.routexl.com/
-• Google My Maps → pour visualiser et organiser votre territoire
-  https://www.google.com/maps/d/
+Voici comment optimiser vos tournées gratuitement :
+• MapQuest (26 stops) : mapquest.com/routeplanner
+• RouteXL (20 stops) : routexl.com
 
-Si c'est autre chose qui vous a bloqué, dites-le moi, je serai ravi de comprendre.
+Au fait, c'était quoi le blocage ?
+→ Le prix
+→ Pas convaincu
+→ J'utilise déjà autre chose
 
 Harold, créateur de Easy Way

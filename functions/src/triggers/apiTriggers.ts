@@ -147,15 +147,13 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
     }
   }
 
-  // Stage 2a: Paywall blocked (didn't start trial)
+  // Stage 2a: Paywall blocked (didn't start trial) - FreeOptions désactivé
   if (userData.paywall_blocked && !userData.paywall_passed) {
-    const delayMs = getTimeout('FreeOptions', isTestUser)
-    const delayStr = isTestUser ? `${Math.round(delayMs / 1000)}s` : '10min'
     return {
       current_stage: 'paywall_blocked',
-      next_email: 'FreeOptions',
-      next_email_reason: 'paywall_blocked: true, paywall_passed: false',
-      next_email_at: `immediate (${delayStr} delay)`,
+      next_email: 'none',
+      next_email_reason: 'paywall_blocked: true, paywall_passed: false (FreeOptions désactivé)',
+      next_email_at: 'N/A',
       blockers: [],
       is_test_user: isTestUser
     }
@@ -241,9 +239,10 @@ const VALID_LOCALES: Locale[] = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl']
 const VALID_PLANS = ['free', 'trial', 'monthly', 'yearly']
 
 interface SyncUserRequest {
-  revenuecat_id: string
-  email?: string
+  email: string  // Required: used as document ID
+  revenuecat_id?: string  // Optional: stored as field for RevenueCat webhook lookups
   first_name?: string
+  phone_number?: string  // Optional: any format
   locale?: string
   role?: string
   needs?: string[]
@@ -269,7 +268,8 @@ interface SyncUserRequest {
 /**
  * Sync user data from the mobile app
  * POST /syncUser
- * Body: { revenuecat_id: "...", ... }
+ * Body: { email: "...", ... }
+ * Document ID is the email (lowercase, trimmed)
  */
 export const syncUser = onRequest(
   { cors: true, secrets: [EMAIL_NUDGE_API_KEY] },
@@ -285,25 +285,32 @@ export const syncUser = onRequest(
 
     const data = req.body as SyncUserRequest
 
-    // Validate revenuecat_id
-    if (!data.revenuecat_id || typeof data.revenuecat_id !== 'string' || data.revenuecat_id.trim() === '') {
-      res.status(400).json({ error: 'revenuecat_id is required and must be a non-empty string' })
+    // LOG: Print full request body to debug
+    console.log('[syncUser] Received request body:', JSON.stringify(data, null, 2))
+    console.log('[syncUser] phone_number field:', data.phone_number)
+
+    // Validate email (required, used as document ID)
+    if (!data.email || typeof data.email !== 'string' || data.email.trim() === '') {
+      res.status(400).json({ error: 'email is required and must be a non-empty string' })
       return
     }
 
-    const userId = data.revenuecat_id.trim()
+    // Use lowercase email as document ID
+    const userId = data.email.trim().toLowerCase()
 
     try {
       // Build update object with only provided fields
-      const updateData: Record<string, unknown> = {}
+      const updateData: Record<string, unknown> = {
+        email: userId  // Store the normalized email
+      }
 
-      // String fields
-      if (data.email !== undefined) {
-        if (typeof data.email !== 'string') {
-          res.status(400).json({ error: 'email must be a string' })
+      // Store revenuecat_id if provided (for RevenueCat webhook lookups)
+      if (data.revenuecat_id !== undefined) {
+        if (typeof data.revenuecat_id !== 'string') {
+          res.status(400).json({ error: 'revenuecat_id must be a string' })
           return
         }
-        updateData.email = data.email
+        updateData.revenuecat_id = data.revenuecat_id
       }
 
       if (data.first_name !== undefined) {
@@ -312,6 +319,14 @@ export const syncUser = onRequest(
           return
         }
         updateData.first_name = data.first_name
+      }
+
+      if (data.phone_number !== undefined) {
+        if (typeof data.phone_number !== 'string') {
+          res.status(400).json({ error: 'phone_number must be a string' })
+          return
+        }
+        updateData.phone_number = data.phone_number
       }
 
       if (data.locale !== undefined) {
@@ -424,7 +439,7 @@ export const syncUser = onRequest(
       if (!userDoc.exists) {
         // Create new user with defaults
         const newUser = {
-          revenuecat_id: userId,
+          email: userId,  // email is the document ID
           created_at: FieldValue.serverTimestamp(),
           onboarding_complete: false,
           onboarding_dropped: false,
@@ -436,16 +451,22 @@ export const syncUser = onRequest(
           subscription_active: false,
           plan: 'free',
           email_whyleaving_sent: false,
+          email_whatsmissing_sent: false,
+          email_freeoptions_sent: false,
+          email_novisits_sent: false,
+          email_nooptimization_sent: false,
           has_replied: false,
           is_test_user: false,
           ...updateData
         }
         await userRef.set(newUser)
         console.log(`[syncUser] Created new user: ${userId}`)
+        console.log(`[syncUser] Created with updateData:`, JSON.stringify(updateData, null, 2))
       } else {
         // Merge with existing user
         await userRef.update(updateData)
         console.log(`[syncUser] Updated user: ${userId}`)
+        console.log(`[syncUser] Updated with data:`, JSON.stringify(updateData, null, 2))
       }
 
       res.json({

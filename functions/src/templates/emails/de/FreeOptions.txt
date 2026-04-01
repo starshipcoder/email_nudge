@@ -1,14 +1,16 @@
-SUBJECT: 3 kostenlose Wege, Ihre Routen zu erstellen
+SUBJECT: 3 kostenlose Tools für Ihre Routen
 
 Hallo{{first_name}},
 
-Kein Problem, wenn Sie die Testversion nicht gestartet haben.
+Testversion nicht gestartet? Kein Problem 🙂
 
-Sie können Ihre Routen auch ohne uns erstellen:
-• MapQuest Route Planner → bis zu 26 Stopps (https://www.mapquest.com/routeplanner)
-• RouteXL → bis zu 20 Stopps (https://www.routexl.com/)
-• Google My Maps → um Ihr Gebiet zu kartieren (https://www.google.com/maps/d/)
+So optimieren Sie Ihre Routen kostenlos:
+• MapQuest (26 Stopps): mapquest.com/routeplanner
+• RouteXL (20 Stopps): routexl.com
 
-Wenn Sie etwas anderes blockiert hat, sagen Sie mir Bescheid.
+Übrigens, was hat Sie abgehalten?
+→ Der Preis
+→ Nicht überzeugt
+→ Nutze bereits etwas anderes
 
 Harold, Gründer von Easy Way

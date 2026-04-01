@@ -1,9 +1,15 @@
-SUBJECT: A quick question
+SUBJECT: Stuck somewhere?
 
-Hello{{first_name}},
+Hey{{first_name}},
 
-You started setting up Easy Way but didn't finish.
+You started Easy Way but didn't finish the setup.
 
-What was missing?
+What happened?
+→ No time
+→ Too complicated
+→ Not what I'm looking for
+→ Just testing
+
+One word is enough!
 
 Harold, creator of Easy Way

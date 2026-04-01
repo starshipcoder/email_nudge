@@ -1,9 +1,15 @@
-SUBJECT: Una pregunta rápida
+SUBJECT: ¿Bloqueado en algún lado?
 
 Hola{{first_name}},
 
-Empezó a configurar Easy Way pero no terminó.
+Empezaste Easy Way pero no terminaste la configuración.
 
-¿Qué le faltó?
+¿Qué pasó?
+→ No tuve tiempo
+→ Muy complicado
+→ No es lo que busco
+→ Solo estaba probando
+
+¡Una palabra es suficiente!
 
 Harold, creador de Easy Way

@@ -1,33 +1,18 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler'
-import { sendEmailNow, RESEND_API_KEY } from '../services/emailService'
-import { db } from '../index'
+import { RESEND_API_KEY } from '../services/emailService'
 
-// Timeouts for production (in milliseconds)
-const TIMEOUTS = {
-  onboarding: 60 * 60 * 1000,         // 1 hour
-  paywall: 10 * 60 * 1000,            // 10 minutes
-  noVisits: 24 * 60 * 60 * 1000,      // 24 hours
-  noOptimization: 48 * 60 * 60 * 1000 // 48 hours
-}
-
-// Timeouts for test users (in milliseconds)
-const TEST_TIMEOUTS = {
-  onboarding: 30 * 1000,      // 30 seconds
-  paywall: 30 * 1000,         // 30 seconds
-  noVisits: 30 * 1000,        // 30 seconds
-  noOptimization: 30 * 1000   // 30 seconds
-}
-
-function getTimeout(key: keyof typeof TIMEOUTS, isTestUser: boolean): number {
-  return isTestUser ? TEST_TIMEOUTS[key] : TIMEOUTS[key]
-}
+// CODE DÉSACTIVÉ - Plus d'emails aux users
+// import { sendEmailNow } from '../services/emailService'
+// import { db } from '../index'
 
 /**
- * Scheduled: Check and send all emails every 30 minutes
- * - WhatsMissing: onboarding abandoned > 1h
- * - FreeOptions: paywall abandoned > 10min
- * - NoVisits: paywall_passed but no visits > 24h
- * - NoOptimization: has_added_visits but no optimization > 48h
+ * TOUS LES EMAILS AUX USERS SONT DÉSACTIVÉS
+ * On passe à WhatsApp pour les commerciaux français
+ *
+ * Seuls les emails à Harold sont actifs :
+ * - Récap quotidien (9h)
+ * - Alerte churn immédiate
+ * - Récap hebdomadaire (lundi 9h)
  */
 export const checkAndSendEmails = onSchedule(
   {
@@ -35,6 +20,10 @@ export const checkAndSendEmails = onSchedule(
     secrets: [RESEND_API_KEY]
   },
   async () => {
+    console.log('[Cron] EMAILS AUX USERS DÉSACTIVÉS - Passage à WhatsApp')
+    return // Désactivé temporairement
+
+    /* CODE DÉSACTIVÉ - Ne plus envoyer d'emails aux users
     const now = Date.now()
     const results = {
       whatsMissing: 0,
@@ -76,24 +65,24 @@ export const checkAndSendEmails = onSchedule(
         }
       }
 
-      // 2. Check FreeOptions (paywall abandoned)
-      if (user.onboarding_complete && !user.paywall_passed && !user.email_freeoptions_sent) {
-        const completedAt = user.onboarding_completed_at?.toDate?.()?.getTime() ||
-                            user.onboarding_completed_at?.getTime?.() ||
-                            user.last_action_at?.toDate?.()?.getTime() ||
-                            (user.onboarding_completed_at ? new Date(user.onboarding_completed_at).getTime() : null)
-
-        if (completedAt && (now - completedAt) > getTimeout('paywall', isTestUser)) {
-          console.log(`[Cron] User ${userId}: sending FreeOptions`)
-          await sendEmailNow(userId, 'FreeOptions')
-          await db.collection('users').doc(userId).update({
-            paywall_blocked: true,
-            email_freeoptions_sent: true
-          })
-          results.freeOptions++
-          continue
-        }
-      }
+      // 2. FreeOptions DÉSACTIVÉ - On ne donne plus d'outils gratuits à ceux qui ne veulent pas payer
+      // if (user.onboarding_complete && !user.paywall_passed && !user.email_freeoptions_sent) {
+      //   const completedAt = user.onboarding_completed_at?.toDate?.()?.getTime() ||
+      //                       user.onboarding_completed_at?.getTime?.() ||
+      //                       user.last_action_at?.toDate?.()?.getTime() ||
+      //                       (user.onboarding_completed_at ? new Date(user.onboarding_completed_at).getTime() : null)
+      //
+      //   if (completedAt && (now - completedAt) > getTimeout('paywall', isTestUser)) {
+      //     console.log(`[Cron] User ${userId}: sending FreeOptions`)
+      //     await sendEmailNow(userId, 'FreeOptions')
+      //     await db.collection('users').doc(userId).update({
+      //       paywall_blocked: true,
+      //       email_freeoptions_sent: true
+      //     })
+      //     results.freeOptions++
+      //     continue
+      //   }
+      // }
 
       // 3. Check NoVisits (trial but no visits)
       if (user.paywall_passed && !user.has_added_visits && !user.email_novisits_sent) {
@@ -132,5 +121,6 @@ export const checkAndSendEmails = onSchedule(
     }
 
     console.log(`[Cron] Results: WhatsMissing=${results.whatsMissing}, FreeOptions=${results.freeOptions}, NoVisits=${results.noVisits}, NoOptimization=${results.noOptimization}`)
+    */ // FIN CODE DÉSACTIVÉ
   }
 )

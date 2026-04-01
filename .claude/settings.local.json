@@ -16,9 +16,30 @@
       "Bash(firebase login:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
-      "Bash(firebase functions:log:*)"
+      "Bash(firebase functions:log:*)",
+      "Bash(flutter test:*)",
+      "Bash(firebase functions:list:*)",
+      "Bash(ls:*)",
+      "Bash(npx:*)",
+      "Bash(npm search:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(grep:*)",
+      "Bash(firebase login:list:*)",
+      "Bash(unset:*)",
+      "Bash(gcloud functions describe:*)",
+      "Bash(firebase --version:*)",
+      "Bash(firebase projects:list:*)",
+      "Bash(gcloud auth:*)",
+      "Bash(echo:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "notion",
+    "figma"
+  ]
 }

@@ -1,9 +1,15 @@
-SUBJECT: Ein Problem mit Ihrer Zahlung
+SUBJECT: Zahlungsproblem?
 
 Hallo{{first_name}},
 
-Ich habe gesehen, dass es ein Problem mit Ihrer Zahlung gab.
+Es gab ein Problem mit Ihrer Zahlung.
 
-Wenn es ein Kartenfehler oder ein technisches Problem ist, antworten Sie mir gerne - ich kann Ihnen helfen, das zu lösen.
+Was ist passiert?
+→ Karte abgelaufen
+→ Unzureichendes Guthaben
+→ Ich möchte kündigen
+→ Technischer Fehler
+
+Ich kann Ihnen helfen, das schnell zu beheben.
 
 Harold, Gründer von Easy Way

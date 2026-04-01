@@ -1,16 +1,19 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
-import { sendEmailNow, RESEND_API_KEY } from '../services/emailService'
+import { RESEND_API_KEY } from '../services/emailService'
 import { db } from '../index'
+
+// sendChurnAlert not used anymore - churns are in daily recap only
 
 /**
  * Trigger: User churns (detected via Firestore update)
- * Action: Send WhyLeaving email
+ * Action: NO email - churns are reported in daily recap only
  */
 export const onUserChurned = onDocumentUpdated(
   {
     document: 'users/{userId}',
-    database: 'email-nudge'
+    database: 'email-nudge',
+    secrets: [RESEND_API_KEY]
   },
   async (event) => {
     const before = event.data?.before.data()
@@ -21,8 +24,9 @@ export const onUserChurned = onDocumentUpdated(
 
     // Check if user just churned
     if (!before.churned_at && after.churned_at) {
-      console.log(`User ${userId} churned${after.churn_reason ? `: ${after.churn_reason}` : ''}`)
-      await sendEmailNow(userId, 'WhyLeaving')
+      console.log(`User ${userId} churned${after.churn_reason ? `: ${after.churn_reason}` : ''} - will be in daily recap`)
+
+      // NO immediate alert - churns will be reported in daily recap
     }
   }
 )
@@ -41,11 +45,38 @@ interface RevenueCatWebhook {
     environment: string
     product_id?: string
     expiration_at_ms?: number
+    country_code?: string
     subscriber_attributes?: {
       $email?: { value: string }
       [key: string]: { value: string; updated_at_ms?: number } | undefined
     }
   }
+}
+
+/**
+ * Map country code to locale for email generation
+ */
+function countryCodeToLocale(countryCode?: string): string {
+  if (!countryCode) return 'en'
+
+  const countryToLocale: Record<string, string> = {
+    // French
+    'FR': 'fr', 'BE': 'fr', 'LU': 'fr', 'MC': 'fr', 'CH': 'fr',
+    'CA': 'fr', // Canada - could be fr or en, defaulting to fr
+    // Spanish
+    'ES': 'es', 'MX': 'es', 'AR': 'es', 'CO': 'es', 'CL': 'es',
+    'PE': 'es', 'VE': 'es', 'EC': 'es', 'GT': 'es', 'CU': 'es',
+    // German
+    'DE': 'de', 'AT': 'de',
+    // Italian
+    'IT': 'it',
+    // Portuguese
+    'PT': 'pt', 'BR': 'pt',
+    // Dutch
+    'NL': 'nl',
+  }
+
+  return countryToLocale[countryCode.toUpperCase()] || 'en'
 }
 
 /**
@@ -74,10 +105,12 @@ export const onRevenueCatWebhook = onRequest(
     const aliases = eventData.aliases || []
     const isTestEvent = eventData.environment === 'SANDBOX'
 
-    // Extract email from subscriber_attributes
+    // Extract email and country from event data
     const emailFromAttributes = eventData.subscriber_attributes?.$email?.value
+    const countryCode = eventData.country_code
+    const locale = countryCodeToLocale(countryCode)
 
-    console.log(`RevenueCat ${eventType}: app_user_id=${appUserId}, aliases=${aliases.length}, email=${emailFromAttributes || 'none'}`)
+    console.log(`RevenueCat ${eventType}: app_user_id=${appUserId}, aliases=${aliases.length}, email=${emailFromAttributes || 'none'}, country=${countryCode || 'none'}, locale=${locale}`)
 
     // Try to find user by app_user_id or any alias
     const idsToSearch = [appUserId, ...aliases].filter(Boolean)
@@ -117,7 +150,7 @@ export const onRevenueCatWebhook = onRequest(
         } else if (emailFromAttributes) {
           // User not in DB but we have email - send WhyLeaving directly
           console.log(`RevenueCat: User not found, sending WhyLeaving to ${emailFromAttributes}`)
-          await sendWhyLeavingToEmail(emailFromAttributes, churnReason, isTestEvent)
+          await sendWhyLeavingToEmail(emailFromAttributes, churnReason, isTestEvent, locale)
         } else {
           // No user, no email - notify Harold
           console.log(`RevenueCat: CANCELLATION - no user and no email, notifying Harold`)
@@ -166,7 +199,7 @@ async function handleChurn(userId: string, isTestEvent: boolean, churnReason: st
     is_test_user: isTestEvent
   })
 
-  // WhyLeaving will be triggered by Firestore onUpdate
+  // Churn alert will be triggered by Firestore onUpdate (onUserChurned)
 }
 
 async function handleSubscriptionActive(userId: string, productId: string | undefined, isTestEvent: boolean): Promise<void> {
@@ -208,7 +241,7 @@ async function handleTrialStarted(userId: string, expirationAt: string | undefin
 /**
  * Send WhyLeaving email directly to an email address (user not in DB)
  */
-async function sendWhyLeavingToEmail(email: string, churnReason: string | null, isTestEvent: boolean): Promise<void> {
+async function sendWhyLeavingToEmail(email: string, churnReason: string | null, isTestEvent: boolean, locale: string = 'en'): Promise<void> {
   // Import Resend here to avoid circular dependency
   const { Resend } = await import('resend')
   const resend = new Resend(RESEND_API_KEY.value())
@@ -217,7 +250,7 @@ async function sendWhyLeavingToEmail(email: string, churnReason: string | null, 
   const fakeUser = {
     id: 'unknown',
     email,
-    locale: 'en', // Default to English
+    locale, // Use locale derived from country_code
     role: 'delivery' as const,
     churn_reason: churnReason,
     dry_run: isTestEvent

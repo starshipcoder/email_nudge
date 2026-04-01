@@ -1,11 +1,14 @@
-SUBJECT: Eine kurze Frage bevor Sie gehen
+SUBJECT: Ein Wort bevor Sie gehen?
 
 Hallo{{first_name}},
 
-Ich habe gesehen, dass Sie Ihr Abo gekündigt haben.
+Sie verlassen Easy Way - was war das Problem?
+→ Zu teuer
+→ Nutze es nicht mehr
+→ Etwas fehlt
+→ Etwas besseres gefunden
+→ Anderes
 
-Kein Problem - aber es würde mir helfen zu verstehen warum.
-
-Antworten Sie in 2 Worten, ich lese alles.
+Ein Wort genügt, ich lese alles.
 
 Harold, Gründer von Easy Way

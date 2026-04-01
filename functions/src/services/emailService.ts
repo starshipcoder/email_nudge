@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { defineSecret, defineString } from 'firebase-functions/params'
+import { defineSecret } from 'firebase-functions/params'
 import { User, EmailName, Segment, EmailQueueItem, EmailLog } from '../types'
 import { resolveSegment, shouldSendEmail } from '../utils/segmentResolver'
 import { generateEmail } from './emailGenerator'
@@ -29,11 +29,11 @@ const TEST_EMAILS = [
 ]
 
 // Environment: 'dev' = all emails go to TEST_RECIPIENT, 'prod' = normal behavior
-// Set in Google Cloud Console or via firebase functions:params:set ENV=prod
-const ENV_PARAM = defineString('ENV', { default: 'dev' })
+// Change this value to switch modes
+const ENV: 'dev' | 'prod' = 'prod'
 
 function getEnv(): string {
-  return ENV_PARAM.value()
+  return ENV
 }
 
 function isTestEmail(email: string): boolean {
@@ -41,9 +41,19 @@ function isTestEmail(email: string): boolean {
 }
 
 function getRecipient(user: { email: string; is_test_user?: boolean }): string {
-  if (getEnv() === 'dev') return TEST_RECIPIENT
-  if (user.is_test_user) return TEST_RECIPIENT
-  if (isTestEmail(user.email)) return TEST_RECIPIENT
+  // Dev mode: all emails go to TEST_RECIPIENT
+  if (getEnv() === 'dev') {
+    return TEST_RECIPIENT
+  }
+  // Test users go to TEST_RECIPIENT
+  if (user.is_test_user) {
+    return TEST_RECIPIENT
+  }
+  // Known test emails go to TEST_RECIPIENT
+  if (isTestEmail(user.email)) {
+    return TEST_RECIPIENT
+  }
+  // Production: send to real user
   return user.email
 }
 
@@ -66,10 +76,6 @@ Email: ${user.email}
 Role: ${user.role || 'non défini'}
 Needs: ${user.needs?.join(', ') || 'aucun'}
 Locale: ${user.locale || 'fr'}
-Trial active: ${user.trial_active}
-Subscription active: ${user.subscription_active}
-Has added visits: ${user.has_added_visits}
-Has optimized route: ${user.has_optimized_route}
 `
 }
 
@@ -169,18 +175,19 @@ export async function sendEmailNow(
   const { subject, body } = generateEmail(user, emailName)
   const fullBody = body + getDebugFooter(user)
 
+  // Get actual recipient (may be redirected in dev mode or for test users)
+  const toEmail = getRecipient(user)
+
   // Check dry_run mode
   if (isDryRun(user)) {
-    await logEmail(userId, emailName, 'dry_run', 'dry_run mode enabled', segment)
-    console.log(`[DRY_RUN] Would send ${emailName} (${segment}) to ${user.email}`)
+    await logEmail(userId, emailName, 'dry_run', 'dry_run mode enabled', segment, toEmail)
+    console.log(`[DRY_RUN] Would send ${emailName} (${segment}) to ${toEmail}`)
     console.log(`[DRY_RUN] Subject: ${subject}`)
     return
   }
 
   // Send via Resend
   try {
-    const toEmail = getRecipient(user)
-
     await getResend().emails.send({
       from: FROM_EMAIL,
       to: toEmail,
@@ -189,7 +196,7 @@ export async function sendEmailNow(
       text: fullBody
     })
 
-    await logEmail(userId, emailName, 'sent', undefined, segment)
+    await logEmail(userId, emailName, 'sent', undefined, segment, toEmail)
     console.log(`[${getEnv()}] Sent ${emailName} (${segment}) to ${toEmail}`)
 
     // Set WhyLeaving flag
@@ -238,18 +245,19 @@ export async function processEmailQueue(): Promise<void> {
       const { subject, body } = generateEmail(user, item.email_name)
       const fullBody = body + getDebugFooter(user)
 
+      // Get actual recipient
+      const toEmail = getRecipient(user)
+
       // Check dry_run mode
       if (isDryRun(user)) {
-        await logEmail(item.user_id, item.email_name, 'dry_run', 'dry_run mode enabled', item.segment)
-        console.log(`[DRY_RUN] Would send queued ${item.email_name} (${item.segment}) to ${user.email}`)
+        await logEmail(item.user_id, item.email_name, 'dry_run', 'dry_run mode enabled', item.segment, toEmail)
+        console.log(`[DRY_RUN] Would send queued ${item.email_name} (${item.segment}) to ${toEmail}`)
         console.log(`[DRY_RUN] Subject: ${subject}`)
         await doc.ref.delete()
         continue
       }
 
       // Send via Resend
-      const toEmail = getRecipient(user)
-
       await getResend().emails.send({
         from: FROM_EMAIL,
         to: toEmail,
@@ -258,7 +266,7 @@ export async function processEmailQueue(): Promise<void> {
         text: fullBody
       })
 
-      await logEmail(item.user_id, item.email_name, 'sent', undefined, item.segment)
+      await logEmail(item.user_id, item.email_name, 'sent', undefined, item.segment, toEmail)
       console.log(`[${getEnv()}] Sent queued ${item.email_name} (${item.segment}) to ${toEmail}`)
 
       // Set WhyLeaving flag
@@ -305,7 +313,8 @@ async function logEmail(
   emailName: EmailName,
   status: EmailLog['status'],
   reason?: string,
-  segment?: Segment
+  segment?: Segment,
+  toEmail?: string
 ): Promise<void> {
   const log: Record<string, any> = {
     user_id: userId,
@@ -322,6 +331,10 @@ async function logEmail(
 
   if (status === 'sent') {
     log.sent_at = new Date()
+  }
+
+  if (toEmail) {
+    log.to_email = toEmail
   }
 
   await db.collection('email_logs').add(log)

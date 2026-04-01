@@ -1,11 +1,14 @@
-SUBJECT: Una domanda prima di andare
+SUBJECT: Una parola prima di andare?
 
-Buongiorno{{first_name}},
+Ciao{{first_name}},
 
-Ho visto che ha cancellato il suo abbonamento.
+Stai lasciando Easy Way - qual è stato il problema?
+→ Troppo caro
+→ Non lo uso più
+→ Manca qualcosa
+→ Ho trovato di meglio
+→ Altro
 
-Nessun problema - ma mi aiuterebbe capire perché.
-
-Mi risponda in 2 parole, leggo tutto.
+Una parola basta, leggo tutto.
 
 Harold, creatore di Easy Way

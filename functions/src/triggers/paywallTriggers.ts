@@ -1,15 +1,16 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
-import { sendEmailNow } from '../services/emailService'
+import { RESEND_API_KEY } from '../services/emailService'
 import { db } from '../index'
 
 /**
+ * DÉSACTIVÉ - Plus d'emails aux users
  * Trigger: User passes paywall → send QuickStart immediately
- * Other emails (FreeOptions, NoVisits, NoOptimization) are handled by the cron
  */
 export const onPaywallStateChanged = onDocumentUpdated(
   {
     document: 'users/{userId}',
-    database: 'email-nudge'
+    database: 'email-nudge',
+    secrets: [RESEND_API_KEY]
   },
   async (event) => {
     const before = event.data?.before.data()
@@ -18,17 +19,16 @@ export const onPaywallStateChanged = onDocumentUpdated(
 
     if (!before || !after) return
 
-    // User passed paywall → send QuickStart immediately
+    // User passed paywall → just record timestamp (no email)
     if (!before.paywall_passed && after.paywall_passed) {
-      console.log(`User ${userId} passed paywall - sending QuickStart`)
+      console.log(`User ${userId} passed paywall - NO EMAIL (désactivé)`)
 
-      // Record timestamp for NoVisits calculation
       await db.collection('users').doc(userId).update({
         paywall_passed_at: new Date()
       })
 
-      // Send QuickStart immediately
-      await sendEmailNow(userId, 'QuickStart')
+      // QuickStart email DÉSACTIVÉ
+      // await sendEmailNow(userId, 'QuickStart')
     }
   }
 )

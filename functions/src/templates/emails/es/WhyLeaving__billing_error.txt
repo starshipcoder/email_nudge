@@ -1,9 +1,15 @@
-SUBJECT: Un problema con su pago
+SUBJECT: ¿Problema con el pago?
 
 Hola{{first_name}},
 
-Vi que hubo un problema con su pago.
+Hubo un problema con tu pago.
 
-Si es un error de tarjeta o un problema técnico, no dude en responderme - puedo ayudarle a resolverlo.
+¿Qué pasó?
+→ Tarjeta vencida
+→ Fondos insuficientes
+→ Quiero cancelar
+→ Error técnico
+
+Puedo ayudarte a solucionarlo rápido.
 
 Harold, creador de Easy Way

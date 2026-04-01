@@ -1,6 +1,9 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { RESEND_API_KEY, sendEmailNow } from '../services/emailService'
 import { generateEmail } from '../services/emailGenerator'
+import { sendDailyRecap } from '../services/dailyRecapService'
+import { sendWeeklyRecap } from '../services/weeklyRecapService'
+import { sendChurnAlert } from '../services/churnAlertService'
 import { Resend } from 'resend'
 import { db } from '../index'
 import { EmailName, User } from '../types'
@@ -38,7 +41,7 @@ export const testSendEmail = onRequest(
       res.status(400).json({
         error: 'Missing parameters',
         usage: '/testSendEmail?userId=xxx&emailName=WhatsMissing',
-        availableEmails: ['WhatsMissing', 'FreeOptions', 'QuickStart', 'NoVisits', 'NoOptimization', 'WhyLeaving']
+        availableEmails: ['WhatsMissing', 'QuickStart', 'NoVisits', 'NoOptimization', 'WhyLeaving'] // FreeOptions désactivé
       })
       return
     }
@@ -271,23 +274,23 @@ export const testTriggerCron = onRequest(
         }
       }
 
-      // 2. Check FreeOptions (paywall abandoned)
-      if (user.onboarding_complete && !user.paywall_passed && !user.email_freeoptions_sent) {
-        const completedAt = user.onboarding_completed_at?.toDate?.()?.getTime() ||
-                            user.onboarding_completed_at?.getTime?.() ||
-                            (user.onboarding_completed_at ? new Date(user.onboarding_completed_at).getTime() : null)
-
-        if (completedAt && (now - completedAt) > timeouts.paywall) {
-          console.log(`[TestCron] User ${userId}: sending FreeOptions`)
-          await sendEmailNow(userId, 'FreeOptions')
-          await db.collection('users').doc(userId).update({
-            paywall_blocked: true,
-            email_freeoptions_sent: true
-          })
-          results.push({ userId, email: 'FreeOptions', status: 'sent' })
-          continue
-        }
-      }
+      // 2. FreeOptions DÉSACTIVÉ - On ne donne plus d'outils gratuits
+      // if (user.onboarding_complete && !user.paywall_passed && !user.email_freeoptions_sent) {
+      //   const completedAt = user.onboarding_completed_at?.toDate?.()?.getTime() ||
+      //                       user.onboarding_completed_at?.getTime?.() ||
+      //                       (user.onboarding_completed_at ? new Date(user.onboarding_completed_at).getTime() : null)
+      //
+      //   if (completedAt && (now - completedAt) > timeouts.paywall) {
+      //     console.log(`[TestCron] User ${userId}: sending FreeOptions`)
+      //     await sendEmailNow(userId, 'FreeOptions')
+      //     await db.collection('users').doc(userId).update({
+      //       paywall_blocked: true,
+      //       email_freeoptions_sent: true
+      //     })
+      //     results.push({ userId, email: 'FreeOptions', status: 'sent' })
+      //     continue
+      //   }
+      // }
 
       // 3. Check NoVisits (trial but no visits)
       if (user.paywall_passed && !user.has_added_visits && !user.email_novisits_sent) {
@@ -333,6 +336,19 @@ export const testTriggerCron = onRequest(
 )
 
 /**
+ * Get current environment info (for debugging)
+ * Usage: GET /getEnvInfo
+ */
+export const getEnvInfo = onRequest(
+  async (req, res) => {
+    res.json({
+      env: process.env.ENV || 'not set (default: prod)',
+      timestamp: new Date().toISOString()
+    })
+  }
+)
+
+/**
  * Get email logs for a user
  * Usage: GET /getEmailLogs?userId=xxx
  */
@@ -368,5 +384,81 @@ export const getEmailLogs = onRequest(
     }))
 
     res.json({ success: true, userId, count: logs.length, logs })
+  }
+)
+
+/**
+ * Test endpoint to manually trigger daily recap
+ * Usage: GET /testDailyRecap
+ */
+export const testDailyRecap = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    try {
+      const result = await sendDailyRecap()
+      res.json(result)
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: `Exception: ${String(error)}`,
+        total_emails_yesterday: 0,
+        sales_emails: 0,
+        email_sent: false
+      })
+    }
+  }
+)
+
+/**
+ * Test endpoint to manually trigger weekly recap
+ * Usage: GET /testWeeklyRecap
+ */
+export const testWeeklyRecap = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    try {
+      const result = await sendWeeklyRecap()
+      res.json(result)
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: `Exception: ${String(error)}`,
+        total_emails_week: 0,
+        total_users: 0,
+        email_sent: false
+      })
+    }
+  }
+)
+
+/**
+ * Test endpoint to manually trigger churn alert
+ * Usage: GET /testChurnAlert?userId=xxx
+ */
+export const testChurnAlert = onRequest(
+  { secrets: [RESEND_API_KEY] },
+  async (req, res) => {
+    const userId = req.query.userId as string
+
+    if (!userId) {
+      res.status(400).json({
+        error: 'Missing userId parameter',
+        usage: '/testChurnAlert?userId=xxx'
+      })
+      return
+    }
+
+    try {
+      await sendChurnAlert(userId)
+      res.json({
+        success: true,
+        message: `Churn alert sent for user ${userId}`
+      })
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: String(error)
+      })
+    }
   }
 )

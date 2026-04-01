@@ -1,11 +1,14 @@
-SUBJECT: Une question avant de partir
+SUBJECT: Un mot avant de partir ?
 
 Bonjour{{first_name}},
 
-J'ai vu que vous avez arrêté votre abonnement.
+Vous quittez Easy Way - c'était quoi le problème ?
+→ Trop cher
+→ Je ne l'utilise plus
+→ Il manque quelque chose
+→ J'ai trouvé mieux
+→ Autre
 
-Pas de souci - mais ça m'aiderait de comprendre pourquoi.
-
-Répondez-moi en 2 mots, je lis tout.
+Un mot suffit, je lis tout.
 
 Harold, créateur de Easy Way

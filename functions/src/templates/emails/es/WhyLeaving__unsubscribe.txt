@@ -1,11 +1,14 @@
-SUBJECT: Una pregunta antes de irse
+SUBJECT: ¿Una palabra antes de irte?
 
 Hola{{first_name}},
 
-Vi que canceló su suscripción.
+Te vas de Easy Way - ¿cuál fue el problema?
+→ Muy caro
+→ Ya no lo uso
+→ Falta algo
+→ Encontré algo mejor
+→ Otro
 
-No pasa nada - pero me ayudaría entender por qué.
-
-Responda en 2 palabras, leo todo.
+Una palabra es suficiente, leo todo.
 
 Harold, creador de Easy Way

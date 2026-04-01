@@ -1,9 +1,15 @@
-SUBJECT: Eine kurze Frage
+SUBJECT: Irgendwo blockiert?
 
 Hallo{{first_name}},
 
-Sie haben angefangen Easy Way einzurichten, aber nicht abgeschlossen.
+Sie haben Easy Way gestartet, aber die Einrichtung nicht abgeschlossen.
 
-Was hat Ihnen gefehlt?
+Was war los?
+→ Keine Zeit
+→ Zu kompliziert
+→ Nicht das, was ich suche
+→ Nur am Testen
+
+Ein Wort genügt!
 
 Harold, Gründer von Easy Way

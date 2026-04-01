@@ -1,14 +1,16 @@
-SUBJECT: 3 formas gratuitas de crear sus rutas
+SUBJECT: 3 herramientas gratis para tus rutas
 
 Hola{{first_name}},
 
-No pasa nada si no empezó la prueba.
+¿No empezaste la prueba? No pasa nada 🙂
 
-Puede crear sus rutas sin nosotros:
-• MapQuest Route Planner → hasta 26 paradas (https://www.mapquest.com/routeplanner)
-• RouteXL → hasta 20 paradas (https://www.routexl.com/)
-• Google My Maps → para mapear su territorio (https://www.google.com/maps/d/)
+Aquí tienes cómo optimizar tus rutas gratis:
+• MapQuest (26 paradas): mapquest.com/routeplanner
+• RouteXL (20 paradas): routexl.com
 
-Si algo más le bloqueó, dígamelo.
+Por cierto, ¿qué te frenó?
+→ El precio
+→ No me convence
+→ Ya uso otra cosa
 
 Harold, creador de Easy Way

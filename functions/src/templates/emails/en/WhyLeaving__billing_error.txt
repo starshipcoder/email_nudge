@@ -1,9 +1,15 @@
-SUBJECT: An issue with your payment
+SUBJECT: Payment issue?
 
-Hello{{first_name}},
+Hey{{first_name}},
 
-I noticed there was an issue with your payment.
+There was an issue with your payment.
 
-If it's a card error or a technical problem, feel free to reply - I can help you sort it out.
+What happened?
+→ Card expired
+→ Insufficient funds
+→ I want to cancel
+→ Technical error
+
+I can help you fix this quickly.
 
 Harold, creator of Easy Way
