@@ -38,3 +38,6 @@ export {
 
 // API triggers (for mobile app)
 export { syncUser, getUser, getStatus } from './triggers/apiTriggers'
+
+// WhatsApp triggers (nudge automatique nouveaux users)
+export { onNewUserWhatsapp } from './triggers/whatsappTriggers'
