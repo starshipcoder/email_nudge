@@ -6,7 +6,7 @@ import { defineSecret } from 'firebase-functions/params'
 export const NUDGE_WEBHOOK_SECRET = defineSecret('NUDGE_WEBHOOK_SECRET')
 
 // URL du webhook VPS (à configurer selon l'environnement)
-const VPS_NUDGE_URL = process.env.VPS_NUDGE_URL || 'http://YOUR_VPS_IP:3001/nudge-event'
+const VPS_NUDGE_URL = process.env.VPS_NUDGE_URL || 'https://api.easyway-planner.com/nudge/nudge-event'
 
 /**
  * Déclenché à la création d'un nouveau user dans Firestore.

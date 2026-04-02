@@ -7,8 +7,8 @@ admin.initializeApp()
 // Use named database
 export const db = getFirestore('email-nudge')
 
-// Scheduled triggers (main cron for all emails)
-export { checkAndSendEmails } from './triggers/scheduledTriggers'
+// Scheduled triggers (emails désactivés, WhatsApp lifecycle actif)
+export { checkAndSendEmails, checkAndSendWhatsApp } from './triggers/scheduledTriggers'
 
 // Daily recap trigger (send recap to Harold every morning)
 export { sendDailyEmailRecap } from './triggers/dailyRecapTrigger'
