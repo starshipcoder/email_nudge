@@ -42,6 +42,13 @@ export interface User {
   subscription_active: boolean
   plan: 'free' | 'trial' | 'monthly' | 'yearly'
 
+  // Contexte app (pour personnalisation nudge)
+  user_step?: string           // emailWithLandscape | configuration | introduction | paywall | main
+  contacts_total?: number      // contacts importés
+  contacts_located?: number    // contacts géolocalisés
+  routes_created?: number      // nombre de tournées créées
+  visits_logged?: number       // nombre de visites CRM loggées
+
   // Churn
   churned_at?: Date
   churn_reason?: string
