@@ -41,11 +41,23 @@ export const onNewUserWhatsapp = onDocumentCreated(
 
     const payload = {
       phone,
+      email: user.email,
+      first_name: user.first_name,
       event_type: 'new_signup',
       platform,
       country,
+      locale: user.locale || 'fr',
       trial: user.trial_active === true,
       days_since_signup: 0,
+      // Contexte onboarding
+      role: user.role,
+      needs: user.needs || [],
+      user_step: user.user_step,
+      // Métriques app
+      contacts_total: user.contacts_total ?? 0,
+      contacts_located: user.contacts_located ?? 0,
+      routes_created: user.routes_created ?? 0,
+      visits_logged: user.visits_logged ?? 0,
     }
 
     console.log(`[WhatsApp] Nouveau user — envoi event nudge: ${JSON.stringify({ ...payload, phone: phone.slice(0, 6) + '***' })}`)
