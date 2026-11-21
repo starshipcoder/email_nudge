@@ -149,3 +149,25 @@ test('les actions du jour : prêtes et reportées échues, Plus tard, Ignorer, t
   assert.equal((await s.modifierTexte('a', 'Nouveau', 'Texte')).modifie_a_la_main, true);
   await assert.rejects(() => s.modifierTexte('a', '', 'x'), /requis/);
 });
+
+test('le fil réunit la page, Gmail et WhatsApp ; « A répondu » arrête les relances de campagne', async () => {
+  const { cleUtilisateur } = await import('../envoi.mjs');
+  const db = baseEnMemoire({
+    users: [{ id: 'ana@exemple.fr', revenuecat_id: 'rcA' }],
+    crm_actions: [
+      { id: 'essai_j2__x', type: 'essai_j2', user_id: 'ana@exemple.fr', statut: 'a_blanc', sujet: 'Votre essai', corps: 'Bonjour', maj_le: '2026-12-01T10:00:00Z' },
+      { id: 'campagne_relance__x', type: 'campagne_relance', user_id: 'ana@exemple.fr', statut: 'prete', campagne_id: 'c1' },
+    ],
+    crm_messages: [{ id: 'g1', user_id: 'ana@exemple.fr', sens: 'recu', source: 'gmail', le: '2026-12-02T09:00:00Z', sujet: 'Re', extrait: 'Merci' },
+      { id: 'g2', user_id: 'autre@exemple.fr', sens: 'recu', source: 'gmail', le: '2026-12-02T09:00:00Z' }],
+    crm_membres: [{ id: 'c1__k', campagne_id: 'c1', user_id: 'ana@exemple.fr', statut: 'envoye' }],
+  });
+  const s = suivi(db, { maintenant: () => new Date('2026-12-03T10:00:00Z') });
+  assert.deepEqual((await s.fil('ana@exemple.fr')).map((l) => l.source), ['gmail', 'page, à blanc']);
+  await assert.rejects(s.noterMessage('ana@exemple.fr', { sens: 'recu', source: 'whatsapp', extrait: '  ' }), /Coller/);
+  await s.noterMessage('ana@exemple.fr', { sens: 'recu', source: 'whatsapp', extrait: 'Oui ça marche' });
+  assert.equal((await s.fil('ana@exemple.fr'))[0].source, 'whatsapp');
+  assert.ok(db.donnees.crm_fiches.get(cleUtilisateur('ana@exemple.fr')).a_repondu_le);
+  assert.equal(db.donnees.crm_membres.get('c1__k').statut, 'repondu');
+  assert.equal(db.donnees.crm_actions.get('campagne_relance__x').statut, 'ignoree');
+});

@@ -92,6 +92,15 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const f = await s.fiche(url.searchParams.get('id') ?? '');
         return f ? json(res, 200, f) : json(res, 404, { erreur: 'Inscrit introuvable.' });
       }
+      if (route === 'GET /api/fil') return json(res, 200, { lignes: await s.fil(url.searchParams.get('id') ?? '') });
+      if (route === 'POST /api/message') {
+        const { id, sens, source, extrait } = await lireCorps(req);
+        return json(res, 200, { ok: await s.noterMessage(String(id ?? ''), { sens, source, extrait }) });
+      }
+      if (route === 'POST /api/repondu') {
+        const { id } = await lireCorps(req);
+        return json(res, 200, { ok: await s.aRepondu(String(id ?? '')) });
+      }
       if (route === 'GET /api/desinscrit') return json(res, 200, { desinscrit: await s.desinscrit(url.searchParams.get('id') ?? '') });
       if (route === 'POST /api/desinscrire') {
         const { id } = await lireCorps(req);

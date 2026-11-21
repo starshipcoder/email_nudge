@@ -129,8 +129,28 @@ async function fiche(id) {
     </dl></div>
     <div class="carte"><h2>E-mails</h2><p id="etat-desinscription" class="doux">…</p>
       <div class="outils"><button id="desinscrire" class="danger" hidden>Désinscrire</button></div></div>
+    <div class="carte"><h2>Échanges</h2>
+      <div class="outils"><button id="a-repondu">A répondu</button><button id="wa-recu">Réponse WhatsApp</button><span class="message" id="msg-fil"></span></div>
+      <div id="wa-zone" hidden><textarea id="wa-texte" rows="3" placeholder="Coller la réponse reçue sur WhatsApp"></textarea>
+        <div class="outils"><button id="wa-noter" class="choisi">Noter la réponse</button></div></div>
+      <div id="fil" class="doux">…</div></div>
     <div class="carte"><h2>Faits</h2><dl class="grille">${faits.map(([k, v]) => `<dt>${k}</dt><dd>${echapper(v)}</dd>`).join('')}</dl></div>`;
   vue.querySelectorAll('[data-copier]').forEach((b) => b.addEventListener('click', () => copier(b.dataset.copier, b)));
+  const SOURCES = { gmail: 'Gmail', whatsapp: 'WhatsApp' };
+  const remplirFil = async () => {
+    const { lignes } = await api(`fil?id=${encodeURIComponent(f.id)}`);
+    document.getElementById('fil').innerHTML = lignes.length ? `<table><tbody>${lignes.map((l) => `<tr><td>${dateHeure(l.le)}</td><td>${l.sens === 'recu' ? 'reçu' : 'envoyé'} · ${echapper(SOURCES[l.source] ?? l.source)}</td>
+      <td><strong>${echapper(l.sujet)}</strong><br>${echapper(l.extrait)}</td></tr>`).join('')}</tbody></table>` : 'Aucun échange noté.';
+  };
+  const msgFil = document.getElementById('msg-fil');
+  document.getElementById('a-repondu').addEventListener('click', async () => { await api('repondu', { id: f.id }); msgFil.textContent = 'Noté : a répondu.'; });
+  document.getElementById('wa-recu').addEventListener('click', () => { document.getElementById('wa-zone').hidden = false; });
+  document.getElementById('wa-noter').addEventListener('click', async () => {
+    try { await api('message', { id: f.id, sens: 'recu', source: 'whatsapp', extrait: document.getElementById('wa-texte').value }); document.getElementById('wa-zone').hidden = true; msgFil.textContent = 'Réponse notée.'; await remplirFil(); }
+    catch (e) { msgFil.className = 'message erreur'; msgFil.textContent = e.message; }
+  });
+  vue.querySelector('a.bouton[href^="https://wa.me/"]')?.addEventListener('click', () => { api('message', { id: f.id, sens: 'envoye', source: 'whatsapp' }).then(remplirFil).catch(() => {}); });
+  remplirFil().catch(() => { document.getElementById('fil').textContent = 'Fil illisible.'; });
   const etatDesinscription = document.getElementById('etat-desinscription');
   const boutonDesinscrire = document.getElementById('desinscrire');
   const { desinscrit } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);

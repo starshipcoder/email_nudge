@@ -122,6 +122,42 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       const lignes = [...await db.lister('crm_journal'), ...(await db.lister('crm_envois')).map((e) => ({ ...e, quoi: e.quoi ?? `envoi ${e.statut ?? ''}`.trim() }))];
       return lignes.sort((a, b) => String(b.le ?? '').localeCompare(String(a.le ?? ''))).slice(0, 200);
     },
+    // Le fil d'une personne : e-mails de la page (envoyés ou à blanc), e-mails Gmail, WhatsApp notés.
+    async fil(id) {
+      const actions = (await db.lister('crm_actions')).filter((a) => a.user_id === id && ['envoyee', 'a_blanc', 'erreur'].includes(a.statut))
+        .map((a) => ({ le: a.maj_le ?? a.cree_le, sens: 'envoye', source: a.statut === 'a_blanc' ? 'page, à blanc' : a.statut === 'erreur' ? 'page, en erreur' : 'page', sujet: a.sujet, extrait: String(a.corps ?? '').slice(0, 500) }));
+      const messages = (await db.lister('crm_messages')).filter((m) => m.user_id === id)
+        .map((m) => ({ le: m.le, sens: m.sens, source: m.source, sujet: m.sujet ?? '', extrait: m.extrait ?? '' }));
+      return [...actions, ...messages].sort((a, b) => String(b.le ?? '').localeCompare(String(a.le ?? '')));
+    },
+    async noterMessage(id, { sens, source, extrait = '' }) {
+      if (!['envoye', 'recu'].includes(sens) || source !== 'whatsapp') throw new Error('Message inconnu.');
+      const u = await db.lire('users', id);
+      if (!u) throw new Error('Inscrit introuvable.');
+      const texte = String(extrait).replace(/\s+/g, ' ').trim().slice(0, 500);
+      if (sens === 'recu' && !texte) throw new Error('Coller la réponse reçue.');
+      const { cleUtilisateur } = await import('./envoi.mjs');
+      const t = maintenant();
+      await db.ajouter('crm_messages', { user_id: id, cle: cleUtilisateur(id), sens, source, le: t, extrait: texte || 'lien WhatsApp ouvert' });
+      if (sens === 'recu') await this.aRepondu(id);
+      return true;
+    },
+    // A répondu : la fiche, et ses campagnes en cours (ses relances en attente sont retirées).
+    async aRepondu(id) {
+      const u = await db.lire('users', id);
+      if (!u) throw new Error('Inscrit introuvable.');
+      const { cleUtilisateur } = await import('./envoi.mjs');
+      const t = maintenant();
+      await db.ecrire('crm_fiches', cleUtilisateur(id), { user_id: id, a_repondu_le: t, maj_le: t });
+      for (const m of (await db.lister('crm_membres')).filter((x) => x.user_id === id && ['envoye', 'relance', 'a_envoyer'].includes(x.statut))) {
+        await db.ecrire('crm_membres', m.id, { statut: 'repondu', repondu_le: t });
+      }
+      for (const a of (await db.lister('crm_actions')).filter((x) => x.user_id === id && x.type === 'campagne_relance' && ['prete', 'reportee'].includes(x.statut))) {
+        await db.ecrire('crm_actions', a.id, { statut: 'ignoree', raison: 'a répondu', maj_le: t });
+      }
+      await journaliser('a répondu', u.revenuecat_id);
+      return true;
+    },
     async aujourdhui() {
       const t = maintenant();
       const actions = await db.lister('crm_actions');

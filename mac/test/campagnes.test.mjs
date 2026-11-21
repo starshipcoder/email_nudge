@@ -123,3 +123,16 @@ test('sans relance prévue, aucune relance', async () => {
   avancer(10);
   assert.equal(await c.relances(), 0);
 });
+
+test('une réponse arrivée par Gmail après l’envoi arrête la relance', async () => {
+  const { db, c, avancer } = monter();
+  const id = await c.creer(BRUT);
+  await c.preparer(id);
+  await c.envoyer(id);
+  avancer(1);
+  await db.ecrire('crm_fiches', cleUtilisateur('a@exemple.fr'), { a_repondu_le: jours(1) });
+  avancer(2);
+  await c.relances();
+  const r = (await db.lister('crm_actions')).find((a) => a.type === 'campagne_relance' && a.user_id === 'a@exemple.fr');
+  assert.equal((await c.envoyerUne(r.id)).raison, 'a répondu');
+});

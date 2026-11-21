@@ -87,6 +87,8 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       if (action.type === 'campagne_relance') {
         const membre = await db.lire('crm_membres', `${action.campagne_id}__${cleUtilisateur(action.user_id)}`);
         if (!membre || ['repondu', 'exclu'].includes(membre.statut)) return bloquer(action, 'a répondu', true);
+        // Une réponse arrivée par Gmail ou notée à la main après l'envoi de la campagne vaut réponse.
+        if (fiche.a_repondu_le && membre.envoye_le && new Date(fiche.a_repondu_le) > new Date(membre.envoye_le)) return bloquer(action, 'a répondu', true);
       }
       if (action.echeance && t > new Date(action.echeance)) {
         await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
