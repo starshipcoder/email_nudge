@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
+import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
@@ -36,7 +37,7 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
-export function application(s, { port }) {
+export function application(s, { port, porte = null }) {
   return async (req, res) => {
     try {
       if (!hoteAutorise(req.headers.host, port)) return json(res, 403, { erreur: 'Hôte refusé.' });
@@ -59,6 +60,16 @@ export function application(s, { port }) {
         const f = await s.fiche(url.searchParams.get('id') ?? '');
         return f ? json(res, 200, f) : json(res, 404, { erreur: 'Inscrit introuvable.' });
       }
+      if (route === 'GET /api/desinscrit') return json(res, 200, { desinscrit: await s.desinscrit(url.searchParams.get('id') ?? '') });
+      if (route === 'POST /api/desinscrire') {
+        const { id } = await lireCorps(req);
+        return json(res, 200, { desinscrit: await s.desinscrire(id) });
+      }
+      if (route === 'POST /api/envoyer') {
+        if (!porte) return json(res, 503, { erreur: 'Porte d’envoi absente.' });
+        const { actionId, canal } = await lireCorps(req);
+        return json(res, 200, await porte.envoyerAction(String(actionId ?? ''), { canal: canal === 'test_moi' ? 'test_moi' : 'email' }));
+      }
       if (route === 'POST /api/prenom') {
         const { id, prenom } = await lireCorps(req);
         return json(res, 200, { prenom: await s.changerPrenom(id, prenom) });
@@ -80,7 +91,9 @@ export function application(s, { port }) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const i = process.argv.indexOf('--port');
   const port = i > 0 ? Number(process.argv[i + 1]) : 4810;
-  http.createServer(application(suivi(clientFirestore()), { port })).listen(port, '127.0.0.1', () => {
+  const db = clientFirestore();
+  const porte = porteEnvoi({ db, envoyerResend: resendReel(), lireRevenueCat: revenueCatReel() });
+  http.createServer(application(suivi(db), { port, porte })).listen(port, '127.0.0.1', () => {
     console.log(`Suivi Easy Way : http://localhost:${port}`);
   });
 }

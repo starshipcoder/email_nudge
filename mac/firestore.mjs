@@ -77,6 +77,16 @@ export function clientFirestore({ fetcher = fetch, jeton = jetonGcloud() } = {})
     async ajouter(collection, champs) {
       await appel(collection, { method: 'POST', body: JSON.stringify({ fields: encoderChamps(champs) }) });
     },
+    // Crée un document seulement s'il n'existe pas : un deuxième appel échoue (verrou anti-doublon).
+    async creer(collection, id, champs) {
+      const reponse = await fetcher(`${RACINE}/${collection}?documentId=${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${await jeton()}`, 'x-goog-user-project': PROJET, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: encoderChamps(champs) }),
+      });
+      if (reponse.status === 409) throw new Error('existe déjà');
+      if (!reponse.ok) throw new Error(`Firestore ${reponse.status} sur ${collection}`);
+    },
     // Modifie un document qui doit déjà exister (jamais de création).
     async modifierExistant(collection, id, champs) {
       const masque = Object.keys(champs).map((c) => `updateMask.fieldPaths=${encodeURIComponent(c)}`).join('&');

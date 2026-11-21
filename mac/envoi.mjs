@@ -1,0 +1,160 @@
+// La seule porte d'envoi d'e-mails aux utilisateurs (spec : hephaistos, notes/spec-crm-2026-11-21.md, § 3.0 et § 4).
+// Tout envoi passe par envoyerAction : coupe-circuit, mode à blanc, anti-doublon, désinscription,
+// abonnement relu chez RevenueCat, écart de 72 h, plafond du jour, adresse de test.
+import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const run = promisify(execFile);
+export const PLAFOND_JOUR = 90; // Resend gratuit : 100 par jour
+export const ECART_HEURES = 72;
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+export const cleUtilisateur = (userId) => createHash('sha256').update(String(userId)).digest('hex').slice(0, 24);
+
+export function piedDePage(langue, adresseReponse) {
+  const fr = String(langue ?? '').startsWith('fr');
+  return fr
+    ? `\n\n--\nPour ne plus recevoir d'e-mails d'Easy Way, réponds simplement STOP (${adresseReponse}).`
+    : `\n\n--\nTo stop receiving emails from Easy Way, just reply STOP (${adresseReponse}).`;
+}
+
+// Ce que RevenueCat dit de l'abonnement, réduit à ce qui décide un envoi.
+export function lireAbonne(abonne, maintenant) {
+  const subs = Object.values(abonne?.subscriber?.subscriptions ?? {});
+  const actifs = subs.filter((s) => s.expires_date && new Date(s.expires_date) > maintenant && !s.refunded_at);
+  const essai = actifs.find((s) => s.period_type === 'trial');
+  const payant = actifs.find((s) => s.period_type !== 'trial');
+  return {
+    aucun: subs.length === 0,
+    essai_en_cours: Boolean(essai && !essai.unsubscribe_detected_at),
+    essai_fin: essai?.expires_date ?? null,
+    payant_annule: Boolean(payant && payant.unsubscribe_detected_at),
+    payant_actif: Boolean(payant && !payant.unsubscribe_detected_at),
+  };
+}
+
+// Le garde-fou propre à chaque type d'envoi, d'après l'abonnement relu juste avant.
+export function gardeFouType(type, ab, maintenant) {
+  if (type === 'essai_j2') {
+    if (!ab.essai_en_cours || ab.payant_actif) return 'déjà payé ou annulé';
+    if (new Date(ab.essai_fin).getTime() - maintenant.getTime() < 12 * 3600 * 1000) return 'trop tard';
+  }
+  if (type === 'resiliation' && !ab.payant_annule) return 'plus résilié';
+  if (type === 'onboarding' && !ab.aucun) return 'déjà abonné';
+  return null;
+}
+
+const debutJourParis = (d) => {
+  const jour = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(d);
+  const decalage = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Paris' })).getTime() - new Date(d.toLocaleString('en-US', { timeZone: 'UTC' })).getTime();
+  return new Date(new Date(`${jour}T00:00:00Z`).getTime() - decalage);
+};
+
+export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () => new Date() }) {
+  async function bloquer(action, raison, definitif) {
+    if (definitif) await db.ecrire('crm_actions', action.id, { statut: 'bloquee', raison, maj_le: maintenant() });
+    return { statut: 'bloquee', raison };
+  }
+
+  return {
+    // canal : 'email' (au destinataire) ou 'test_moi' (le texte part à l'adresse de test, l'action ne bouge pas).
+    async envoyerAction(actionId, { canal = 'email' } = {}) {
+      const t = maintenant();
+      const reglages = (await db.lire('crm_reglages', 'general')) ?? { envois_coupes: true, a_blanc: true };
+      if (reglages.envois_coupes !== false) return { statut: 'bloquee', raison: 'envois coupés' };
+      for (const champ of ['expediteur', 'repondre_a', 'adresse_test']) {
+        if (!EMAIL.test(String(reglages[champ] ?? '').replace(/^.*<|>$/g, ''))) return { statut: 'bloquee', raison: `réglage manquant : ${champ}` };
+      }
+      const action = await db.lire('crm_actions', actionId);
+      if (!action) return { statut: 'bloquee', raison: 'action introuvable' };
+      const user = await db.lire('users', action.user_id);
+      const fiche = (await db.lire('crm_fiches', cleUtilisateur(action.user_id))) ?? {};
+      const texte = `${action.corps}${piedDePage(user?.locale, reglages.repondre_a)}`;
+
+      if (canal === 'test_moi') {
+        if (reglages.a_blanc !== false) return { statut: 'a_blanc', raison: 'essai à blanc' };
+        await envoyerResend({ from: reglages.expediteur, to: reglages.adresse_test, reply_to: reglages.repondre_a,
+          subject: `[ESSAI] ${action.sujet}`, text: texte }, `${actionId}__essai__${t.getTime()}`);
+        await db.ajouter('crm_journal', { le: t, quoi: `essai envoyé à l'adresse de test (${action.type})`, rc: user?.revenuecat_id ?? null });
+        return { statut: 'envoye', raison: 'adresse de test' };
+      }
+
+      if (action.statut !== 'prete') return bloquer(action, 'déjà traitée', false);
+      if (await db.lire('crm_envois', actionId)) return bloquer(action, 'déjà envoyé', false);
+      if (fiche.desinscrit) return bloquer(action, 'désinscrit', true);
+      if (!user || !EMAIL.test(user.id)) return bloquer(action, "pas d'adresse", true);
+      if (action.echeance && t > new Date(action.echeance)) {
+        await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
+        return { statut: 'bloquee', raison: 'trop tard' };
+      }
+      if (['essai_j2', 'resiliation', 'onboarding'].includes(action.type)) {
+        if (!user.revenuecat_id) return bloquer(action, "pas d'identifiant RevenueCat", true);
+        const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t);
+        if (raison) return bloquer(action, raison, true);
+      }
+      if (fiche.dernier_envoi_le && t.getTime() - new Date(fiche.dernier_envoi_le).getTime() < ECART_HEURES * 3600 * 1000) {
+        return { statut: 'bloquee', raison: 'trop tôt' };
+      }
+      const depuis = debutJourParis(t);
+      const duJour = (await db.lister('crm_envois')).filter((e) => ['envoye', 'a_blanc'].includes(e.statut) && new Date(e.le) >= depuis);
+      if (duJour.length >= (reglages.plafond_jour ?? PLAFOND_JOUR)) return { statut: 'bloquee', raison: 'plafond du jour' };
+
+      const test = Boolean(user.is_test_user || fiche.test);
+      const destinataire = test ? reglages.adresse_test : user.id;
+      try {
+        await db.creer('crm_envois', actionId, { le: t, statut: 'en_cours', type: action.type, rc: user.revenuecat_id ?? null,
+          destinataire_reel: test ? 'adresse_test' : 'utilisateur', sujet: action.sujet, texte });
+      } catch {
+        return { statut: 'bloquee', raison: 'déjà envoyé' };
+      }
+      await db.ecrire('crm_fiches', cleUtilisateur(action.user_id), { user_id: action.user_id, dernier_envoi_le: t, maj_le: t });
+
+      if (reglages.a_blanc !== false) {
+        await db.ecrire('crm_envois', actionId, { statut: 'a_blanc' });
+        await db.ecrire('crm_actions', actionId, { statut: 'a_blanc', maj_le: t });
+        return { statut: 'a_blanc' };
+      }
+      try {
+        const { id } = await envoyerResend({ from: reglages.expediteur, to: destinataire, reply_to: reglages.repondre_a, subject: action.sujet, text: texte,
+          headers: { 'List-Unsubscribe': `<mailto:${reglages.repondre_a}?subject=STOP>` } }, actionId);
+        await db.ecrire('crm_envois', actionId, { statut: 'envoye', resend_id: id ?? null });
+        await db.ecrire('crm_actions', actionId, { statut: 'envoyee', maj_le: t });
+        return { statut: 'envoye' };
+      } catch (erreur) {
+        await db.ecrire('crm_envois', actionId, { statut: 'erreur', erreur: String(erreur.message).slice(0, 300) });
+        await db.ecrire('crm_actions', actionId, { statut: 'erreur', maj_le: t });
+        return { statut: 'erreur', raison: erreur.message };
+      }
+    },
+  };
+}
+
+// Les vrais services, avec les clés du trousseau (TODO-EW-9). Rien n'est affiché.
+async function cleTrousseau(service) {
+  const { stdout } = await run('security', ['find-generic-password', '-s', service, '-w']);
+  return stdout.trim();
+}
+
+export function resendReel({ fetcher = fetch } = {}) {
+  return async (message, idempotence) => {
+    const reponse = await fetcher('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await cleTrousseau('easyway-crm-resend')}`, 'Content-Type': 'application/json', 'Idempotency-Key': idempotence },
+      body: JSON.stringify(message),
+    });
+    const corps = await reponse.json().catch(() => ({}));
+    if (!reponse.ok) throw new Error(`Resend ${reponse.status} : ${corps.message ?? ''}`);
+    return corps;
+  };
+}
+
+export function revenueCatReel({ fetcher = fetch } = {}) {
+  return async (rc) => {
+    const reponse = await fetcher(`https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(rc)}`, {
+      headers: { Authorization: `Bearer ${await cleTrousseau('easyway-crm-revenuecat')}` },
+    });
+    if (!reponse.ok) throw new Error(`RevenueCat ${reponse.status}`);
+    return reponse.json();
+  };
+}

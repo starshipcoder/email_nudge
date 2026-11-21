@@ -82,10 +82,35 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       return { ...REGLAGES_PAR_DEFAUT };
     },
     async changerReglage(cle, valeur) {
+      if (['expediteur', 'repondre_a', 'adresse_test'].includes(cle)) {
+        const adresse = String(valeur ?? '').trim();
+        if (!/^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(adresse.replace(/^[^<]*<|>$/g, ''))) throw new Error('Adresse e-mail invalide.');
+        await db.ecrire('crm_reglages', 'general', { [cle]: adresse, maj_le: maintenant() });
+        await journaliser(`réglage ${cle} changé`, null);
+        return this.reglages();
+      }
+      if (cle === 'plafond_jour') {
+        if (!Number.isInteger(valeur) || valeur < 1 || valeur > 90) throw new Error('Le plafond va de 1 à 90 par jour (Resend gratuit : 100).');
+        await db.ecrire('crm_reglages', 'general', { plafond_jour: valeur, maj_le: maintenant() });
+        return this.reglages();
+      }
       if (!(cle in REGLAGES_PAR_DEFAUT) || typeof valeur !== 'boolean') throw new Error('Réglage inconnu.');
       await db.ecrire('crm_reglages', 'general', { [cle]: valeur, maj_le: maintenant() });
       await journaliser(`${cle} : ${valeur ? 'oui' : 'non'}`, null);
       return this.reglages();
+    },
+    // Irréversible depuis la page : seul le fondateur, dans la base, pourrait l'enlever.
+    async desinscrire(id) {
+      const u = await db.lire('users', id);
+      if (!u) throw new Error('Inscrit introuvable.');
+      const { cleUtilisateur } = await import('./envoi.mjs');
+      await db.ecrire('crm_fiches', cleUtilisateur(id), { user_id: id, desinscrit: true, desinscrit_le: maintenant(), maj_le: maintenant() });
+      await journaliser('désinscrit à la main', u.revenuecat_id);
+      return true;
+    },
+    async desinscrit(id) {
+      const { cleUtilisateur } = await import('./envoi.mjs');
+      return Boolean((await db.lire('crm_fiches', cleUtilisateur(id)))?.desinscrit);
     },
     async journal() {
       const lignes = [...await db.lister('crm_journal'), ...(await db.lister('crm_envois')).map((e) => ({ ...e, quoi: e.quoi ?? `envoi ${e.statut ?? ''}`.trim() }))];
@@ -109,6 +134,10 @@ export function baseEnMemoire(collections = {}) {
     async lire(c, id) { const d = col(c).get(id); return d ? { ...d } : null; },
     async ecrire(c, id, champs) { col(c).set(id, { ...(col(c).get(id) ?? { id }), ...champs }); },
     async ajouter(c, champs) { n += 1; col(c).set(`auto${n}`, { id: `auto${n}`, ...champs }); },
+    async creer(c, id, champs) {
+      if (col(c).has(id)) throw new Error('existe déjà');
+      col(c).set(id, { id, ...champs });
+    },
     async modifierExistant(c, id, champs) {
       if (!col(c).has(id)) throw new Error('document absent');
       col(c).set(id, { ...col(c).get(id), ...champs });

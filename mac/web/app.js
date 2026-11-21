@@ -45,7 +45,7 @@ async function utilisateurs() {
     <div class="outils"><input type="search" id="q" placeholder="E-mail, prénom ou identifiant RevenueCat" value="${echapper(recherche.q)}">
     ${FILTRES.map(([cle, nom]) => `<button data-filtre="${cle}" class="${recherche.filtre === cle ? 'choisi' : ''}">${nom}</button>`).join('')}
     <button id="recharger">Recharger</button></div>
-    <p class="doux" id="compte">Chargement…</p><div class="carte" style="overflow-x:auto"><table><thead><tr>
+    <p class="doux" id="compte">Chargement…</p><div class="carte defile"><table><thead><tr>
     <th>Inscrit le</th><th>E-mail</th><th>Prénom</th><th>État</th><th>Rôle</th><th>Tournées</th><th>Langue</th></tr></thead><tbody id="lignes"></tbody></table></div>`;
   const remplir = async (frais = false) => {
     const params = new URLSearchParams({ q: recherche.q, filtre: recherche.filtre, ...(frais ? { frais: '1' } : {}) });
@@ -77,8 +77,22 @@ async function fiche(id) {
       <dt>Prénom</dt><dd><input type="text" id="prenom" value="${echapper(f.prenom)}" maxlength="60" placeholder="À retrouver"> <span class="message" id="msg-prenom"></span></dd>
       <dt>Identifiant RevenueCat</dt><dd>${f.rc ? `<code>${echapper(f.rc)}</code> <button data-copier="${echapper(f.rc)}">Copier</button>` : '—'}</dd>
     </dl></div>
+    <div class="carte"><h2>E-mails</h2><p id="etat-desinscription" class="doux">…</p>
+      <div class="outils"><button id="desinscrire" class="danger" hidden>Désinscrire</button></div></div>
     <div class="carte"><h2>Faits</h2><dl class="grille">${faits.map(([k, v]) => `<dt>${k}</dt><dd>${echapper(v)}</dd>`).join('')}</dl></div>`;
   vue.querySelectorAll('[data-copier]').forEach((b) => b.addEventListener('click', () => copier(b.dataset.copier, b)));
+  const etatDesinscription = document.getElementById('etat-desinscription');
+  const boutonDesinscrire = document.getElementById('desinscrire');
+  const { desinscrit } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);
+  etatDesinscription.textContent = desinscrit ? 'Désinscrit : plus aucun e-mail ne partira.' : 'Reçoit les e-mails d’Easy Way.';
+  boutonDesinscrire.hidden = desinscrit;
+  let confirmeDesinscription = false;
+  boutonDesinscrire.addEventListener('click', async () => {
+    if (!confirmeDesinscription) { confirmeDesinscription = true; boutonDesinscrire.textContent = 'Confirmer : désinscrire pour de bon'; return; }
+    await api('desinscrire', { id: f.id });
+    etatDesinscription.textContent = 'Désinscrit : plus aucun e-mail ne partira.';
+    boutonDesinscrire.hidden = true;
+  });
   const champ = document.getElementById('prenom');
   const msg = document.getElementById('msg-prenom');
   champ.addEventListener('change', async () => {
@@ -100,7 +114,18 @@ async function reglages() {
       <p>${r.envois_coupes ? 'Tous les envois sont <strong>coupés</strong>.' : 'Les envois sont ouverts.'}</p>
       <div class="outils"><button id="coupe" class="${r.envois_coupes ? '' : 'danger'}">${r.envois_coupes ? 'Rétablir les envois' : 'Couper tous les envois'}</button></div></div>
     <div class="carte"><h2>Mode à blanc</h2><p>${r.a_blanc ? 'À blanc : tout se passe comme un envoi, sauf l’envoi lui-même.' : 'Les envois partent vraiment.'}</p>
-      <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>`;
+      <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>
+    <div class="carte"><h2>Expéditeur</h2><dl class="grille">
+      ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test']]
+        .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
+      <dt>Plafond par jour</dt><dd><input type="text" data-reglage="plafond_jour" value="${r.plafond_jour ?? 90}" class="petit"> <span class="message" data-msg="plafond_jour"></span></dd>
+    </dl><p class="doux">Sans ces trois adresses, aucun e-mail ne part.</p></div>`;
+  vue.querySelectorAll('[data-reglage]').forEach((champ) => champ.addEventListener('change', async () => {
+    const cle = champ.dataset.reglage;
+    const msg = vue.querySelector(`[data-msg="${cle}"]`);
+    try { await api('reglages', { cle, valeur: cle === 'plafond_jour' ? Number(champ.value) : champ.value }); msg.className = 'message'; msg.textContent = 'Enregistré'; }
+    catch (e) { msg.className = 'message erreur'; msg.textContent = e.message; }
+  }));
   const coupe = document.getElementById('coupe');
   let confirme = false;
   coupe.addEventListener('click', async () => {

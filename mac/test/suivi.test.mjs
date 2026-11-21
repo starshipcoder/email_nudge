@@ -108,3 +108,23 @@ test('le serveur : liste, fiche, prénom, refus d’un autre hôte', async () =>
     serveur.close();
   }
 });
+
+test('désinscrire à la main pose desinscrit sur la fiche, et la porte refuse ensuite', async () => {
+  const { porteEnvoi } = await import('../envoi.mjs');
+  const db = baseEnMemoire({ users: inscrits(), crm_reglages: [{ id: 'general', envois_coupes: false, a_blanc: true, expediteur: 'x@exemple.fr', repondre_a: 'y@exemple.fr', adresse_test: 'z@exemple.fr' }],
+    crm_actions: [{ id: 'libre__a', type: 'libre', user_id: 'a@exemple.fr', statut: 'prete', sujet: 's', corps: 'c' }] });
+  const s = suivi(db);
+  assert.equal(await s.desinscrit('a@exemple.fr'), false);
+  await s.desinscrire('a@exemple.fr');
+  assert.equal(await s.desinscrit('a@exemple.fr'), true);
+  const porte = porteEnvoi({ db, envoyerResend: async () => ({}), lireRevenueCat: async () => ({}) });
+  assert.equal((await porte.envoyerAction('libre__a')).raison, 'désinscrit');
+});
+
+test('réglages d’adresses et plafond vérifiés', async () => {
+  const s = suivi(baseEnMemoire());
+  assert.equal((await s.changerReglage('expediteur', 'Prénom d’Easy Way <bonjour@exemple.fr>')).expediteur, 'Prénom d’Easy Way <bonjour@exemple.fr>');
+  await assert.rejects(() => s.changerReglage('repondre_a', 'pas une adresse'), /invalide/);
+  await assert.rejects(() => s.changerReglage('plafond_jour', 150), /90/);
+  assert.equal((await s.changerReglage('plafond_jour', 50)).plafond_jour, 50);
+});
