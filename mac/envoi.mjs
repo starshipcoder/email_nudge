@@ -97,7 +97,8 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t);
         if (raison) return bloquer(action, raison, true);
       }
-      if (fiche.dernier_envoi_le && t.getTime() - new Date(fiche.dernier_envoi_le).getTime() < ECART_HEURES * 3600 * 1000) {
+      // « Ton bug est corrigé » répond à sa demande : l'écart de 72 h ne le retient pas.
+      if (action.type !== 'bug_corrige' && fiche.dernier_envoi_le && t.getTime() - new Date(fiche.dernier_envoi_le).getTime() < ECART_HEURES * 3600 * 1000) {
         return { statut: 'bloquee', raison: 'trop tôt' };
       }
       const depuis = debutJourParis(t);

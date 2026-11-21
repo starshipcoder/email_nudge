@@ -73,6 +73,30 @@ I will not write to you again about this.
 
 {{signature}}`],
   },
+  bug_corrige: {
+    fr: ['Le problème que vous avez signalé est corrigé', `Bonjour,
+
+Vous nous avez signalé un problème dans Easy Way : {{titre}}.
+
+Il est corrigé dans la version {{version}}, disponible sur {{store}}. Il suffit de mettre l'app à jour.
+
+Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
+
+Merci de l'avoir signalé.
+
+{{signature}}`],
+    en: ['The problem you reported is fixed', `Hello,
+
+You reported a problem in Easy Way: {{titre}}.
+
+It is fixed in version {{version}}, available on {{store}}. Just update the app.
+
+If you still see it, reply to this email: I will look into it myself.
+
+Thank you for reporting it.
+
+{{signature}}`],
+  },
 };
 
 export const langueDe = (locale) => (String(locale ?? '').toLowerCase().startsWith('fr') ? 'fr' : 'en');

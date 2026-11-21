@@ -33,8 +33,8 @@ async function bandeau() {
   }
 }
 
-const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', libre: 'Message' };
-const ORDRE = ['essai_j2', 'resiliation', 'onboarding', 'gros', 'campagne_relance', 'libre'];
+const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', libre: 'Message' };
+const ORDRE = ['essai_j2', 'resiliation', 'bug_corrige', 'onboarding', 'gros', 'campagne_relance', 'libre'];
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
@@ -275,6 +275,36 @@ async function uneCampagne(id) {
   vue.querySelectorAll('[data-repondu]').forEach((b) => b.addEventListener('click', async () => { if (await geste('repondu', { userId: b.dataset.repondu })) uneCampagne(c.id); }));
 }
 
+const PLATEFORMES = { ios: 'iPhone', android: 'Android' };
+async function listeBugs() {
+  const { retours, versions, erreur } = await api('bugs');
+  const enVente = ['ios', 'android'].map((p) => `${PLATEFORMES[p]} : ${versions[p] ? `${echapper(versions[p].version)} (vue le ${date(versions[p].vue_le)})` : 'pas encore lue'}`).join(' · ');
+  const etat = (r) => {
+    if (!r.note) return '';
+    if (r.note.action_id) return `<a href="#action-${encodeURIComponent(r.note.action_id)}">action préparée</a>`;
+    if (!r.user_id) return 'personne inconnue : à prévenir à la main';
+    return `attend la ${echapper(r.note.version_corrigee)} en vente`;
+  };
+  vue.innerHTML = `<h1>Bugs signalés</h1>
+    <p class="doux">Les « Signaler un bug » des 90 derniers jours, lus dans Sentry. Noter le titre public (ce que la personne lira) et la version qui corrige : quand cette version est en vente sur son store, « Bug corrigé » arrive dans Aujourd’hui. En vente : ${enVente}.</p>
+    ${erreur ? `<p class="message erreur">${echapper(erreur)}</p>` : ''}
+    <div class="carte defile">${retours.length ? `<table><thead><tr><th>Le</th><th>Retour</th><th>Qui</th><th>Vu en</th><th>Titre public</th><th>Corrigé en</th><th>Tâche</th><th></th></tr></thead><tbody>
+      ${retours.map((r) => `<tr data-retour="${echapper(r.id)}"><td>${date(r.le)}<br><span class="doux">n° ${echapper(r.id)}</span></td><td>${echapper(String(r.texte).slice(0, 400))}</td>
+        <td>${r.user_id ? `<a href="#fiche-${encodeURIComponent(r.user_id)}">${echapper(r.user_id)}</a>` : `<span class="doux">${r.contact ? echapper(r.contact) : 'inconnu'}</span>`}<br><span class="doux">${PLATEFORMES[r.plateforme] ?? ''}</span></td>
+        <td>${echapper(r.version_vue ?? '')}</td>
+        <td><input type="text" data-b="titre" value="${echapper(r.note?.titre ?? '')}" placeholder="la carte qui restait blanche" ${r.note?.action_id ? 'disabled' : ''}></td>
+        <td><input type="text" data-b="version_corrigee" class="petit" value="${echapper(r.note?.version_corrigee ?? '')}" placeholder="7.6.9" ${r.note?.action_id ? 'disabled' : ''}></td>
+        <td><input type="text" data-b="bug_ew" class="petit" value="${echapper(r.note?.bug_ew ?? '')}" placeholder="BUG-EW-" ${r.note?.action_id ? 'disabled' : ''}></td>
+        <td>${r.note?.action_id ? '' : '<button data-noter>Noter</button>'} <span class="message">${etat(r)}</span></td></tr>`).join('')}</tbody></table>` : '<p class="doux">Aucun retour sur 90 jours.</p>'}</div>`;
+  vue.querySelectorAll('[data-noter]').forEach((b) => b.addEventListener('click', async () => {
+    const tr = b.closest('tr');
+    const champ = (k) => tr.querySelector(`[data-b="${k}"]`).value;
+    const msg = tr.querySelector('.message');
+    try { await api('bug', { id: tr.dataset.retour, titre: champ('titre'), version_corrigee: champ('version_corrigee'), bug_ew: champ('bug_ew') }); msg.className = 'message'; msg.textContent = 'Noté'; }
+    catch (e) { msg.className = 'message erreur'; msg.textContent = e.message; }
+  }));
+}
+
 async function afficher() {
   const cle = location.hash.slice(1) || 'aujourdhui';
   const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle.startsWith('campagne-') ? 'campagnes' : cle;
@@ -284,7 +314,7 @@ async function afficher() {
     if (cle.startsWith('fiche-')) await fiche(decodeURIComponent(cle.slice(6)));
     else if (cle.startsWith('action-')) await uneAction(decodeURIComponent(cle.slice(7)));
     else if (cle.startsWith('campagne-')) await uneCampagne(decodeURIComponent(cle.slice(9)));
-    else await ({ aujourdhui, utilisateurs, campagnes: listeCampagnes, journal, reglages }[cle] ?? aujourdhui)();
+    else await ({ aujourdhui, utilisateurs, campagnes: listeCampagnes, bugs: listeBugs, journal, reglages }[cle] ?? aujourdhui)();
   } catch (e) {
     vue.innerHTML = `<div class="carte"><p class="message erreur">${echapper(e.message)}</p><p class="doux">Si la base ne répond pas, la connexion Google du Mac a peut-être expiré : <code>gcloud auth application-default login</code>.</p></div>`;
   }

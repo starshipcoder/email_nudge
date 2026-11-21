@@ -9,6 +9,8 @@ import { filtrer, suivi } from './suivi.mjs';
 import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
 import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
+import { bugs, retoursSentry } from './bugs.mjs';
+import { versionsEnVente } from './versions.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -67,7 +69,7 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
-export function application(s, { port, porte = null, preparerMaintenant = null, camp = null }) {
+export function application(s, { port, porte = null, preparerMaintenant = null, camp = null, bg = null, db = null }) {
   return async (req, res) => {
     try {
       if (!hoteAutorise(req.headers.host, port)) return json(res, 403, { erreur: 'Hôte refusé.' });
@@ -140,6 +142,16 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
           return json(res, 200, await gestes[op]());
         }
       }
+      if (route === 'GET /api/bugs' || route === 'POST /api/bug') {
+        if (!bg) return json(res, 503, { erreur: 'Bugs absents.' });
+        if (route === 'POST /api/bug') {
+          const { id, titre, version_corrigee, bug_ew } = await lireCorps(req);
+          return json(res, 200, await bg.noter(String(id ?? ''), { titre, version_corrigee, bug_ew }));
+        }
+        const versions = db ? Object.fromEntries((await db.lister('crm_versions')).map((v) => [v.id, v])) : {};
+        try { return json(res, 200, { retours: await bg.retours(), versions }); }
+        catch (e) { return json(res, 200, { retours: [], versions, erreur: `Sentry ne répond pas : ${e.message}` }); }
+      }
       if (route === 'POST /api/preparer') {
         if (!preparerMaintenant) return json(res, 503, { erreur: 'Préparation absente.' });
         return json(res, 200, await preparerMaintenant());
@@ -158,8 +170,20 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const porte = porteEnvoi({ db, envoyerResend: resendReel(), lireRevenueCat: revenueCatReel() });
   const s = suivi(db);
   const camp = campagnes(db, { porte });
-  const preparerMaintenant = async () => ({ ...(await passeDuMac(db)), relances: await camp.relances() });
-  http.createServer(application(s, { port, porte, preparerMaintenant, camp })).listen(port, '127.0.0.1', () => {
+  // Les versions en vente, lues au plus toutes les 6 h.
+  let versionsLues = null; let versionsLe = 0;
+  const lireVersions = async () => {
+    if (!versionsLues || Date.now() - versionsLe > 6 * 3600 * 1000) { versionsLues = await versionsEnVente(); versionsLe = Date.now(); }
+    return versionsLues;
+  };
+  const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions });
+  const preparerMaintenant = async () => {
+    const r = { ...(await passeDuMac(db)), relances: await camp.relances() };
+    try { const b = await bg.preparer(); r.bugs = b.creees; r.versions = Object.fromEntries(Object.entries(b.versions).map(([k, v]) => [k, v.version ?? v.erreur])); }
+    catch (e) { r.bugs = `erreur : ${e.message}`; }
+    return r;
+  };
+  http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Suivi Easy Way : http://localhost:${port}`);
   });
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
