@@ -185,15 +185,106 @@ async function reglages() {
   document.getElementById('blanc').addEventListener('click', async () => { await api('reglages', { cle: 'a_blanc', valeur: !r.a_blanc }); await bandeau(); reglages(); });
 }
 
+
+const FILTRES_CAMPAGNE = [['essais', 'Essais en cours'], ['payants', 'Payants'], ['actifs_30j', 'Payants, essais et actifs sur 30 jours']];
+const STATUTS_CAMPAGNE = { brouillon: 'Brouillon', preparee: 'Préparée', en_cours: 'En cours', close: 'Close' };
+const STATUTS_MEMBRE = { a_envoyer: 'À envoyer', envoye: 'Envoyé', repondu: 'A répondu', relance: 'Relancé', exclu: 'Exclu' };
+const MODELE_BETA = { nom: 'Bêta-testeurs', filtre: 'actifs_30j', langue: 'fr', relance_apres_jours: 5,
+  sujet: 'Tester les nouveautés d’Easy Way avant tout le monde ?',
+  corps: 'Bonjour,\n\nJe cherche quelques personnes pour essayer les nouvelles versions d’Easy Way avant leur sortie et me dire ce qui ne va pas.\n\nConcrètement : une version de test de temps en temps, et vos remarques par e-mail ou WhatsApp. Aucune obligation, vous arrêtez quand vous voulez.\n\nCela vous intéresse ? Répondez simplement « oui ».\n\n{{signature}}',
+  relance_sujet: 'Re : Tester les nouveautés d’Easy Way avant tout le monde ?',
+  relance_corps: 'Bonjour,\n\nJe me permets une seule relance : je cherche encore quelques testeurs pour les prochaines versions d’Easy Way. Si cela vous intéresse, répondez « oui ». Sinon, pas besoin de répondre.\n\n{{signature}}' };
+
+async function listeCampagnes() {
+  const { campagnes } = await api('campagnes');
+  vue.innerHTML = `<div class="outils"><h1>Campagnes</h1><button id="nouvelle" class="choisi">Nouvelle campagne</button></div>
+    <p class="doux">Écrire à un groupe d’utilisateurs de l’app, noter qui répond, relancer les autres. Un nom qui commence par TEST ne vise que les utilisateurs de test.</p>
+    <div class="carte">${campagnes.length ? `<table><thead><tr><th>Nom</th><th>Statut</th><th>Membres</th><th>Envoyés</th><th>Répondus</th><th>Relancés</th></tr></thead><tbody>
+      ${campagnes.map((c) => `<tr data-campagne="${echapper(c.id)}"><td>${echapper(c.nom)}</td><td><span class="puce">${STATUTS_CAMPAGNE[c.statut] ?? c.statut}</span></td>
+        <td>${c.nb_membres}</td><td>${c.nb_envoyes}</td><td>${c.nb_repondus}</td><td>${c.nb_relances}</td></tr>`).join('')}</tbody></table>` : '<p class="doux">Aucune campagne.</p>'}</div>`;
+  vue.querySelectorAll('[data-campagne]').forEach((tr) => tr.addEventListener('click', () => { location.hash = `campagne-${tr.dataset.campagne}`; }));
+  document.getElementById('nouvelle').addEventListener('click', async () => {
+    const { id } = await api('campagne', { op: 'creer', champs: MODELE_BETA });
+    location.hash = `campagne-${id}`;
+  });
+}
+
+function formulaireCampagne(c) {
+  return `<div class="carte"><h2>La campagne</h2><dl class="grille">
+    <dt>Nom</dt><dd><input type="text" data-champ="nom" value="${echapper(c.nom)}" maxlength="80"></dd>
+    <dt>Qui</dt><dd>${FILTRES_CAMPAGNE.map(([cle, nom]) => `<label><input type="radio" name="filtre" value="${cle}" ${c.filtre === cle ? 'checked' : ''}> ${nom}</label>`).join(' ')}</dd>
+    <dt>Langue</dt><dd>${[['fr', 'Français'], ['en', 'Anglais (tout sauf fr)']].map(([cle, nom]) => `<label><input type="radio" name="langue" value="${cle}" ${c.langue === cle ? 'checked' : ''}> ${nom}</label>`).join(' ')}</dd>
+    <dt>Sujet</dt><dd><input type="text" data-champ="sujet" value="${echapper(c.sujet)}" class="large"></dd>
+    <dt>Texte</dt><dd><textarea data-champ="corps" rows="12">${echapper(c.corps)}</textarea></dd>
+    <dt>Relance après</dt><dd><input type="text" data-champ="relance_apres_jours" value="${c.relance_apres_jours ?? ''}" class="petit"> jours (vide : pas de relance ; 3 à 30)</dd>
+    <dt>Sujet de relance</dt><dd><input type="text" data-champ="relance_sujet" value="${echapper(c.relance_sujet ?? '')}" class="large"></dd>
+    <dt>Texte de relance</dt><dd><textarea data-champ="relance_corps" rows="7">${echapper(c.relance_corps ?? '')}</textarea></dd>
+  </dl><p class="doux">{{signature}} prend la signature des réglages. Le pied « répondez STOP » est ajouté à l’envoi.</p>
+  <div class="outils"><button id="enregistrer">Enregistrer</button><button id="apercu">Voir qui est concerné</button>
+    <button id="preparer-campagne" class="choisi">Préparer</button><button id="clore" class="danger">Abandonner</button></div>
+  <p class="message" id="msg-campagne"></p></div>`;
+}
+
+async function uneCampagne(id) {
+  const c = await api(`campagne?id=${encodeURIComponent(id)}`);
+  const brouillon = c.statut === 'brouillon';
+  vue.innerHTML = `<a href="#campagnes" class="doux">← Campagnes</a>
+    <h1>${echapper(c.nom)} <span class="puce">${STATUTS_CAMPAGNE[c.statut] ?? c.statut}</span></h1>
+    ${brouillon ? formulaireCampagne(c) : `<div class="carte"><h2>${echapper(c.rendu?.sujet ?? c.sujet)}</h2><pre class="texte">${echapper(c.rendu?.corps ?? c.corps)}</pre>
+      <p class="doux">${c.relance_apres_jours ? `Relance ${c.relance_apres_jours} jours après l’envoi, dans Aujourd’hui, pour qui n’a pas répondu.` : 'Pas de relance.'}</p>
+      ${c.statut !== 'close' ? '<div class="outils"><button id="envoyer-campagne" class="choisi">Envoyer les prêtes</button><button id="clore" class="danger">Clore</button></div>' : ''}
+      <p class="message" id="msg-campagne"></p></div>
+      <div class="carte defile"><h2>Membres (${c.membres.length})</h2><table><thead><tr><th>E-mail</th><th>Statut</th><th>Envoyé le</th><th>Répondu le</th><th>Relancé le</th><th></th></tr></thead><tbody>
+      ${c.membres.map((m) => `<tr><td><a href="#fiche-${encodeURIComponent(m.user_id)}">${echapper(m.user_id)}</a></td><td>${STATUTS_MEMBRE[m.statut] ?? m.statut}${m.raison_exclusion ? ` (${echapper(m.raison_exclusion)})` : ''}</td>
+        <td>${dateHeure(m.envoye_le)}</td><td>${dateHeure(m.repondu_le)}</td><td>${dateHeure(m.relance_le)}</td>
+        <td>${['envoye', 'relance', 'a_envoyer'].includes(m.statut) && c.statut !== 'close' ? `<button data-repondu="${echapper(m.user_id)}">A répondu</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`}`;
+  const msg = document.getElementById('msg-campagne');
+  const dire = (texte, erreur = false) => { if (msg) { msg.className = erreur ? 'message erreur' : 'message'; msg.textContent = texte; } };
+  const geste = async (op, extra = {}) => { try { return await api('campagne', { op, id: c.id, ...extra }); } catch (e) { dire(e.message, true); return null; } };
+  const lire = () => ({ ...Object.fromEntries([...vue.querySelectorAll('[data-champ]')].map((ch) => [ch.dataset.champ, ch.value])),
+    filtre: vue.querySelector('[name=filtre]:checked')?.value, langue: vue.querySelector('[name=langue]:checked')?.value });
+  const clore = document.getElementById('clore');
+  let confirmeClore = false;
+  clore?.addEventListener('click', async () => {
+    if (!confirmeClore) { confirmeClore = true; clore.textContent = 'Confirmer'; return; }
+    if (await geste('clore')) uneCampagne(c.id);
+  });
+  if (brouillon) {
+    const enregistrer = async () => (await geste('modifier', { champs: lire() })) !== null;
+    document.getElementById('enregistrer').addEventListener('click', async () => { if (await enregistrer()) dire('Enregistré.'); });
+    document.getElementById('apercu').addEventListener('click', async () => {
+      if (!(await enregistrer())) return;
+      try { const { membres } = await api(`campagne/apercu?id=${encodeURIComponent(c.id)}`); dire(`${membres} personne${membres > 1 ? 's' : ''} concernée${membres > 1 ? 's' : ''}.`); } catch (e) { dire(e.message, true); }
+    });
+    const prep = document.getElementById('preparer-campagne');
+    let confirmePrep = false;
+    prep.addEventListener('click', async () => {
+      if (!(await enregistrer())) return;
+      if (!confirmePrep) { confirmePrep = true; prep.textContent = 'Confirmer : figer les membres'; return; }
+      if (await geste('preparer')) uneCampagne(c.id);
+    });
+    return;
+  }
+  const envoyer = document.getElementById('envoyer-campagne');
+  let confirmeEnvoi = false;
+  envoyer?.addEventListener('click', async () => {
+    if (!confirmeEnvoi) { confirmeEnvoi = true; envoyer.textContent = 'Confirmer l’envoi'; return; }
+    const r = await geste('envoyer');
+    if (r) { await uneCampagne(c.id); dire(`${r.envoyes} envoyé(s), ${r.bloques} bloqué(s), ${r.restants} restant(s)${r.restants ? ' : relancer l’envoi plus tard (plafond du jour, écart de 72 h ou envois coupés)' : ''}.`); }
+  });
+  vue.querySelectorAll('[data-repondu]').forEach((b) => b.addEventListener('click', async () => { if (await geste('repondu', { userId: b.dataset.repondu })) uneCampagne(c.id); }));
+}
+
 async function afficher() {
   const cle = location.hash.slice(1) || 'aujourdhui';
-  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle;
+  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle.startsWith('campagne-') ? 'campagnes' : cle;
   document.querySelectorAll('[data-vue]').forEach((a) => a.classList.toggle('actif', a.dataset.vue === nom));
   vue.innerHTML = '<p class="doux">Chargement…</p>';
   try {
     if (cle.startsWith('fiche-')) await fiche(decodeURIComponent(cle.slice(6)));
     else if (cle.startsWith('action-')) await uneAction(decodeURIComponent(cle.slice(7)));
-    else await ({ aujourdhui, utilisateurs, journal, reglages }[cle] ?? aujourdhui)();
+    else if (cle.startsWith('campagne-')) await uneCampagne(decodeURIComponent(cle.slice(9)));
+    else await ({ aujourdhui, utilisateurs, campagnes: listeCampagnes, journal, reglages }[cle] ?? aujourdhui)();
   } catch (e) {
     vue.innerHTML = `<div class="carte"><p class="message erreur">${echapper(e.message)}</p><p class="doux">Si la base ne répond pas, la connexion Google du Mac a peut-être expiré : <code>gcloud auth application-default login</code>.</p></div>`;
   }

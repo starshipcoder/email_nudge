@@ -47,3 +47,6 @@ input.petit { min-width: 60px; width: 60px; }
 .defile { overflow-x: auto; }
 textarea { font: inherit; padding: 10px; border: 1px solid var(--trait); border-radius: 6px; background: var(--carte); color: var(--texte); width: 100%; box-sizing: border-box; }
 #sujet { width: 100%; box-sizing: border-box; }
+input.large { width: 100%; box-sizing: border-box; }
+pre.texte { white-space: pre-wrap; font: inherit; margin: 0; }
+label { margin-right: 12px; }

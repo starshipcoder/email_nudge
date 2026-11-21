@@ -8,6 +8,7 @@ import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
 import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
 import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
+import { campagnes } from './campagnes.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -66,7 +67,7 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
-export function application(s, { port, porte = null, preparerMaintenant = null }) {
+export function application(s, { port, porte = null, preparerMaintenant = null, camp = null }) {
   return async (req, res) => {
     try {
       if (!hoteAutorise(req.headers.host, port)) return json(res, 403, { erreur: 'Hôte refusé.' });
@@ -97,7 +98,8 @@ export function application(s, { port, porte = null, preparerMaintenant = null }
       if (route === 'POST /api/envoyer') {
         if (!porte) return json(res, 503, { erreur: 'Porte d’envoi absente.' });
         const { actionId, canal } = await lireCorps(req);
-        return json(res, 200, await porte.envoyerAction(String(actionId ?? ''), { canal: canal === 'test_moi' ? 'test_moi' : 'email' }));
+        const options = { canal: canal === 'test_moi' ? 'test_moi' : 'email' };
+        return json(res, 200, camp ? await camp.envoyerUne(String(actionId ?? ''), options) : await porte.envoyerAction(String(actionId ?? ''), options));
       }
       if (route === 'POST /api/prenom') {
         const { id, prenom } = await lireCorps(req);
@@ -118,6 +120,26 @@ export function application(s, { port, porte = null, preparerMaintenant = null }
         const { id, op, sujet, corps } = await lireCorps(req);
         return json(res, 200, op === 'texte' ? await s.modifierTexte(id, sujet, corps) : await s.traiterAction(id, op));
       }
+      if (route.endsWith('/api/campagnes') || route.includes('/api/campagne')) {
+        if (!camp) return json(res, 503, { erreur: 'Campagnes absentes.' });
+        const id = url.searchParams.get('id') ?? '';
+        if (route === 'GET /api/campagnes') return json(res, 200, { campagnes: await camp.liste() });
+        if (route === 'GET /api/campagne') return json(res, 200, await camp.une(id));
+        if (route === 'GET /api/campagne/apercu') return json(res, 200, { membres: (await camp.apercu(id)).membres });
+        if (route === 'POST /api/campagne') {
+          const { op, id: cid, champs, userId } = await lireCorps(req);
+          const gestes = {
+            creer: () => camp.creer(champs ?? {}).then((nouvel) => ({ id: nouvel })),
+            modifier: () => camp.modifier(cid, champs ?? {}),
+            preparer: () => camp.preparer(cid),
+            envoyer: () => camp.envoyer(cid),
+            repondu: () => camp.repondu(cid, String(userId ?? '')).then(() => ({ ok: true })),
+            clore: () => camp.clore(cid).then(() => ({ ok: true })),
+          };
+          if (!gestes[op]) return json(res, 400, { erreur: 'Geste inconnu.' });
+          return json(res, 200, await gestes[op]());
+        }
+      }
       if (route === 'POST /api/preparer') {
         if (!preparerMaintenant) return json(res, 503, { erreur: 'Préparation absente.' });
         return json(res, 200, await preparerMaintenant());
@@ -135,8 +157,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const db = clientFirestore();
   const porte = porteEnvoi({ db, envoyerResend: resendReel(), lireRevenueCat: revenueCatReel() });
   const s = suivi(db);
-  const preparerMaintenant = () => passeDuMac(db);
-  http.createServer(application(s, { port, porte, preparerMaintenant })).listen(port, '127.0.0.1', () => {
+  const camp = campagnes(db, { porte });
+  const preparerMaintenant = async () => ({ ...(await passeDuMac(db)), relances: await camp.relances() });
+  http.createServer(application(s, { port, porte, preparerMaintenant, camp })).listen(port, '127.0.0.1', () => {
     console.log(`Suivi Easy Way : http://localhost:${port}`);
   });
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.

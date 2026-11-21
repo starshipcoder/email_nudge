@@ -84,6 +84,10 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       if (await db.lire('crm_envois', actionId)) return bloquer(action, 'déjà envoyé', false);
       if (fiche.desinscrit) return bloquer(action, 'désinscrit', true);
       if (!user || !EMAIL.test(user.id)) return bloquer(action, "pas d'adresse", true);
+      if (action.type === 'campagne_relance') {
+        const membre = await db.lire('crm_membres', `${action.campagne_id}__${cleUtilisateur(action.user_id)}`);
+        if (!membre || ['repondu', 'exclu'].includes(membre.statut)) return bloquer(action, 'a répondu', true);
+      }
       if (action.echeance && t > new Date(action.echeance)) {
         await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
         return { statut: 'bloquee', raison: 'trop tard' };

@@ -125,7 +125,8 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
     async aujourdhui() {
       const t = maintenant();
       const actions = await db.lister('crm_actions');
-      return actions.filter((a) => a.statut === 'prete' || (a.statut === 'reportee' && (!a.reporter_au || new Date(a.reporter_au) <= t)))
+      // Les envois de campagne partent depuis leur campagne ; seules leurs relances viennent ici.
+      return actions.filter((a) => a.type !== 'campagne').filter((a) => a.statut === 'prete' || (a.statut === 'reportee' && (!a.reporter_au || new Date(a.reporter_au) <= t)))
         .sort((a, b) => String(a.echeance ?? '').localeCompare(String(b.echeance ?? '')));
     },
     async action(id) {
