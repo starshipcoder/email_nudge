@@ -31,7 +31,7 @@ test('un envoi réel part une fois, avec le pied, la désinscription et la clé 
   assert.equal(envoyes.length, 1);
   assert.equal(envoyes[0].cle, 'essai_j2__a');
   assert.equal(envoyes[0].message.to, 'ana@exemple.fr');
-  assert.match(envoyes[0].message.text, /réponds simplement STOP/);
+  assert.match(envoyes[0].message.text, /répondez simplement STOP/);
   assert.equal(envoyes[0].message.headers['List-Unsubscribe'], '<mailto:moi@exemple.fr?subject=STOP>');
   assert.equal(db.donnees.crm_envois.get('essai_j2__a').statut, 'envoye');
   assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'envoyee');
@@ -126,6 +126,6 @@ test('une erreur de Resend est notée, l’action passe en erreur', async () => 
 });
 
 test('pied de page dans la langue de la personne', () => {
-  assert.match(piedDePage('fr', 'moi@exemple.fr'), /réponds simplement STOP/);
+  assert.match(piedDePage('fr', 'moi@exemple.fr'), /répondez simplement STOP/);
   assert.match(piedDePage('de', 'moi@exemple.fr'), /just reply STOP/);
 });

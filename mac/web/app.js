@@ -33,10 +33,60 @@ async function bandeau() {
   }
 }
 
+const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', libre: 'Message' };
+const ORDRE = ['essai_j2', 'resiliation', 'onboarding', 'gros', 'campagne_relance', 'libre'];
+const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
+
 async function aujourdhui() {
   const { actions } = await api('aujourdhui');
-  vue.innerHTML = `<h1><span class="grand">${actions.length}</span> action${actions.length > 1 ? 's' : ''} ${actions.length > 1 ? 'restent' : 'reste'}</h1>
-    <div class="carte"><p class="doux">${actions.length ? '' : 'Rien à faire pour l’instant. Les rappels de fin d’essai, les e-mails aux résiliés et les relances arriveront ici quand leur préparation sera en place.'}</p></div>`;
+  const groupes = ORDRE.map((type) => [type, actions.filter((a) => a.type === type)]).filter(([, l]) => l.length);
+  vue.innerHTML = `<div class="outils"><h1><span class="grand">${actions.length}</span> action${actions.length > 1 ? 's' : ''} ${actions.length > 1 ? 'restent' : 'reste'}</h1>
+      <button id="preparer">Préparer maintenant</button><span class="message" id="msg-preparer"></span></div>
+    ${groupes.length ? groupes.map(([type, liste]) => `<div class="carte"><h2>${TYPES[type] ?? type} (${liste.length})</h2><table><tbody>
+      ${liste.map((a) => `<tr data-action="${echapper(a.id)}"><td>${echapper(a.sujet)}</td><td>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</td><td>${resteAvant(a.echeance)}</td></tr>`).join('')}
+      </tbody></table></div>`).join('') : '<div class="carte"><p class="doux">Rien à faire pour l’instant. Les rappels de fin d’essai et les e-mails aux résiliés arrivent ici à chaque passe, toutes les heures.</p></div>'}`;
+  vue.querySelectorAll('[data-action]').forEach((tr) => tr.addEventListener('click', () => { location.hash = `action-${encodeURIComponent(tr.dataset.action)}`; }));
+  document.getElementById('preparer').addEventListener('click', async () => {
+    const msg = document.getElementById('msg-preparer');
+    try { const r = await api('preparer', {}); msg.textContent = r.raison ? r.raison : `${r.creees} nouvelle(s), ${r.expirees} expirée(s)`; if (r.creees || r.expirees) setTimeout(aujourdhui, 800); }
+    catch (e) { msg.className = 'message erreur'; msg.textContent = e.message; }
+  });
+}
+
+async function uneAction(id) {
+  const a = await api(`action?id=${encodeURIComponent(id)}`);
+  const ouverte = ['prete', 'reportee'].includes(a.statut);
+  vue.innerHTML = `<a href="#aujourdhui" class="doux">← Aujourd'hui</a>
+    <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span></h1>
+    <div class="carte"><dl class="grille"><dt>Pour</dt><dd><a href="#fiche-${encodeURIComponent(a.user_id)}">${echapper(a.user_id)}</a></dd>
+      <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
+    <div class="carte"><h2>Le texte</h2>
+      <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
+      <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
+      <p class="doux">Le pied « répondez STOP » est ajouté à l’envoi.</p>
+      ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button><button id="essai">M’envoyer un essai</button>
+        <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
+      <p class="message" id="msg-action"></p></div>`;
+  if (!ouverte) return;
+  const msg = document.getElementById('msg-action');
+  const dire = (texte, erreur = false) => { msg.className = erreur ? 'message erreur' : 'message'; msg.textContent = texte; };
+  const STATUTS = { envoye: 'Envoyé.', a_blanc: 'À blanc : noté dans le journal, rien n’est parti.', bloquee: 'Bloqué', erreur: 'Erreur' };
+  document.getElementById('enregistrer').addEventListener('click', async () => {
+    try { await api('action', { id: a.id, op: 'texte', sujet: document.getElementById('sujet').value, corps: document.getElementById('corps').value }); dire('Texte enregistré.'); }
+    catch (e) { dire(e.message, true); }
+  });
+  const envoyer = async (canal) => {
+    try { const r = await api('envoyer', { actionId: a.id, canal }); dire(`${STATUTS[r.statut] ?? r.statut}${r.raison ? ` : ${r.raison}` : ''}`, ['bloquee', 'erreur'].includes(r.statut)); if (canal === 'email' && ['envoye', 'a_blanc'].includes(r.statut)) setTimeout(() => uneAction(a.id), 1200); }
+    catch (e) { dire(e.message, true); }
+  };
+  document.getElementById('essai').addEventListener('click', () => envoyer('test_moi'));
+  let confirme = false;
+  document.getElementById('envoyer').addEventListener('click', (e) => {
+    if (!confirme) { confirme = true; e.target.textContent = 'Confirmer l’envoi'; return; }
+    envoyer('email');
+  });
+  document.getElementById('reporter').addEventListener('click', async () => { await api('action', { id: a.id, op: 'reporter' }); location.hash = 'aujourdhui'; });
+  document.getElementById('ignorer').addEventListener('click', async () => { await api('action', { id: a.id, op: 'ignorer' }); location.hash = 'aujourdhui'; });
 }
 
 const recherche = { q: '', filtre: '' };
@@ -116,10 +166,10 @@ async function reglages() {
     <div class="carte"><h2>Mode à blanc</h2><p>${r.a_blanc ? 'À blanc : tout se passe comme un envoi, sauf l’envoi lui-même.' : 'Les envois partent vraiment.'}</p>
       <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
-      ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test']]
+      ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
       <dt>Plafond par jour</dt><dd><input type="text" data-reglage="plafond_jour" value="${r.plafond_jour ?? 90}" class="petit"> <span class="message" data-msg="plafond_jour"></span></dd>
-    </dl><p class="doux">Sans ces trois adresses, aucun e-mail ne part.</p></div>`;
+    </dl><p class="doux">Sans les trois adresses, aucun e-mail ne part ; sans signature, rien n’est préparé.</p></div>`;
   vue.querySelectorAll('[data-reglage]').forEach((champ) => champ.addEventListener('change', async () => {
     const cle = champ.dataset.reglage;
     const msg = vue.querySelector(`[data-msg="${cle}"]`);
@@ -137,11 +187,12 @@ async function reglages() {
 
 async function afficher() {
   const cle = location.hash.slice(1) || 'aujourdhui';
-  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle;
+  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle;
   document.querySelectorAll('[data-vue]').forEach((a) => a.classList.toggle('actif', a.dataset.vue === nom));
   vue.innerHTML = '<p class="doux">Chargement…</p>';
   try {
     if (cle.startsWith('fiche-')) await fiche(decodeURIComponent(cle.slice(6)));
+    else if (cle.startsWith('action-')) await uneAction(decodeURIComponent(cle.slice(7)));
     else await ({ aujourdhui, utilisateurs, journal, reglages }[cle] ?? aujourdhui)();
   } catch (e) {
     vue.innerHTML = `<div class="carte"><p class="message erreur">${echapper(e.message)}</p><p class="doux">Si la base ne répond pas, la connexion Google du Mac a peut-être expiré : <code>gcloud auth application-default login</code>.</p></div>`;

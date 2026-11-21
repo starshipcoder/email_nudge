@@ -7,6 +7,35 @@ import { fileURLToPath } from 'node:url';
 import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
 import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
+import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import os from 'node:os';
+
+const BASE_MIXPANEL = path.join(os.homedir(), '.local/share/starshipcoder/mixpanel/easyway.sqlite');
+const LIENS_RC = path.join(os.homedir(), '.local/share/starshipcoder/mixpanel/easyway-liens-revenuecat.sqlite');
+
+// Une passe de préparation : la base Mixpanel du Mac en lecture seule, puis les actions dans Firestore.
+export async function passeDuMac(db) {
+  if (!existsSync(BASE_MIXPANEL)) return { creees: 0, expirees: 0, raison: 'base Mixpanel absente' };
+  const { DatabaseSync } = await import('node:sqlite');
+  const base = new DatabaseSync(BASE_MIXPANEL, { readOnly: true });
+  const liens = existsSync(LIENS_RC) ? new DatabaseSync(LIENS_RC, { readOnly: true }) : null;
+  try {
+    const lecteur = { all: (sql, ...p) => base.prepare(sql).all(...p) };
+    const carte = new Map(liens ? liens.prepare('SELECT abonne, personne FROM liens').all().map((r) => [r.abonne, r.personne]) : []);
+    const faits = lireFaits(lecteur, Date.now() - 30 * 86400000);
+    return await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date() });
+  } finally {
+    base.close();
+    liens?.close();
+  }
+}
+
+export function notifier(n) {
+  const texte = n === 0 ? 'Aucune action ce matin.' : `${n} action${n > 1 ? 's' : ''} ${n > 1 ? 'restent' : 'reste'} à faire.`;
+  execFile('osascript', ['-e', `display notification "${texte}" with title "Suivi Easy Way" sound name "default"`]);
+}
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
@@ -37,7 +66,7 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
-export function application(s, { port, porte = null }) {
+export function application(s, { port, porte = null, preparerMaintenant = null }) {
   return async (req, res) => {
     try {
       if (!hoteAutorise(req.headers.host, port)) return json(res, 403, { erreur: 'Hôte refusé.' });
@@ -81,6 +110,18 @@ export function application(s, { port, porte = null }) {
       }
       if (route === 'GET /api/journal') return json(res, 200, { lignes: await s.journal() });
       if (route === 'GET /api/aujourdhui') return json(res, 200, { actions: await s.aujourdhui() });
+      if (route === 'GET /api/action') {
+        const a = await s.action(url.searchParams.get('id') ?? '');
+        return a ? json(res, 200, a) : json(res, 404, { erreur: 'Action introuvable.' });
+      }
+      if (route === 'POST /api/action') {
+        const { id, op, sujet, corps } = await lireCorps(req);
+        return json(res, 200, op === 'texte' ? await s.modifierTexte(id, sujet, corps) : await s.traiterAction(id, op));
+      }
+      if (route === 'POST /api/preparer') {
+        if (!preparerMaintenant) return json(res, 503, { erreur: 'Préparation absente.' });
+        return json(res, 200, await preparerMaintenant());
+      }
       return json(res, 404, { erreur: 'Introuvable.' });
     } catch (erreur) {
       return json(res, 400, { erreur: erreur.message });
@@ -93,7 +134,22 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = i > 0 ? Number(process.argv[i + 1]) : 4810;
   const db = clientFirestore();
   const porte = porteEnvoi({ db, envoyerResend: resendReel(), lireRevenueCat: revenueCatReel() });
-  http.createServer(application(suivi(db), { port, porte })).listen(port, '127.0.0.1', () => {
+  const s = suivi(db);
+  const preparerMaintenant = () => passeDuMac(db);
+  http.createServer(application(s, { port, porte, preparerMaintenant })).listen(port, '127.0.0.1', () => {
     console.log(`Suivi Easy Way : http://localhost:${port}`);
   });
+  // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
+  const passe = () => preparerMaintenant().then((r) => console.log('passe', new Date().toISOString(), JSON.stringify(r))).catch((e) => console.error('passe', e.message));
+  passe();
+  setInterval(passe, 3600 * 1000);
+  let dernierJour = '';
+  setInterval(async () => {
+    const maintenant = new Date();
+    const jour = maintenant.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' });
+    const heure = Number(maintenant.toLocaleString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }));
+    if (heure !== 9 || jour === dernierJour) return;
+    dernierJour = jour;
+    try { notifier((await s.aujourdhui()).length); } catch (e) { console.error('notification', e.message); }
+  }, 60 * 1000);
 }

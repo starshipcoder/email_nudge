@@ -128,3 +128,24 @@ test('réglages d’adresses et plafond vérifiés', async () => {
   await assert.rejects(() => s.changerReglage('plafond_jour', 150), /90/);
   assert.equal((await s.changerReglage('plafond_jour', 50)).plafond_jour, 50);
 });
+
+test('les actions du jour : prêtes et reportées échues, Plus tard, Ignorer, texte modifié', async () => {
+  const T = new Date('2026-12-02T10:00:00Z');
+  const db = baseEnMemoire({ crm_actions: [
+    { id: 'a', statut: 'prete', echeance: '2026-12-03T00:00:00Z', sujet: 's', corps: 'c' },
+    { id: 'b', statut: 'reportee', reporter_au: '2026-12-01T08:00:00Z' },
+    { id: 'c', statut: 'reportee', reporter_au: '2026-12-05T08:00:00Z' },
+    { id: 'd', statut: 'envoyee' },
+  ] });
+  const s = suivi(db, { maintenant: () => T });
+  assert.deepEqual((await s.aujourdhui()).map((a) => a.id).sort(), ['a', 'b']);
+  await s.traiterAction('a', 'reporter');
+  assert.equal(db.donnees.crm_actions.get('a').statut, 'reportee');
+  assert.equal(new Date(db.donnees.crm_actions.get('a').reporter_au).toISOString(), '2026-12-03T08:00:00.000Z');
+  await s.traiterAction('b', 'ignorer');
+  assert.deepEqual((await s.aujourdhui()).map((a) => a.id), []);
+  await assert.rejects(() => s.traiterAction('d', 'ignorer'), /déjà traitée/);
+  await db.ecrire('crm_actions', 'a', { statut: 'prete' });
+  assert.equal((await s.modifierTexte('a', 'Nouveau', 'Texte')).modifie_a_la_main, true);
+  await assert.rejects(() => s.modifierTexte('a', '', 'x'), /requis/);
+});

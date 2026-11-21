@@ -15,7 +15,7 @@ export const cleUtilisateur = (userId) => createHash('sha256').update(String(use
 export function piedDePage(langue, adresseReponse) {
   const fr = String(langue ?? '').startsWith('fr');
   return fr
-    ? `\n\n--\nPour ne plus recevoir d'e-mails d'Easy Way, réponds simplement STOP (${adresseReponse}).`
+    ? `\n\n--\nPour ne plus recevoir d'e-mails d'Easy Way, répondez simplement STOP (${adresseReponse}).`
     : `\n\n--\nTo stop receiving emails from Easy Way, just reply STOP (${adresseReponse}).`;
 }
 

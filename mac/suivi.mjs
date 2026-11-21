@@ -89,6 +89,12 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
         await journaliser(`réglage ${cle} changé`, null);
         return this.reglages();
       }
+      if (cle === 'signature') {
+        const signature = String(valeur ?? '').trim();
+        if (!signature || signature.length > 200 || /[<>]/.test(signature)) throw new Error('La signature fait de 1 à 200 caractères, sans < ni >.');
+        await db.ecrire('crm_reglages', 'general', { signature, maj_le: maintenant() });
+        return this.reglages();
+      }
       if (cle === 'plafond_jour') {
         if (!Number.isInteger(valeur) || valeur < 1 || valeur > 90) throw new Error('Le plafond va de 1 à 90 par jour (Resend gratuit : 100).');
         await db.ecrire('crm_reglages', 'general', { plafond_jour: valeur, maj_le: maintenant() });
@@ -117,8 +123,36 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       return lignes.sort((a, b) => String(b.le ?? '').localeCompare(String(a.le ?? ''))).slice(0, 200);
     },
     async aujourdhui() {
+      const t = maintenant();
       const actions = await db.lister('crm_actions');
-      return actions.filter((a) => ['prete', 'reportee'].includes(a.statut));
+      return actions.filter((a) => a.statut === 'prete' || (a.statut === 'reportee' && (!a.reporter_au || new Date(a.reporter_au) <= t)))
+        .sort((a, b) => String(a.echeance ?? '').localeCompare(String(b.echeance ?? '')));
+    },
+    async action(id) {
+      return db.lire('crm_actions', id);
+    },
+    // Plus tard : demain 9 h (Paris, à l'heure près) ; Ignorer : l'action sort de la liste.
+    async traiterAction(id, op) {
+      const a = await db.lire('crm_actions', id);
+      if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
+      const t = maintenant();
+      if (op === 'reporter') {
+        const demain = new Date(t.getTime() + 86400000);
+        demain.setUTCHours(8, 0, 0, 0);
+        await db.ecrire('crm_actions', id, { statut: 'reportee', reporter_au: demain, maj_le: t });
+      } else if (op === 'ignorer') {
+        await db.ecrire('crm_actions', id, { statut: 'ignoree', maj_le: t });
+      } else if (op === 'texte') {
+        throw new Error('Utiliser modifierTexte.');
+      } else throw new Error('Geste inconnu.');
+      return db.lire('crm_actions', id);
+    },
+    async modifierTexte(id, sujet, corps) {
+      const a = await db.lire('crm_actions', id);
+      if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
+      if (!String(sujet ?? '').trim() || !String(corps ?? '').trim() || String(corps).length > 5000) throw new Error('Sujet et texte requis (5 000 caractères au plus).');
+      await db.ecrire('crm_actions', id, { sujet: String(sujet).trim(), corps: String(corps), modifie_a_la_main: true, maj_le: maintenant() });
+      return db.lire('crm_actions', id);
     },
   };
 }
