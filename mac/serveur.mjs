@@ -113,7 +113,9 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
       if (route === 'GET /api/utilisateurs') {
         const tous = await s.utilisateurs({ frais: url.searchParams.get('frais') === '1' });
         const lignes = filtrer(tous, { q: url.searchParams.get('q') ?? '', filtre: url.searchParams.get('filtre') ?? '' });
-        return json(res, 200, { total: tous.length, lignes: lignes.slice(0, 300), trouves: lignes.length });
+        // Les 50 plus récents par défaut (fondateur, 22/11) ; « tout » les affiche tous. La recherche porte toujours sur tous.
+        const limite = url.searchParams.get('tout') === '1' ? 5000 : 50;
+        return json(res, 200, { total: tous.length, lignes: lignes.slice(0, limite), trouves: lignes.length });
       }
       if (route === 'GET /api/fiche') {
         const f = await s.fiche(url.searchParams.get('id') ?? '');

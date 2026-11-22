@@ -133,16 +133,17 @@ async function uneAction(id) {
   document.getElementById('ignorer').addEventListener('click', async () => { await api('action', { id: a.id, op: 'ignorer' }); location.hash = 'aujourdhui'; });
 }
 
-const recherche = { q: '', filtre: '' };
+const recherche = { q: '', filtre: '', tout: false };
 async function utilisateurs() {
   vue.innerHTML = `<h1>Utilisateurs</h1>
     <div class="outils"><input type="search" id="q" placeholder="E-mail, prénom ou identifiant RevenueCat" value="${echapper(recherche.q)}">
     ${FILTRES.map(([cle, nom]) => `<button data-filtre="${cle}" class="${recherche.filtre === cle ? 'choisi' : ''}">${nom}</button>`).join('')}
+    <button id="tout" class="${recherche.tout ? 'choisi' : ''}">${recherche.tout ? 'Les 50 plus récents' : 'Tout afficher'}</button>
     <button id="recharger">Recharger</button></div>
     <p class="doux" id="compte">Chargement…</p><div class="carte defile"><table><thead><tr>
     <th>Inscrit le</th><th>E-mail</th><th>Prénom</th><th>État</th><th>Rôle</th><th>Tournées</th><th>Langue</th></tr></thead><tbody id="lignes"></tbody></table></div>`;
   const remplir = async (frais = false) => {
-    const params = new URLSearchParams({ q: recherche.q, filtre: recherche.filtre, ...(frais ? { frais: '1' } : {}) });
+    const params = new URLSearchParams({ q: recherche.q, filtre: recherche.filtre, ...(recherche.tout ? { tout: '1' } : {}), ...(frais ? { frais: '1' } : {}) });
     const { total, trouves, lignes } = await api(`utilisateurs?${params}`);
     document.getElementById('compte').textContent = `${trouves} sur ${total} inscrits${trouves > lignes.length ? ` (les ${lignes.length} plus récents affichés)` : ''}`;
     document.getElementById('lignes').innerHTML = lignes.map((l) => `<tr data-id="${echapper(l.id)}">
@@ -153,6 +154,7 @@ async function utilisateurs() {
   document.getElementById('q').addEventListener('input', (e) => { recherche.q = e.target.value; clearTimeout(minuterie); minuterie = setTimeout(() => remplir(), 250); });
   vue.querySelectorAll('[data-filtre]').forEach((b) => b.addEventListener('click', () => { recherche.filtre = b.dataset.filtre; utilisateurs(); }));
   document.getElementById('recharger').addEventListener('click', () => remplir(true));
+  document.getElementById('tout').addEventListener('click', () => { recherche.tout = !recherche.tout; utilisateurs(); });
   document.getElementById('lignes').addEventListener('click', (e) => { const tr = e.target.closest('tr'); if (tr) location.hash = `fiche-${encodeURIComponent(tr.dataset.id)}`; });
   await remplir();
 }
