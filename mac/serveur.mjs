@@ -282,6 +282,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Iris CRM : http://localhost:${port}`);
   });
+  // La liste des inscrits se charge d'avance : le premier clic sur Utilisateurs n'attend pas.
+  s.utilisateurs().catch((e) => console.error('inscrits', e.message));
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
   const passe = () => preparerMaintenant().then((r) => console.log('passe', new Date().toISOString(), JSON.stringify(r))).catch((e) => console.error('passe', e.message));
   passe();

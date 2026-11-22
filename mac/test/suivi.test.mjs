@@ -197,3 +197,17 @@ test('le numéro WhatsApp se règle au format international, et se retire', asyn
   await assert.rejects(() => s.changerReglage('whatsapp', '06 00'), /format international/);
   assert.equal((await s.changerReglage('whatsapp', '')).whatsapp, null);
 });
+
+test('la liste des inscrits ne fait jamais attendre : un cache vieilli est rendu tout de suite et relu derrière', async () => {
+  let t = 0;
+  const db = baseEnMemoire({ users: [{ id: 'a@exemple.fr' }] });
+  const s = suivi(db, { maintenant: () => new Date(t), dureeCache: 1000 });
+  assert.equal((await s.utilisateurs()).length, 1);
+  await db.ecrire('users', 'b@exemple.fr', {});
+  t = 5000;
+  assert.equal((await s.utilisateurs()).length, 1, 'l’ancienne liste, sans attendre');
+  await new Promise((r) => setImmediate(r));
+  assert.equal((await s.utilisateurs()).length, 2, 'relue en arrière-plan');
+  await db.ecrire('users', 'c@exemple.fr', {});
+  assert.equal((await s.utilisateurs({ frais: true })).length, 3);
+});

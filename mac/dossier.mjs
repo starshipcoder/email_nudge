@@ -103,8 +103,10 @@ export function dossierDe({ rc, sources, maintenant = new Date() }) {
     zones: zones.filter((z) => z.n > 0).sort((a, b) => b.n - a.n), zones_jamais: zones.filter((z) => z.n === 0).map((z) => z.zone),
   };
 
+  // Les noms entre « rc_ » et « rc` » (le caractère après « _ ») : la même chose que LIKE 'rc\\_%', mais par l'index
+  // propres_nom_jour ; LIKE parcourait les 2 millions d'événements à chaque fiche (4,5 s, 22/11).
   const rcEvts = mp?.prepare(`SELECT p.nom, p.jour, p.formule FROM propres p JOIN evenements e ON e.id = p.id
-    WHERE p.nom LIKE 'rc\\_%' ESCAPE '\\' AND instr(e.proprietes, ?) > 0 ORDER BY p.temps`).all(JSON.stringify(String(rc))) ?? [];
+    WHERE p.nom >= 'rc_' AND p.nom < 'rc\`' AND instr(e.proprietes, ?) > 0 ORDER BY p.temps`).all(JSON.stringify(String(rc))) ?? [];
   const paiements = rcEvts.filter((e) => ['rc_trial_converted_event', 'rc_initial_purchase_event', 'rc_renewal_event'].includes(e.nom));
   const abonnement = {
     formule: rcEvts.map((e) => e.formule).filter(Boolean).at(-1) ?? null,

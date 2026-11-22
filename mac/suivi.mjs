@@ -48,13 +48,22 @@ export function nettoyerPrenom(prenom) {
 }
 
 export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 * 1000 } = {}) {
+  // La liste des inscrits (1 232 au 22/11, 2 s à relire dans Firestore) : la page ne l'attend jamais. Un cache vieilli
+  // est rendu tel quel et relu en arrière-plan ; seul « frais » (le bouton Rafraîchir) ou le premier appel attendent.
   let cache = null;
   let cacheLe = 0;
-  async function utilisateurs({ frais = false } = {}) {
-    if (frais || !cache || maintenant().getTime() - cacheLe > dureeCache) {
-      cache = (await db.lister('users', CHAMPS_USERS)).map(ligneUtilisateur);
+  let relecture = null;
+  const relire = () => {
+    relecture ??= db.lister('users', CHAMPS_USERS).then((docs) => {
+      cache = docs.map(ligneUtilisateur);
       cacheLe = maintenant().getTime();
-    }
+      return cache;
+    }).finally(() => { relecture = null; });
+    return relecture;
+  };
+  async function utilisateurs({ frais = false } = {}) {
+    if (frais || !cache) return relire();
+    if (maintenant().getTime() - cacheLe > dureeCache) relire().catch(() => {});
     return cache;
   }
   async function journaliser(quoi, rc) {
