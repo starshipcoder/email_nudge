@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { baseEnMemoire } from '../suivi.mjs';
 import { cleUtilisateur, porteEnvoi } from '../envoi.mjs';
 import { bugs, personneDuRetour } from '../bugs.mjs';
-import { compareVersions, versionDePiste } from '../versions.mjs';
+import { compareVersions, texteDuTrousseau, versionDePiste } from '../versions.mjs';
 
 const T = new Date('2026-12-02T10:00:00Z');
 const evenement = ({ rc = 'rcA', contact = null, os = 'iOS', version = '7.6.8+812' } = {}) => ({
@@ -97,4 +97,10 @@ test('versions : ordre, et version de la piste de production', () => {
   assert.equal(compareVersions('7.6.10', '7.6.9'), 1);
   assert.equal(compareVersions('7.6.9+812', '7.6.9'), 0);
   assert.equal(versionDePiste({ releases: [{ name: '7.6.7 (800)', status: 'completed' }, { name: '7.6.8 (812)', status: 'inProgress' }, { name: '7.7.0', status: 'draft' }] }), '7.6.8');
+});
+
+test('le trousseau rend une clé JSON en hexadécimal : elle se décode', () => {
+  const json = '{\n  "a": 1\n}';
+  assert.equal(texteDuTrousseau(Buffer.from(json).toString('hex') + '\n'), json);
+  assert.equal(texteDuTrousseau('{"a":1}'), '{"a":1}');
 });

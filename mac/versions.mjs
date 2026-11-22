@@ -29,10 +29,15 @@ export async function versionAppStore({ fetcher = fetch } = {}) {
   return { version: app.version, mise_en_vente_le: app.currentVersionReleaseDate ?? null };
 }
 
+// `security -w` rend en hexadécimal une valeur qui contient des retours à la ligne (une clé JSON en a).
+export function texteDuTrousseau(sortie) {
+  const brut = String(sortie).trim();
+  return /^[0-9a-f]+$/i.test(brut) && brut.length % 2 === 0 ? Buffer.from(brut, 'hex').toString('utf8') : brut;
+}
 const b64 = (x) => Buffer.from(x).toString('base64url');
 async function jetonGoogle(fetcher) {
   const { stdout } = await run('security', ['find-generic-password', '-s', 'play-compte-service', '-w']);
-  const cle = JSON.parse(stdout.trim());
+  const cle = JSON.parse(texteDuTrousseau(stdout));
   const t = Math.floor(Date.now() / 1000);
   const entete = `${b64(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64(JSON.stringify({ iss: cle.client_email,
     scope: 'https://www.googleapis.com/auth/androidpublisher', aud: 'https://oauth2.googleapis.com/token', iat: t, exp: t + 600 }))}`;
