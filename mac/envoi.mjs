@@ -15,10 +15,20 @@ export const cleUtilisateur = (userId) => createHash('sha256').update(String(use
 
 // Plus de pied « répondez STOP » (fondateur, 22/11 : « on ne met pas le STOP dans les mails »). La désinscription
 // reste possible depuis la fiche. À la place, s'il est réglé, le lien WhatsApp du fondateur (EW-53).
-export const lienWhatsapp = (numero) => (/^\d{8,15}$/.test(String(numero ?? '')) ? `https://wa.me/${numero}` : null);
+// Le numéro réglé (chiffres seuls, indicatif compris) écrit des deux façons : 06 52 … en France, +33 6 52 … ailleurs.
+export function formesNumero(numero) {
+  const n = String(numero ?? '');
+  if (!/^\d{8,15}$/.test(n)) return null;
+  if (/^33\d{9}$/.test(n)) {
+    const reste = n.slice(2);
+    const paires = reste.slice(1).match(/\d{2}/g).join(' ');
+    return { national: `0${reste[0]} ${paires}`, international: `+33 ${reste[0]} ${paires}` };
+  }
+  return { national: `+${n}`, international: `+${n}` };
+}
 export function piedDePage(langue, whatsapp) {
-  const lien = lienWhatsapp(whatsapp);
-  return lien ? `\n\n${WHATSAPP[langueDe(langue)](lien)}` : '';
+  const f = formesNumero(whatsapp);
+  return f ? `\n\n${WHATSAPP[langueDe(langue)](f.national, f.international)}` : '';
 }
 
 // Ce que RevenueCat dit de l'abonnement, réduit à ce qui décide un envoi.

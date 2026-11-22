@@ -40,13 +40,15 @@ export function direSource(l) {
 
 // La ligne WhatsApp à la fin de chaque e-mail (EW-53, fondateur, 22/11 : « pour que les gens puissent me contacter, et ça
 // fait plus humain »). Plus de pied « répondez STOP » depuis le 22/11.
+// Le fondateur, 22/11 : « WhatsApp : 06 52 50 55 00 » pour les Français, « WhatsApp: +33 6 52 50 55 00 (I am French) »
+// pour les autres, la parenthèse dans leur langue (elle explique l'indicatif). Pas de lien.
 export const WHATSAPP = {
-  fr: (lien) => `Vous pouvez aussi m'écrire sur WhatsApp : ${lien}`,
-  en: (lien) => `You can also message me on WhatsApp: ${lien}`,
-  de: (lien) => `Sie können mir auch auf WhatsApp schreiben: ${lien}`,
-  es: (lien) => `También puede escribirme por WhatsApp: ${lien}`,
-  it: (lien) => `Può anche scrivermi su WhatsApp: ${lien}`,
-  pt: (lien) => `Também me pode escrever no WhatsApp: ${lien}`,
+  fr: (national) => `WhatsApp : ${national}`,
+  en: (_, international) => `WhatsApp: ${international} (I am French)`,
+  de: (_, international) => `WhatsApp: ${international} (ich bin Franzose)`,
+  es: (_, international) => `WhatsApp: ${international} (soy francés)`,
+  it: (_, international) => `WhatsApp: ${international} (sono francese)`,
+  pt: (_, international) => `WhatsApp: ${international} (sou francês)`,
 };
 
 export const ARRETER = {
