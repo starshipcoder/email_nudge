@@ -4,7 +4,7 @@
 import { randomBytes } from 'node:crypto';
 import { cleUtilisateur } from './envoi.mjs';
 import { CHAMPS_USERS, ligneUtilisateur } from './suivi.mjs';
-import { langueDe } from './modeles.mjs';
+import { langueCampagne } from './langues.mjs';
 
 const JOUR = 86400000;
 export const MAX_MEMBRES = 300;
@@ -59,7 +59,7 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
     const fiches = new Map((await db.lister('crm_fiches')).map((f) => [f.id, f]));
     return (await db.lister('users', CHAMPS_USERS)).map(ligneUtilisateur)
       .filter((l) => (estTest(c.nom) ? l.test : !l.test))
-      .filter((l) => FILTRES_CAMPAGNE[c.filtre](l, t) && langueDe(l.langue) === c.langue)
+      .filter((l) => FILTRES_CAMPAGNE[c.filtre](l, t) && langueCampagne(l.langue) === c.langue)
       .filter((l) => !fiches.get(cleUtilisateur(l.id))?.desinscrit)
       .map((l) => l.id).sort();
   }

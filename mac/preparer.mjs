@@ -1,8 +1,9 @@
 // Prépare les actions du jour à partir de la base Mixpanel du Mac (événements que RevenueCat y envoie)
 // et des inscrits d'email_nudge. Rien ne part d'ici : la porte d'envoi relit RevenueCat avant chaque e-mail.
 import { cleUtilisateur } from './envoi.mjs';
-import { arreter, dateFin, langueDe, rendre } from './modeles.mjs';
-import { brouillonResiliation, resumer } from './dossier.mjs';
+import { arreter, dateFin, rendre, rendreAvecTraduction } from './modeles.mjs';
+import { brouillonAvecTraduction, resumer } from './dossier.mjs';
+import { langueDePersonne } from './langues.mjs';
 
 const H = 3600 * 1000;
 const FENETRE_J2 = [24 * H, 60 * H]; // fin d'essai entre 24 h et 60 h d'ici
@@ -47,20 +48,24 @@ export function candidats(faits, inscrits, maintenant) {
   return [...essais, ...resiliations];
 }
 
-export function actionDe(c, { tournees, signature, maintenant, dossierPour = null }) {
-  const langue = langueDe(c.user.locale);
+export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null }) {
   const cle = cleUtilisateur(c.user.id);
+  // Le dossier de la personne, s'il se lit : son pays (pour la langue), son usage et sa réponse au questionnaire.
+  const dossier = dossierPour?.(c.user.revenuecat_id) ?? null;
+  const l = langueDePersonne({ locale: c.user.locale, pays: dossier?.pays, choix: choixLangue(cle) });
+  const langue = l.langue;
+  const source = { langue_source: l.source, ...(l.pays ? { pays: l.pays } : {}) };
   if (c.type === 'essai_j2') {
     const n = tournees(c.user.revenuecat_id);
-    const { sujet, corps } = rendre(n > 0 ? 'essai_j2_usage' : 'essai_j2_peu_usage', langue,
-      { date_fin: dateFin(c.fait.fin, langue), n_tournees: n, arreter: arreter(c.fait.store, langue), signature });
+    const { sujet, corps, traduction_fr } = rendreAvecTraduction(n > 0 ? 'essai_j2_usage' : 'essai_j2_peu_usage', langue,
+      (lg) => ({ date_fin: dateFin(c.fait.fin, lg), n_tournees: n, arreter: arreter(c.fait.store, lg), signature }));
     return { id: `essai_j2__${cle}__${c.fait.transaction}`, type: 'essai_j2', variante: n > 0 ? 'usage' : 'peu_usage', user_id: c.user.id,
-      statut: 'prete', sujet, corps, langue, echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
+      statut: 'prete', sujet, corps, langue, ...source, ...(traduction_fr ? { traduction_fr } : {}),
+      echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
   }
-  // Le dossier de la personne, s'il se lit : un brouillon qui part de son usage et de sa réponse au questionnaire.
-  const dossier = dossierPour?.(c.user.revenuecat_id) ?? null;
-  const { sujet, corps } = dossier ? brouillonResiliation(dossier, langue, signature) : rendre('resiliation', langue, { signature });
-  return { id: `resiliation__${cle}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue,
+  const { sujet, corps, traduction_fr } = dossier ? brouillonAvecTraduction(dossier, langue, signature) : rendreAvecTraduction('resiliation', langue, () => ({ signature }));
+  return { id: `resiliation__${cle}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
+    ...(traduction_fr ? { traduction_fr } : {}),
     ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
     echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
 }
@@ -71,9 +76,11 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
   const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
   if (!reglages.signature) return { creees: 0, expirees: 0, raison: 'signature à régler' };
   const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user']);
+  const fiches = new Map((await db.lister('crm_fiches')).map((f) => [f.id, f]));
+  const choixLangue = (cle) => fiches.get(cle)?.langue ?? null;
   let creees = 0;
   for (const c of candidats(faits, inscrits, maintenant)) {
-    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour });
+    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour, choixLangue });
     try { await db.creer('crm_actions', id, champs); creees += 1; } catch { /* déjà là */ }
   }
   let expirees = 0;

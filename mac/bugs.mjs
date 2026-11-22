@@ -6,12 +6,12 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { cleUtilisateur } from './envoi.mjs';
-import { langueDe, rendre } from './modeles.mjs';
+import { rendreAvecTraduction } from './modeles.mjs';
+import { ET, STORES, langueDePersonne } from './langues.mjs';
 import { compareVersions, versionValide } from './versions.mjs';
 
 const run = promisify(execFile);
 const JOUR = 86400000;
-const STORES = { ios: { fr: 'l’App Store', en: 'the App Store' }, android: { fr: 'Google Play', en: 'Google Play' } };
 
 export function personneDuRetour(event) {
   const fb = event?.contexts?.feedback ?? {};
@@ -55,7 +55,7 @@ function verifierNote({ titre, version_corrigee, bug_ew }) {
   return { titre: t, version_corrigee: v, bug_ew: nom || null };
 }
 
-export function bugs(db, { maintenant = () => new Date(), lireRetours, lireVersions }) {
+export function bugs(db, { maintenant = () => new Date(), lireRetours, lireVersions, paysPour = () => null }) {
   async function inscrits() {
     const users = await db.lister('users', ['revenuecat_id', 'locale']);
     return { parRc: new Map(users.filter((u) => u.revenuecat_id).map((u) => [u.revenuecat_id, u])), parId: new Map(users.map((u) => [u.id.toLowerCase(), u])) };
@@ -100,12 +100,16 @@ export function bugs(db, { maintenant = () => new Date(), lireRetours, lireVersi
         if (b.action_id || !b.user_id || !users.has(b.user_id) || fiches.get(cleUtilisateur(b.user_id))?.desinscrit) continue;
         const enVente = (b.plateforme ? [b.plateforme] : ['ios', 'android']).filter((p) => versions[p]?.version && compareVersions(versions[p].version, b.version_corrigee) >= 0);
         if (!enVente.length) continue;
-        const langue = langueDe(users.get(b.user_id).locale);
-        const store = enVente.map((p) => STORES[p][langue]).join(langue === 'fr' ? ' et ' : ' and ');
-        const { sujet, corps } = rendre('bug_corrige', langue, { titre: b.titre, version: b.version_corrigee, store, signature });
+        const fiche = fiches.get(cleUtilisateur(b.user_id));
+        const l = langueDePersonne({ locale: users.get(b.user_id).locale, pays: await paysPour(b.rc), choix: fiche?.langue });
+        const langue = l.langue;
+        const store = (lg) => enVente.map((p) => STORES[p][lg]).join(ET[lg]);
+        // Le titre public est écrit en français par le fondateur : il reste tel quel, à traduire à la relecture.
+        const { sujet, corps, traduction_fr } = rendreAvecTraduction('bug_corrige', langue, (lg) => ({ titre: b.titre, version: b.version_corrigee, store: store(lg), signature }));
         const id = `bug_corrige__${cleUtilisateur(b.user_id)}__${b.version_corrigee}`;
         try {
-          await db.creer('crm_actions', id, { type: 'bug_corrige', user_id: b.user_id, statut: 'prete', sujet, corps, langue,
+          await db.creer('crm_actions', id, { type: 'bug_corrige', user_id: b.user_id, statut: 'prete', sujet, corps, langue, langue_source: l.source,
+            ...(traduction_fr ? { traduction_fr, a_verifier: 'le titre public est en français : le traduire dans le texte' } : {}),
             bug: b.id, bug_ew: b.bug_ew, echeance: new Date(t.getTime() + 30 * JOUR), cree_le: t });
           creees += 1;
         } catch { /* même personne, même version : une seule action */ }

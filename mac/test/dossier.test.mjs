@@ -107,3 +107,24 @@ test('sans réponse au questionnaire, un import raté donne le fait et la questi
   assert.match(b.corps, /Est-ce ce problème qui vous a arrêté/);
   assert.equal((b.corps.match(/\?/g) ?? []).length, 1);
 });
+
+test('un inscrit non abonné se relie à sa personne par l’id RevenueCat que l’app a vu, et l’index se garde', async () => {
+  const { indexIds, personneDe } = await import('../dossier.mjs');
+  const { mkdtempSync, writeFileSync, existsSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const mp = new DatabaseSync(':memory:');
+  mp.exec(`CREATE TABLE evenements (id TEXT, distinct_id TEXT, proprietes TEXT);
+    CREATE TABLE propres (id TEXT, nom TEXT, utilisateur TEXT, a_exclure TEXT);
+    INSERT INTO evenements VALUES ('1', 'dev1', '{"rc.user_id":"rcX"}'), ('2', 'rcY', '{}'), ('3', 'dev3', '{"$user_id":"rcZ"}');
+    INSERT INTO propres VALUES ('1', 'Event-RevenueCat-CustomerInfo', 'pX', ''), ('2', 'Screen-ContactMap', 'pY', ''), ('3', 'Screen-ContactMap', 'pZ', '');`);
+  const dossier = mkdtempSync(join(tmpdir(), 'iris-'));
+  const base = join(dossier, 'easyway.sqlite');
+  writeFileSync(base, 'x');
+  const ids = indexIds(mp, base);
+  assert.deepEqual(['rcX', 'rcY', 'rcZ'].map((r) => personneDe({ liens: new Map(), ids }, r)), ['pX', 'pY', 'pZ']);
+  assert.ok(existsSync(join(dossier, 'iris-index-ids.json')));
+  mp.exec("DELETE FROM propres");
+  assert.equal(indexIds(mp, base).get('rcX'), 'pX');
+  assert.equal(personneDe({ liens: new Map([['rcX', 'lien']]), ids }, 'rcX'), 'lien');
+});

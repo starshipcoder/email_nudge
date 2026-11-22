@@ -54,3 +54,5 @@ label { margin-right: 12px; }
 .barre-semaine { width: 18px; background: var(--accent); border-radius: 2px 2px 0 0; }
 .barre-semaine.h0 { height: 2px; background: var(--trait); } .barre-semaine.h1 { height: 10px; } .barre-semaine.h2 { height: 20px; }
 .barre-semaine.h3 { height: 30px; } .barre-semaine.h4 { height: 40px; }
+select { font: inherit; padding: 5px 8px; border: 1px solid var(--trait); border-radius: 6px; background: var(--carte); color: var(--texte); }
+#sujet-fr { width: 100%; box-sizing: border-box; }

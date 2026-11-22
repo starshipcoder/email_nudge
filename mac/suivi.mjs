@@ -188,8 +188,27 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       const a = await db.lire('crm_actions', id);
       if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
       if (!String(sujet ?? '').trim() || !String(corps ?? '').trim() || String(corps).length > 5000) throw new Error('Sujet et texte requis (5 000 caractères au plus).');
-      await db.ecrire('crm_actions', id, { sujet: String(sujet).trim(), corps: String(corps), modifie_a_la_main: true, maj_le: maintenant() });
+      await db.ecrire('crm_actions', id, { sujet: String(sujet).trim(), corps: String(corps), modifie_a_la_main: true, a_retraduire: false, maj_le: maintenant() });
       return db.lire('crm_actions', id);
+    },
+    // La traduction française corrigée par le fondateur : le texte dans la langue de la personne est à refaire avant l'envoi.
+    async modifierTraduction(id, sujet, corps) {
+      const a = await db.lire('crm_actions', id);
+      if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
+      if (!a.langue || a.langue === 'fr') throw new Error('Cet e-mail est déjà en français.');
+      if (!String(sujet ?? '').trim() || !String(corps ?? '').trim() || String(corps).length > 5000) throw new Error('Sujet et texte requis (5 000 caractères au plus).');
+      await db.ecrire('crm_actions', id, { traduction_fr: { sujet: String(sujet).trim(), corps: String(corps) }, a_retraduire: true, maj_le: maintenant() });
+      return db.lire('crm_actions', id);
+    },
+    async choisirLangue(id, langue) {
+      const { LANGUES } = await import('./langues.mjs');
+      if (langue && !LANGUES.includes(langue)) throw new Error('Langue inconnue.');
+      const u = await db.lire('users', id);
+      if (!u) throw new Error('Inscrit introuvable.');
+      const { cleUtilisateur } = await import('./envoi.mjs');
+      await db.ecrire('crm_fiches', cleUtilisateur(id), { user_id: id, langue: langue || null, maj_le: maintenant() });
+      await journaliser(`langue choisie : ${langue || 'automatique'}`, u.revenuecat_id);
+      return true;
     },
   };
 }

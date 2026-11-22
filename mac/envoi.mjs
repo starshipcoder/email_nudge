@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { PIED, langueDe } from './langues.mjs';
 
 const run = promisify(execFile);
 export const PLAFOND_JOUR = 90; // Resend gratuit : 100 par jour
@@ -13,10 +14,7 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export const cleUtilisateur = (userId) => createHash('sha256').update(String(userId)).digest('hex').slice(0, 24);
 
 export function piedDePage(langue, adresseReponse) {
-  const fr = String(langue ?? '').startsWith('fr');
-  return fr
-    ? `\n\n--\nPour ne plus recevoir d'e-mails d'Easy Way, répondez simplement STOP (${adresseReponse}).`
-    : `\n\n--\nTo stop receiving emails from Easy Way, just reply STOP (${adresseReponse}).`;
+  return `\n\n--\n${PIED[langueDe(langue)](adresseReponse)}`;
 }
 
 // Ce que RevenueCat dit de l'abonnement, réduit à ce qui décide un envoi.
@@ -70,7 +68,7 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       if (!action) return { statut: 'bloquee', raison: 'action introuvable' };
       const user = await db.lire('users', action.user_id);
       const fiche = (await db.lire('crm_fiches', cleUtilisateur(action.user_id))) ?? {};
-      const texte = `${action.corps}${piedDePage(user?.locale, reglages.repondre_a)}`;
+      const texte = `${action.corps}${piedDePage(action.langue ?? user?.locale, reglages.repondre_a)}`;
 
       if (canal === 'test_moi') {
         if (reglages.a_blanc !== false) return { statut: 'a_blanc', raison: 'essai à blanc' };
@@ -81,6 +79,8 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       }
 
       if (action.statut !== 'prete') return bloquer(action, 'déjà traitée', false);
+      // La traduction française a été corrigée : le texte dans la langue de la personne doit être refait d'abord.
+      if (action.a_retraduire) return { statut: 'bloquee', raison: 'traduction à refaire' };
       if (await db.lire('crm_envois', actionId)) return bloquer(action, 'déjà envoyé', false);
       if (fiche.desinscrit) return bloquer(action, 'désinscrit', true);
       if (!user || !EMAIL.test(user.id)) return bloquer(action, "pas d'adresse", true);

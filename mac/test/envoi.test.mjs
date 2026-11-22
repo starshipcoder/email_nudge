@@ -127,5 +127,6 @@ test('une erreur de Resend est notée, l’action passe en erreur', async () => 
 
 test('pied de page dans la langue de la personne', () => {
   assert.match(piedDePage('fr', 'moi@exemple.fr'), /répondez simplement STOP/);
-  assert.match(piedDePage('de', 'moi@exemple.fr'), /just reply STOP/);
+  assert.match(piedDePage('de', 'moi@exemple.fr'), /antworten Sie einfach STOP/);
+  assert.match(piedDePage('nl', 'moi@exemple.fr'), /just reply STOP/);
 });

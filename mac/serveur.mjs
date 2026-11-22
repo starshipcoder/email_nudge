@@ -11,7 +11,9 @@ import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
 import { versionsEnVente } from './versions.mjs';
-import { brouillonResiliation, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
+import { brouillonAvecTraduction, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
+import { direSource, langueDePersonne } from './langues.mjs';
+import { cleUtilisateur } from './envoi.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -115,8 +117,11 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
       }
       if (route === 'GET /api/dossier') {
         if (!db) return json(res, 503, { erreur: 'Base absente.' });
-        const d = await lire(await db.lire('users', url.searchParams.get('id') ?? ''));
-        return json(res, 200, d ? { resume: resumer(d), rc: d.rc } : { resume: null });
+        const u = await db.lire('users', url.searchParams.get('id') ?? '');
+        const d = await lire(u);
+        const choix = u ? (await db.lire('crm_fiches', cleUtilisateur(u.id)))?.langue ?? null : null;
+        const l = langueDePersonne({ locale: u?.locale, pays: d?.pays, choix });
+        return json(res, 200, { resume: d ? resumer(d) : null, rc: d?.rc ?? null, langue: { ...l, texte: direSource(l), choix } });
       }
       if (route === 'POST /api/rebrouillon') {
         if (!db) return json(res, 503, { erreur: 'Base absente.' });
@@ -127,9 +132,16 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         if (!d) throw new Error('Pas de dossier : identifiant RevenueCat ou base Mixpanel absents.');
         const { signature } = (await db.lire('crm_reglages', 'general')) ?? {};
         if (!signature) throw new Error('Régler la signature d’abord.');
-        const { sujet, corps } = brouillonResiliation(d, a.langue ?? 'en', signature);
-        await db.ecrire('crm_actions', a.id, { sujet, corps, variante: 'dossier', resume: resumer(d), maj_le: new Date() });
+        const u = await db.lire('users', a.user_id);
+        const l = langueDePersonne({ locale: u?.locale, pays: d.pays, choix: (await db.lire('crm_fiches', cleUtilisateur(a.user_id)))?.langue });
+        const { sujet, corps, traduction_fr } = brouillonAvecTraduction(d, l.langue, signature);
+        await db.ecrire('crm_actions', a.id, { sujet, corps, traduction_fr: traduction_fr ?? null, langue: l.langue, langue_source: l.source,
+          a_retraduire: false, variante: 'dossier', resume: resumer(d), maj_le: new Date() });
         return json(res, 200, await db.lire('crm_actions', a.id));
+      }
+      if (route === 'POST /api/langue') {
+        const { id, langue } = await lireCorps(req);
+        return json(res, 200, { ok: await s.choisirLangue(String(id ?? ''), langue ? String(langue) : null) });
       }
       if (route === 'GET /api/desinscrit') return json(res, 200, { desinscrit: await s.desinscrit(url.searchParams.get('id') ?? '') });
       if (route === 'POST /api/desinscrire') {
@@ -159,7 +171,9 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
       }
       if (route === 'POST /api/action') {
         const { id, op, sujet, corps } = await lireCorps(req);
-        return json(res, 200, op === 'texte' ? await s.modifierTexte(id, sujet, corps) : await s.traiterAction(id, op));
+        if (op === 'texte') return json(res, 200, await s.modifierTexte(id, sujet, corps));
+        if (op === 'traduction') return json(res, 200, await s.modifierTraduction(id, sujet, corps));
+        return json(res, 200, await s.traiterAction(id, op));
       }
       if (route.endsWith('/api/campagnes') || route.includes('/api/campagne')) {
         if (!camp) return json(res, 503, { erreur: 'Campagnes absentes.' });
@@ -215,7 +229,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (!versionsLues || Date.now() - versionsLe > 6 * 3600 * 1000) { versionsLues = await versionsEnVente(); versionsLe = Date.now(); }
     return versionsLues;
   };
-  const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions });
+  const paysPour = async (rc) => (await lireDossier({ revenuecat_id: rc }))?.pays ?? null;
+  const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions, paysPour });
   const preparerMaintenant = async () => {
     const r = { ...(await passeDuMac(db)), relances: await camp.relances() };
     try { const b = await bg.preparer(); r.bugs = b.creees; r.versions = Object.fromEntries(Object.entries(b.versions).map(([k, v]) => [k, v.version ?? v.erreur])); }

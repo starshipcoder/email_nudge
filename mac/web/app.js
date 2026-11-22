@@ -69,7 +69,7 @@ async function uneAction(id) {
   vue.innerHTML = `<a href="#aujourdhui" class="doux">← Aujourd'hui</a>
     <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span></h1>
     <div class="carte"><dl class="grille"><dt>Pour</dt><dd><a href="#fiche-${encodeURIComponent(a.user_id)}">${echapper(a.user_id)}</a></dd>
-      <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
+      <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(NOMS_LANGUES[a.langue] ?? a.langue ?? '')}${a.langue_source ? ` (${echapper(SOURCES_LANGUE[a.langue_source] ?? a.langue_source)}${a.pays ? ` : ${echapper(a.pays)}` : ''})` : ''}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
     <div id="dossier-action"></div>
     <div class="carte"><h2>Le texte</h2>
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
@@ -77,7 +77,14 @@ async function uneAction(id) {
       <p class="doux">Le pied « répondez STOP » est ajouté à l’envoi.</p>
       ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${a.type === 'resiliation' ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
         <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
-      <p class="message" id="msg-action"></p></div>`;
+      <p class="message" id="msg-action"></p></div>
+    ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>
+      ${a.a_retraduire ? '<p class="message erreur">La traduction a été corrigée : refais le texte ci-dessus dans sa langue, puis « Enregistrer le texte ». L’envoi est bloqué d’ici là.</p>' : ''}
+      ${a.a_verifier ? `<p class="message erreur">À vérifier : ${echapper(a.a_verifier)}.</p>` : ''}
+      <input type="text" id="sujet-fr" value="${echapper(a.traduction_fr.sujet)}" ${ouverte ? '' : 'disabled'}>
+      <textarea id="corps-fr" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.traduction_fr.corps)}</textarea>
+      <p class="doux">Seul le texte du dessus part. Si tu corriges cette traduction, l’envoi attend que le texte du dessus soit refait.</p>
+      ${ouverte ? '<div class="outils"><button id="enregistrer-fr">Enregistrer la traduction</button></div>' : ''}</div>` : ''}`;
   const zoneDossier = document.getElementById('dossier-action');
   if (a.resume) zoneDossier.innerHTML = carteDossier(a.resume);
   else api(`dossier?id=${encodeURIComponent(a.user_id)}`).then((r) => { zoneDossier.innerHTML = carteDossier(r.resume); }).catch(() => {});
@@ -98,6 +105,10 @@ async function uneAction(id) {
     catch (e) { dire(e.message, true); }
   };
   document.getElementById('essai').addEventListener('click', () => envoyer('test_moi'));
+  document.getElementById('enregistrer-fr')?.addEventListener('click', async () => {
+    try { await api('action', { id: a.id, op: 'traduction', sujet: document.getElementById('sujet-fr').value, corps: document.getElementById('corps-fr').value }); await uneAction(a.id); }
+    catch (e) { dire(e.message, true); }
+  });
   let confirme = false;
   document.getElementById('envoyer').addEventListener('click', (e) => {
     if (!confirme) { confirme = true; e.target.textContent = 'Confirmer l’envoi'; return; }
@@ -143,6 +154,9 @@ async function fiche(id) {
       <dt>E-mail</dt><dd>${echapper(f.email)} <button data-copier="${echapper(f.email)}">Copier</button></dd>
       <dt>Téléphone</dt><dd>${f.telephone ? `${echapper(f.telephone)} <button data-copier="${echapper(f.telephone)}">Copier</button> <a class="bouton" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : '—'}</dd>
       <dt>Prénom</dt><dd><input type="text" id="prenom" value="${echapper(f.prenom)}" maxlength="60" placeholder="À retrouver"> <span class="message" id="msg-prenom"></span></dd>
+      <dt>Langue des e-mails</dt><dd><span id="langue-texte" class="doux">…</span>
+        <select id="langue-choix"><option value="">automatique</option>${Object.entries(NOMS_LANGUES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+        <span class="message" id="msg-langue"></span></dd>
       <dt>Identifiant RevenueCat</dt><dd>${f.rc ? `<code>${echapper(f.rc)}</code> <button data-copier="${echapper(f.rc)}">Copier</button>` : '—'}</dd>
     </dl></div>
     <div class="carte"><h2>E-mails</h2><p id="etat-desinscription" class="doux">…</p>
@@ -170,7 +184,18 @@ async function fiche(id) {
   });
   vue.querySelector('a.bouton[href^="https://wa.me/"]')?.addEventListener('click', () => { api('message', { id: f.id, sens: 'envoye', source: 'whatsapp' }).then(remplirFil).catch(() => {}); });
   remplirFil().catch(() => { document.getElementById('fil').textContent = 'Fil illisible.'; });
-  api(`dossier?id=${encodeURIComponent(f.id)}`).then((r) => { document.getElementById('dossier-fiche').innerHTML = carteDossier(r.resume); }).catch(() => {});
+  const choixLangue = document.getElementById('langue-choix');
+  const lireDossierFiche = () => api(`dossier?id=${encodeURIComponent(f.id)}`).then((r) => {
+    document.getElementById('dossier-fiche').innerHTML = carteDossier(r.resume);
+    document.getElementById('langue-texte').textContent = r.langue?.texte ?? '';
+    choixLangue.value = r.langue?.choix ?? '';
+  }).catch(() => {});
+  lireDossierFiche();
+  choixLangue.addEventListener('change', async () => {
+    const msg = document.getElementById('msg-langue');
+    try { await api('langue', { id: f.id, langue: choixLangue.value }); msg.className = 'message'; msg.textContent = 'Enregistré : vaut pour les prochaines actions'; lireDossierFiche(); }
+    catch (e) { msg.className = 'message erreur'; msg.textContent = e.message; }
+  });
   const etatDesinscription = document.getElementById('etat-desinscription');
   const boutonDesinscrire = document.getElementById('desinscrire');
   const { desinscrit } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);
@@ -228,6 +253,8 @@ async function reglages() {
 
 const FILTRES_CAMPAGNE = [['essais', 'Essais en cours'], ['payants', 'Payants'], ['actifs_30j', 'Payants, essais et actifs sur 30 jours']];
 const STATUTS_CAMPAGNE = { brouillon: 'Brouillon', preparee: 'Préparée', en_cours: 'En cours', close: 'Close' };
+const NOMS_LANGUES = { fr: 'français', en: 'anglais', de: 'allemand', es: 'espagnol', it: 'italien', pt: 'portugais' };
+const SOURCES_LANGUE = { choix: 'choisie à la main', app: "d'après l'app", pays: "d'après le pays", 'pays ambigu': 'pays à plusieurs langues, à choisir', 'défaut': 'par défaut' };
 const STATUTS_MEMBRE = { a_envoyer: 'À envoyer', envoye: 'Envoyé', repondu: 'A répondu', relance: 'Relancé', exclu: 'Exclu' };
 const MODELE_BETA = { nom: 'Bêta-testeurs', filtre: 'actifs_30j', langue: 'fr', relance_apres_jours: 5,
   sujet: 'Tester les nouveautés d’Easy Way avant tout le monde ?',
