@@ -176,3 +176,16 @@ test('une préparation coupée en route se reprend sans doubler', async () => {
   assert.deepEqual(await c.preparer(id), { membres: 3 });
   assert.equal((await db.lister('crm_membres')).length, 3);
 });
+
+test('une campagne ne se prépare ni ne part sans son hypothèse, sa mesure, son seuil et sa date ; une campagne TEST en est dispensée (INT-EW-75)', async () => {
+  const { c } = monter();
+  const vraie = await c.creer({ ...BRUT, nom: 'Bêta-testeurs' });
+  await assert.rejects(c.preparer(vraie), /l’hypothèse, la mesure, le seuil, la date de lecture/);
+  await c.modifier(vraie, { ...BRUT, nom: 'Bêta-testeurs', hypothese: 'Des payants actifs acceptent de tester', mesure: 'réponses en 7 jours', seuil: 'au moins 5 oui sur 50' });
+  await assert.rejects(c.preparer(vraie), /la date de lecture/);
+  await assert.rejects(c.modifier(vraie, { ...BRUT, nom: 'Bêta-testeurs', lecture: 'fin janvier' }), /2027-01-31/);
+  await c.modifier(vraie, { ...BRUT, nom: 'Bêta-testeurs', hypothese: 'h', mesure: 'm', seuil: 's', lecture: '2027-01-31' });
+  assert.ok((await c.preparer(vraie)).membres >= 1, 'les quatre champs remplis : elle se prépare');
+  const test = await c.creer(BRUT);
+  assert.deepEqual(await c.preparer(test), { membres: 3 }, 'TEST : dispensée');
+});

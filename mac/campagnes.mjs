@@ -42,8 +42,23 @@ export function verifierCampagne(brut) {
   const relanceCorps = String(brut.relance_corps ?? '');
   if (avecRelance && (!relanceSujet || !relanceCorps.trim())) throw new Error('Une relance prévue demande son sujet et son texte.');
   for (const t of [corps, relanceCorps, sujet, relanceSujet]) rendreTexte(t, 'x');
-  return { nom, filtre: brut.filtre, langue: brut.langue, sujet, corps, relance_apres_jours: relance, relance_sujet: relanceSujet, relance_corps: relanceCorps };
+  // L'hypothèse de la campagne (INT-EW-75) : libre au brouillon, obligatoire pour préparer et envoyer (manqueHypothese).
+  const hypo = Object.fromEntries(CHAMPS_HYPOTHESE.map(([k]) => [k, String(brut[k] ?? '').trim().slice(0, 500)]));
+  if (hypo.lecture && !/^\d{4}-\d{2}-\d{2}$/.test(hypo.lecture)) throw new Error('La date de lecture s’écrit 2027-01-31.');
+  return { nom, filtre: brut.filtre, langue: brut.langue, sujet, corps, relance_apres_jours: relance, relance_sujet: relanceSujet, relance_corps: relanceCorps, ...hypo };
 }
+
+// Fondateur, 22/11 : chaque campagne écrit son hypothèse, sa mesure, son seuil et sa date de lecture avant de partir.
+// Une campagne TEST en est dispensée.
+export const CHAMPS_HYPOTHESE = [['hypothese', 'l’hypothèse'], ['mesure', 'la mesure'], ['seuil', 'le seuil'], ['lecture', 'la date de lecture']];
+export function manqueHypothese(c) {
+  if (estTest(c.nom ?? '')) return [];
+  return CHAMPS_HYPOTHESE.filter(([k]) => !String(c[k] ?? '').trim()).map(([, nom]) => nom);
+}
+const exigerHypothese = (c) => {
+  const manque = manqueHypothese(c);
+  if (manque.length) throw new Error(`Avant de partir, la campagne doit écrire ${manque.join(', ')}.`);
+};
 
 export function campagnes(db, { porte, maintenant = () => new Date() }) {
   async function lireCampagne(id) {
@@ -85,7 +100,9 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
       }).sort((a, b) => String(b.cree_le ?? '').localeCompare(String(a.cree_le ?? '')));
     },
     async une(id) {
-      return { ...(await lireCampagne(id)), membres: (await membresDe(id)).sort((a, b) => a.user_id.localeCompare(b.user_id)) };
+      const membres = (await membresDe(id)).sort((a, b) => a.user_id.localeCompare(b.user_id));
+      const n = (st) => membres.filter((m) => st.includes(m.statut)).length;
+      return { ...(await lireCampagne(id)), membres, nb_envoyes: n(['envoye', 'repondu', 'relance']), nb_repondus: n(['repondu']) };
     },
     async creer(brut) {
       const champs = verifierCampagne(brut);
@@ -108,6 +125,7 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
     async preparer(id) {
       const c = await lireCampagne(id);
       if (!['brouillon', 'en_preparation'].includes(c.statut)) throw new Error('Seul un brouillon se prépare.');
+      exigerHypothese(c);
       await db.ecrire('crm_campagnes', id, { statut: 'en_preparation', maj_le: maintenant() });
       const { signature } = (await db.lire('crm_reglages', 'general')) ?? {};
       if (!signature) throw new Error('Régler la signature d’abord.');
@@ -132,6 +150,7 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
     async envoyer(id) {
       const c = await lireCampagne(id);
       if (!['preparee', 'en_cours'].includes(c.statut)) throw new Error('Campagne ni préparée ni en cours.');
+      exigerHypothese(c);
       const pretes = (await db.lister('crm_actions')).filter((a) => a.campagne_id === id && a.type === 'campagne' && a.statut === 'prete')
         .sort((a, b) => a.id.localeCompare(b.id));
       let envoyes = 0; let bloques = 0; let restants = 0;

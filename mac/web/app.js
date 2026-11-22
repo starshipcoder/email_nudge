@@ -308,7 +308,11 @@ function formulaireCampagne(c) {
     <dt>Relance après</dt><dd><input type="text" data-champ="relance_apres_jours" value="${c.relance_apres_jours ?? ''}" class="petit"> jours (vide : pas de relance ; 3 à 30)</dd>
     <dt>Sujet de relance</dt><dd><input type="text" data-champ="relance_sujet" value="${echapper(c.relance_sujet ?? '')}" class="large"></dd>
     <dt>Texte de relance</dt><dd><textarea data-champ="relance_corps" rows="7">${echapper(c.relance_corps ?? '')}</textarea></dd>
-  </dl><p class="doux">{{signature}} prend la signature des réglages.</p>
+    <dt>Hypothèse</dt><dd><textarea data-champ="hypothese" rows="2" placeholder="Ce qu’on attend de cette campagne">${echapper(c.hypothese ?? '')}</textarea></dd>
+    <dt>Mesure</dt><dd><input type="text" data-champ="mesure" value="${echapper(c.mesure ?? '')}" class="large" placeholder="par exemple : la part qui répond dans les 7 jours"></dd>
+    <dt>Seuil</dt><dd><input type="text" data-champ="seuil" value="${echapper(c.seuil ?? '')}" class="large" placeholder="par exemple : garder si au moins 5 réponses sur 50, arrêter à la première plainte"></dd>
+    <dt>Date de lecture</dt><dd><input type="text" data-champ="lecture" value="${echapper(c.lecture ?? '')}" class="petit" placeholder="2027-01-31"></dd>
+  </dl><p class="doux">{{signature}} prend la signature des réglages. L’hypothèse, la mesure, le seuil et la date sont obligatoires pour préparer, sauf pour une campagne TEST.</p>
   <div class="outils"><button id="enregistrer">Enregistrer</button><button id="apercu">Voir qui est concerné</button>
     <button id="preparer-campagne" class="choisi">Préparer</button><button id="clore" class="danger">Abandonner</button></div>
   <p class="message" id="msg-campagne"></p></div>`;
@@ -319,7 +323,8 @@ async function uneCampagne(id) {
   const brouillon = c.statut === 'brouillon';
   vue.innerHTML = `<a href="#campagnes" class="doux">← Campagnes</a>
     <h1>${echapper(c.nom)} <span class="puce">${STATUTS_CAMPAGNE[c.statut] ?? c.statut}</span></h1>
-    ${brouillon ? formulaireCampagne(c) : `<div class="carte"><h2>${echapper(c.rendu?.sujet ?? c.sujet)}</h2><pre class="texte">${echapper(c.rendu?.corps ?? c.corps)}</pre>
+    ${brouillon ? formulaireCampagne(c) : `${c.hypothese ? `<div class="carte"><h2>Hypothèse</h2><p>${echapper(c.hypothese)}</p><dl class="grille"><dt>Mesure</dt><dd>${echapper(c.mesure)}</dd><dt>Seuil</dt><dd>${echapper(c.seuil)}</dd><dt>Lecture</dt><dd>${echapper(c.lecture)}</dd>
+      <dt>Aujourd’hui</dt><dd>${c.nb_repondus ?? 0} réponse(s) sur ${c.nb_envoyes ?? 0} envoyé(s)</dd></dl></div>` : ''}<div class="carte"><h2>${echapper(c.rendu?.sujet ?? c.sujet)}</h2><pre class="texte">${echapper(c.rendu?.corps ?? c.corps)}</pre>
       <p class="doux">${c.relance_apres_jours ? `Relance ${c.relance_apres_jours} jours après l’envoi, dans Aujourd’hui, pour qui n’a pas répondu.` : 'Pas de relance.'}</p>
       ${c.statut !== 'close' ? '<div class="outils"><button id="envoyer-campagne" class="choisi">Envoyer les prêtes</button><button id="clore" class="danger">Clore</button></div>' : ''}
       <p class="message" id="msg-campagne"></p></div>
