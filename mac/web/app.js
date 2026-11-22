@@ -245,6 +245,8 @@ async function reglages() {
       <div class="outils"><button id="coupe" class="${r.envois_coupes ? '' : 'danger'}">${r.envois_coupes ? 'Rétablir les envois' : 'Couper tous les envois'}</button></div></div>
     <div class="carte"><h2>Mode à blanc</h2><p>${r.a_blanc ? 'À blanc : tout se passe comme un envoi, sauf l’envoi lui-même.' : 'Les envois partent vraiment.'}</p>
       <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>
+    <div class="carte"><h2>Notifications sur le téléphone</h2><p>${r.notif_telephone === false ? 'Coupées.' : 'Ouvertes : une action à relire, une réponse ou une passe en échec sonnent par ntfy, sans aucune adresse ni nom.'}</p>
+      <div class="outils"><button id="notif">${r.notif_telephone === false ? 'Rouvrir les notifications' : 'Couper les notifications'}</button></div></div>
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
@@ -262,6 +264,7 @@ async function reglages() {
     if (r.envois_coupes && !confirme) { confirme = true; coupe.textContent = 'Confirmer : rétablir les envois'; return; }
     await api('reglages', { cle: 'envois_coupes', valeur: !r.envois_coupes }); await bandeau(); reglages();
   });
+  document.getElementById('notif').addEventListener('click', async () => { await api('reglages', { cle: 'notif_telephone', valeur: r.notif_telephone === false }); reglages(); });
   document.getElementById('blanc').addEventListener('click', async () => { await api('reglages', { cle: 'a_blanc', valeur: !r.a_blanc }); await bandeau(); reglages(); });
 }
 

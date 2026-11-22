@@ -3,7 +3,8 @@ export const CHAMPS_USERS = ['first_name', 'phone_number', 'locale', 'role', 'ne
   'onboarding_complete', 'paywall_passed', 'trial_active', 'trial_start_date', 'trial_end_date', 'subscription_active',
   'plan', 'churned_at', 'routes_created', 'contacts_total', 'visits_logged', 'is_test_user', 'last_action_at'];
 
-export const REGLAGES_PAR_DEFAUT = { envois_coupes: true, a_blanc: true };
+// notif_telephone : les notifications ntfy (INT-EW-72), ouvertes par défaut.
+export const REGLAGES_PAR_DEFAUT = { envois_coupes: true, a_blanc: true, notif_telephone: true };
 
 export function etat(u) {
   if (u.subscription_active && u.plan && u.plan !== 'trial') return 'payant';

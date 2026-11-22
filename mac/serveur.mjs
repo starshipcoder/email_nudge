@@ -13,6 +13,7 @@ import { bugs, retoursSentry } from './bugs.mjs';
 import { versionsEnVente } from './versions.mjs';
 import { brouillonAvecTraduction, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
+import { veilleur } from './notif.mjs';
 import { cleUtilisateur } from './envoi.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -245,6 +246,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   };
   const paysPour = async (rc) => (await lireDossier({ revenuecat_id: rc }))?.pays ?? null;
   const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions, paysPour });
+  // Après chaque passe, ce qui est nouveau sonne sur le téléphone par ntfy (INT-EW-72), sans donnée d'utilisateur.
+  const veille = veilleur();
+  const prevenir = async (echec = null) => {
+    try {
+      const { notif_telephone: actif = true } = (await db.lire('crm_reglages', 'general')) ?? {};
+      await veille({ actions: await s.aujourdhui(), reponses: await s.reponses(), echec, actif: actif !== false });
+    } catch (e) { console.error('ntfy', e.message); }
+  };
   // Chaque passe laisse son état dans crm_sante/passe : la page l'affiche en haut, la notification de 9 h le dit.
   const preparerMaintenant = async () => {
     const le = new Date();
@@ -260,9 +269,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         r.versions = Object.fromEntries(Object.entries(b.versions).map(([k, v]) => [k, v.version ?? v.erreur]));
       } catch (e) { r.bugs = `erreur : ${e.message}`; problemes.push(`bugs : ${e.message}`); }
       await db.ecrire('crm_sante', 'passe', { le, ok: !problemes.length, problemes, base_jusqu_a: r.base_jusqu_a ?? null }).catch(() => {});
+      // Une base en retard se voit sur la page ; seul ce qui empêche le travail sonne.
+      await prevenir(problemes.filter((p) => p !== 'base Mixpanel en retard').join(', ') || null);
       return r;
     } catch (erreur) {
       await db.ecrire('crm_sante', 'passe', { le, ok: false, problemes: [`la passe a échoué : ${String(erreur?.message ?? erreur).slice(0, 200)}`] }).catch(() => {});
+      await prevenir('la passe a échoué');
       throw erreur;
     }
   };

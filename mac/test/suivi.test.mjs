@@ -42,7 +42,7 @@ test('corriger un prénom écrit le seul champ first_name et le journal, sans e-
 test('au premier lancement, les envois sont coupés et à blanc', async () => {
   const db = baseEnMemoire();
   const s = suivi(db);
-  assert.deepEqual(await s.reglages(), { envois_coupes: true, a_blanc: true });
+  assert.deepEqual(await s.reglages(), { envois_coupes: true, a_blanc: true, notif_telephone: true });
   assert.equal(db.donnees.crm_reglages.get('general').envois_coupes, true);
   assert.equal((await s.changerReglage('a_blanc', false)).a_blanc, false);
   await assert.rejects(() => s.changerReglage('autre', true), /inconnu/);
