@@ -53,6 +53,16 @@ async function aujourdhui() {
   });
 }
 
+// Le dossier d'une personne : ce qui ressort de son usage, sa réponse au questionnaire, une piste de question.
+function carteDossier(resume) {
+  if (!resume) return '<div class="carte"><h2>Dossier</h2><p class="doux">Pas de dossier : pas d’identifiant RevenueCat, ou la base Mixpanel du Mac est absente.</p></div>';
+  const max = Math.max(1, ...resume.semaines);
+  const barres = resume.semaines.map((n) => `<span class="barre-semaine h${Math.round((n / max) * 4)}" title="${n} jour(s) actif(s)"></span>`).join('');
+  return `<div class="carte"><h2>Dossier</h2><ul>${resume.faits.map((f) => `<li>${echapper(f)}</li>`).join('')}</ul>
+    <p class="doux">Jours actifs par semaine, 12 dernières semaines :</p><div class="semaines">${barres}</div>
+    <p><strong>Question à lui poser :</strong> ${echapper(resume.question)}</p></div>`;
+}
+
 async function uneAction(id) {
   const a = await api(`action?id=${encodeURIComponent(id)}`);
   const ouverte = ['prete', 'reportee'].includes(a.statut);
@@ -60,15 +70,23 @@ async function uneAction(id) {
     <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span></h1>
     <div class="carte"><dl class="grille"><dt>Pour</dt><dd><a href="#fiche-${encodeURIComponent(a.user_id)}">${echapper(a.user_id)}</a></dd>
       <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
+    <div id="dossier-action"></div>
     <div class="carte"><h2>Le texte</h2>
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
       <p class="doux">Le pied « répondez STOP » est ajouté à l’envoi.</p>
-      ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button><button id="essai">M’envoyer un essai</button>
+      ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${a.type === 'resiliation' ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
         <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>`;
+  const zoneDossier = document.getElementById('dossier-action');
+  if (a.resume) zoneDossier.innerHTML = carteDossier(a.resume);
+  else api(`dossier?id=${encodeURIComponent(a.user_id)}`).then((r) => { zoneDossier.innerHTML = carteDossier(r.resume); }).catch(() => {});
   if (!ouverte) return;
   const msg = document.getElementById('msg-action');
+  document.getElementById('rebrouillon')?.addEventListener('click', async () => {
+    try { await api('rebrouillon', { id: a.id }); await uneAction(a.id); document.getElementById('msg-action').textContent = 'Brouillon refait depuis le dossier : relis-le avant d’envoyer.'; }
+    catch (e) { dire(e.message, true); }
+  });
   const dire = (texte, erreur = false) => { msg.className = erreur ? 'message erreur' : 'message'; msg.textContent = texte; };
   const STATUTS = { envoye: 'Envoyé.', a_blanc: 'À blanc : noté dans le journal, rien n’est parti.', bloquee: 'Bloqué', erreur: 'Erreur' };
   document.getElementById('enregistrer').addEventListener('click', async () => {
@@ -129,6 +147,7 @@ async function fiche(id) {
     </dl></div>
     <div class="carte"><h2>E-mails</h2><p id="etat-desinscription" class="doux">…</p>
       <div class="outils"><button id="desinscrire" class="danger" hidden>Désinscrire</button></div></div>
+    <div id="dossier-fiche"></div>
     <div class="carte"><h2>Échanges</h2>
       <div class="outils"><button id="a-repondu">A répondu</button><button id="wa-recu">Réponse WhatsApp</button><span class="message" id="msg-fil"></span></div>
       <div id="wa-zone" hidden><textarea id="wa-texte" rows="3" placeholder="Coller la réponse reçue sur WhatsApp"></textarea>
@@ -151,6 +170,7 @@ async function fiche(id) {
   });
   vue.querySelector('a.bouton[href^="https://wa.me/"]')?.addEventListener('click', () => { api('message', { id: f.id, sens: 'envoye', source: 'whatsapp' }).then(remplirFil).catch(() => {}); });
   remplirFil().catch(() => { document.getElementById('fil').textContent = 'Fil illisible.'; });
+  api(`dossier?id=${encodeURIComponent(f.id)}`).then((r) => { document.getElementById('dossier-fiche').innerHTML = carteDossier(r.resume); }).catch(() => {});
   const etatDesinscription = document.getElementById('etat-desinscription');
   const boutonDesinscrire = document.getElementById('desinscrire');
   const { desinscrit } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);

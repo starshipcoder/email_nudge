@@ -2,6 +2,7 @@
 // et des inscrits d'email_nudge. Rien ne part d'ici : la porte d'envoi relit RevenueCat avant chaque e-mail.
 import { cleUtilisateur } from './envoi.mjs';
 import { arreter, dateFin, langueDe, rendre } from './modeles.mjs';
+import { brouillonResiliation, resumer } from './dossier.mjs';
 
 const H = 3600 * 1000;
 const FENETRE_J2 = [24 * H, 60 * H]; // fin d'essai entre 24 h et 60 h d'ici
@@ -46,7 +47,7 @@ export function candidats(faits, inscrits, maintenant) {
   return [...essais, ...resiliations];
 }
 
-export function actionDe(c, { tournees, signature, maintenant }) {
+export function actionDe(c, { tournees, signature, maintenant, dossierPour = null }) {
   const langue = langueDe(c.user.locale);
   const cle = cleUtilisateur(c.user.id);
   if (c.type === 'essai_j2') {
@@ -56,20 +57,23 @@ export function actionDe(c, { tournees, signature, maintenant }) {
     return { id: `essai_j2__${cle}__${c.fait.transaction}`, type: 'essai_j2', variante: n > 0 ? 'usage' : 'peu_usage', user_id: c.user.id,
       statut: 'prete', sujet, corps, langue, echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
   }
-  const { sujet, corps } = rendre('resiliation', langue, { signature });
+  // Le dossier de la personne, s'il se lit : un brouillon qui part de son usage et de sa réponse au questionnaire.
+  const dossier = dossierPour?.(c.user.revenuecat_id) ?? null;
+  const { sujet, corps } = dossier ? brouillonResiliation(dossier, langue, signature) : rendre('resiliation', langue, { signature });
   return { id: `resiliation__${cle}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue,
+    ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
     echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
 }
 
 // Une passe : crée les actions qui n'existent pas encore (le même identifiant ne se crée jamais deux fois),
 // et passe en « expirée » celles dont l'échéance est passée.
-export async function preparer({ db, faits, tournees, maintenant = new Date() }) {
+export async function preparer({ db, faits, tournees, maintenant = new Date(), dossierPour = null }) {
   const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
   if (!reglages.signature) return { creees: 0, expirees: 0, raison: 'signature à régler' };
   const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user']);
   let creees = 0;
   for (const c of candidats(faits, inscrits, maintenant)) {
-    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant });
+    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour });
     try { await db.creer('crm_actions', id, champs); creees += 1; } catch { /* déjà là */ }
   }
   let expirees = 0;

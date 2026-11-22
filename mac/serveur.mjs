@@ -11,6 +11,7 @@ import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
 import { versionsEnVente } from './versions.mjs';
+import { brouillonResiliation, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -28,7 +29,11 @@ export async function passeDuMac(db) {
     const lecteur = { all: (sql, ...p) => base.prepare(sql).all(...p) };
     const carte = new Map(liens ? liens.prepare('SELECT abonne, personne FROM liens').all().map((r) => [r.abonne, r.personne]) : []);
     const faits = lireFaits(lecteur, Date.now() - 30 * 86400000);
-    return await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date() });
+    const sources = await ouvrirSources();
+    try {
+      const dossierPour = (rc) => (rc ? dossierDe({ rc, sources, maintenant: new Date() }) : null);
+      return await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour });
+    } finally { fermerSources(sources); }
   } finally {
     base.close();
     liens?.close();
@@ -69,7 +74,14 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
-export function application(s, { port, porte = null, preparerMaintenant = null, camp = null, bg = null, db = null }) {
+// Le dossier d'un inscrit, lu sur les sources du Mac ; null sans identifiant RevenueCat ou sans base.
+export async function lireDossier(user) {
+  if (!user?.revenuecat_id) return null;
+  const sources = await ouvrirSources();
+  try { return sources.mixpanel ? dossierDe({ rc: user.revenuecat_id, sources, maintenant: new Date() }) : null; } finally { fermerSources(sources); }
+}
+
+export function application(s, { port, porte = null, preparerMaintenant = null, camp = null, bg = null, db = null, dossierDe: lire = lireDossier }) {
   return async (req, res) => {
     try {
       if (!hoteAutorise(req.headers.host, port)) return json(res, 403, { erreur: 'Hôte refusé.' });
@@ -100,6 +112,24 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
       if (route === 'POST /api/repondu') {
         const { id } = await lireCorps(req);
         return json(res, 200, { ok: await s.aRepondu(String(id ?? '')) });
+      }
+      if (route === 'GET /api/dossier') {
+        if (!db) return json(res, 503, { erreur: 'Base absente.' });
+        const d = await lire(await db.lire('users', url.searchParams.get('id') ?? ''));
+        return json(res, 200, d ? { resume: resumer(d), rc: d.rc } : { resume: null });
+      }
+      if (route === 'POST /api/rebrouillon') {
+        if (!db) return json(res, 503, { erreur: 'Base absente.' });
+        const { id } = await lireCorps(req);
+        const a = await db.lire('crm_actions', String(id ?? ''));
+        if (!a || a.type !== 'resiliation' || !['prete', 'reportee'].includes(a.statut)) throw new Error('Seule une action de résiliation encore ouverte se refait.');
+        const d = await lire(await db.lire('users', a.user_id));
+        if (!d) throw new Error('Pas de dossier : identifiant RevenueCat ou base Mixpanel absents.');
+        const { signature } = (await db.lire('crm_reglages', 'general')) ?? {};
+        if (!signature) throw new Error('Régler la signature d’abord.');
+        const { sujet, corps } = brouillonResiliation(d, a.langue ?? 'en', signature);
+        await db.ecrire('crm_actions', a.id, { sujet, corps, variante: 'dossier', resume: resumer(d), maj_le: new Date() });
+        return json(res, 200, await db.lire('crm_actions', a.id));
       }
       if (route === 'GET /api/desinscrit') return json(res, 200, { desinscrit: await s.desinscrit(url.searchParams.get('id') ?? '') });
       if (route === 'POST /api/desinscrire') {
