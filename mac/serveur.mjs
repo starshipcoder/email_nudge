@@ -251,10 +251,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions, paysPour });
   // Après chaque passe, ce qui est nouveau sonne sur le téléphone par ntfy (INT-EW-72), sans donnée d'utilisateur.
   const veille = veilleur();
-  const prevenir = async (echec = null) => {
+  const prevenir = async (echec = null, orphelines = null) => {
     try {
       const { notif_telephone: actif = true } = (await db.lire('crm_reglages', 'general')) ?? {};
-      await veille({ actions: await s.aujourdhui(), reponses: await s.reponses(), echec, actif: actif !== false });
+      await veille({ actions: await s.aujourdhui(), reponses: await s.reponses(), orphelines, echec, actif: actif !== false });
     } catch (e) { console.error('ntfy', e.message); }
   };
   // Chaque passe laisse son état dans crm_sante/passe : la page l'affiche en haut, la notification de 9 h le dit.
@@ -273,7 +273,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       } catch (e) { r.bugs = `erreur : ${e.message}`; problemes.push(`bugs : ${e.message}`); }
       await db.ecrire('crm_sante', 'passe', { le, ok: !problemes.length, problemes, base_jusqu_a: r.base_jusqu_a ?? null }).catch(() => {});
       // Une base en retard se voit sur la page ; seul ce qui empêche le travail sonne.
-      await prevenir(problemes.filter((p) => p !== 'base Mixpanel en retard').join(', ') || null);
+      await prevenir(problemes.filter((p) => p !== 'base Mixpanel en retard').join(', ') || null, r.sans_inscrit ?? null);
       return r;
     } catch (erreur) {
       await db.ecrire('crm_sante', 'passe', { le, ok: false, problemes: [`la passe a échoué : ${String(erreur?.message ?? erreur).slice(0, 200)}`] }).catch(() => {});

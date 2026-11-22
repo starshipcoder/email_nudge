@@ -1,4 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https'
+import { garderBesoins, garderLangue, garderMetier } from './valeurs'
 import { defineSecret } from 'firebase-functions/params'
 import { db } from '../index'
 import { Role, Need, Locale } from '../types'
@@ -26,8 +27,7 @@ function verifyApiKey(req: any, res: any): boolean {
   return true
 }
 
-// Valid values for validation
-const VALID_ROLES: Role[] = ['delivery', 'field_sales', 'technician', 'sales_director', 'other']
+// Valid values for validation : les métiers et besoins de l'app, dans valeurs.ts (BUG-EW-6).
 
 // Timeouts for production (in milliseconds)
 const TIMEOUTS: Record<string, number> = {
@@ -234,8 +234,6 @@ function computeUserStatus(userData: Record<string, any>): UserStatus {
     is_test_user: isTestUser
   }
 }
-const VALID_NEEDS: Need[] = ['hotel_search', 'new_clients', 'complex_routes', 'max_visits', 'multi_day', 'client_tracking']
-const VALID_LOCALES: Locale[] = ['fr', 'en', 'es', 'de', 'it', 'pt', 'nl']
 const VALID_PLANS = ['free', 'trial', 'monthly', 'yearly']
 
 interface SyncUserRequest {
@@ -329,34 +327,25 @@ export const syncUser = onRequest(
         updateData.phone_number = data.phone_number
       }
 
+      // BUG-EW-6 : la langue du téléphone (deux ou trois lettres) est gardée même hors de la liste ; avant, « pl » ou « sv »
+      // faisaient rejeter tout l'envoi.
       if (data.locale !== undefined) {
-        if (!VALID_LOCALES.includes(data.locale as Locale)) {
-          res.status(400).json({ error: `locale must be one of: ${VALID_LOCALES.join(', ')}` })
-          return
-        }
-        updateData.locale = data.locale
+        const langue = garderLangue(data.locale)
+        if (langue.inconnue) console.warn(`[syncUser] langue inconnue gardée : ${langue.valeur}`)
+        if (langue.valeur) updateData.locale = langue.valeur as Locale
       }
 
+      // BUG-EW-6 : une valeur inconnue ne fait plus rejeter l'envoi (voir valeurs.ts).
       if (data.role !== undefined) {
-        if (!VALID_ROLES.includes(data.role as Role)) {
-          res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` })
-          return
-        }
-        updateData.role = data.role
+        const metier = garderMetier(data.role)
+        if (metier.inconnue) console.warn(`[syncUser] métier inconnu gardé : ${metier.valeur}`)
+        if (metier.valeur) updateData.role = metier.valeur as Role
       }
 
       if (data.needs !== undefined) {
-        if (!Array.isArray(data.needs)) {
-          res.status(400).json({ error: 'needs must be an array' })
-          return
-        }
-        for (const need of data.needs) {
-          if (!VALID_NEEDS.includes(need as Need)) {
-            res.status(400).json({ error: `Invalid need: ${need}. Must be one of: ${VALID_NEEDS.join(', ')}` })
-            return
-          }
-        }
-        updateData.needs = data.needs
+        const besoins = garderBesoins(data.needs)
+        if (besoins.inconnues.length) console.warn(`[syncUser] besoins inconnus gardés : ${besoins.inconnues.join(', ')}`)
+        if (besoins.valeurs) updateData.needs = besoins.valeurs as Need[]
       }
 
       if (data.plan !== undefined) {

@@ -14,6 +14,9 @@ const roleLabels: Record<Role, string> = {
   sales_director: 'Directeur commercial',
   delivery: 'Livreur',
   technician: 'Technicien',
+  real_estate: 'Immobilier',
+  healthcare: 'Santé',
+  personal: 'Usage personnel',
   other: 'Autre'
 }
 

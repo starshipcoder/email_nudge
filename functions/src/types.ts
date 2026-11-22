@@ -1,5 +1,5 @@
 // User types
-export type Role = 'delivery' | 'field_sales' | 'technician' | 'sales_director' | 'other'
+export type Role = 'delivery' | 'field_sales' | 'technician' | 'sales_director' | 'real_estate' | 'healthcare' | 'personal' | 'other'
 
 export type Need =
   | 'hotel_search'
@@ -8,6 +8,11 @@ export type Need =
   | 'max_visits'
   | 'multi_day'
   | 'client_tracking'
+  | 'adapt_route'
+  | 'visualize_on_map'
+  | 'organize_groups'
+  | 'navigate_to_contact'
+  | 'share_export'
 
 export type Locale = 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt' | 'nl'
 
@@ -117,7 +122,12 @@ export const NEED_LABELS: Record<Need, string> = {
   complex_routes: 'créer des tournées complexes',
   max_visits: 'optimiser tes visites',
   multi_day: 'planifier plusieurs jours',
-  client_tracking: 'suivre tes clients'
+  client_tracking: 'suivre tes clients',
+  adapt_route: 'adapter ta tournée en route',
+  visualize_on_map: 'voir tes clients sur la carte',
+  organize_groups: 'ranger tes clients en groupes',
+  navigate_to_contact: 'aller jusqu\'à un client',
+  share_export: 'partager et exporter'
 }
 
 // Need priority (lower = higher priority)
@@ -127,5 +137,10 @@ export const NEED_PRIORITY: Record<Need, number> = {
   complex_routes: 3,
   max_visits: 4,
   multi_day: 5,
-  client_tracking: 6
+  client_tracking: 6,
+  adapt_route: 7,
+  visualize_on_map: 8,
+  organize_groups: 9,
+  navigate_to_contact: 10,
+  share_export: 11
 }

@@ -1,6 +1,11 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
+import { defineSecret } from 'firebase-functions/params'
 import { RESEND_API_KEY } from '../services/emailService'
+import { appelRevenueCatAutorise } from './revenuecatAuth'
+
+// Le mot de passe que RevenueCat envoie dans l'en-tête Authorization (BUG-EW-6).
+export const REVENUECAT_WEBHOOK_AUTH = defineSecret('REVENUECAT_WEBHOOK_AUTH')
 import { db } from '../index'
 
 // sendChurnAlert not used anymore - churns are in daily recap only
@@ -53,41 +58,21 @@ interface RevenueCatWebhook {
   }
 }
 
-/**
- * Map country code to locale for email generation
- */
-function countryCodeToLocale(countryCode?: string): string {
-  if (!countryCode) return 'en'
-
-  const countryToLocale: Record<string, string> = {
-    // French
-    'FR': 'fr', 'BE': 'fr', 'LU': 'fr', 'MC': 'fr', 'CH': 'fr',
-    'CA': 'fr', // Canada - could be fr or en, defaulting to fr
-    // Spanish
-    'ES': 'es', 'MX': 'es', 'AR': 'es', 'CO': 'es', 'CL': 'es',
-    'PE': 'es', 'VE': 'es', 'EC': 'es', 'GT': 'es', 'CU': 'es',
-    // German
-    'DE': 'de', 'AT': 'de',
-    // Italian
-    'IT': 'it',
-    // Portuguese
-    'PT': 'pt', 'BR': 'pt',
-    // Dutch
-    'NL': 'nl',
-  }
-
-  return countryToLocale[countryCode.toUpperCase()] || 'en'
-}
 
 /**
  * Trigger: RevenueCat webhook for subscription events
  * Handles: CANCELLATION, EXPIRATION, INITIAL_PURCHASE, RENEWAL, TRIAL_STARTED
  */
 export const onRevenueCatWebhook = onRequest(
-  { secrets: [RESEND_API_KEY] },
+  { secrets: [REVENUECAT_WEBHOOK_AUTH] },
   async (req, res) => {
     if (req.method !== 'POST') {
       res.status(405).send('Method not allowed')
+      return
+    }
+    // Seul RevenueCat, avec le mot de passe réglé dans son tableau de bord, peut écrire sur les fiches (BUG-EW-6).
+    if (!appelRevenueCatAutorise(req.headers.authorization, REVENUECAT_WEBHOOK_AUTH.value())) {
+      res.status(401).json({ error: 'Unauthorized' })
       return
     }
 
@@ -108,9 +93,9 @@ export const onRevenueCatWebhook = onRequest(
     // Extract email and country from event data
     const emailFromAttributes = eventData.subscriber_attributes?.$email?.value
     const countryCode = eventData.country_code
-    const locale = countryCodeToLocale(countryCode)
 
-    console.log(`RevenueCat ${eventType}: app_user_id=${appUserId}, aliases=${aliases.length}, email=${emailFromAttributes || 'none'}, country=${countryCode || 'none'}, locale=${locale}`)
+    // Pas d'adresse dans les journaux (BUG-EW-6).
+    console.log(`RevenueCat ${eventType}: aliases=${aliases.length}, adresse=${emailFromAttributes ? 'oui' : 'non'}, country=${countryCode || 'none'}`)
 
     // Try to find user by app_user_id or any alias
     const idsToSearch = [appUserId, ...aliases].filter(Boolean)
@@ -147,14 +132,10 @@ export const onRevenueCatWebhook = onRequest(
       case 'CANCELLATION':
         if (userId) {
           await handleChurn(userId, isTestEvent, churnReason)
-        } else if (emailFromAttributes) {
-          // User not in DB but we have email - send WhyLeaving directly
-          console.log(`RevenueCat: User not found, sending WhyLeaving to ${emailFromAttributes}`)
-          await sendWhyLeavingToEmail(emailFromAttributes, churnReason, isTestEvent, locale)
         } else {
-          // No user, no email - notify Harold
-          console.log(`RevenueCat: CANCELLATION - no user and no email, notifying Harold`)
-          await notifyMissingUser(appUserId, churnReason, isTestEvent)
+          // BUG-EW-6 (22/11) : plus aucun e-mail d'ici. L'e-mail de départ passe par Iris CRM, relu par le fondateur ;
+          // Iris prévient par ntfy d'une annulation sans inscrit.
+          console.log(`RevenueCat: CANCELLATION sans inscrit (${churnReason})${isTestEvent ? ' [TEST]' : ''}`)
         }
         break
 
@@ -236,118 +217,4 @@ async function handleTrialStarted(userId: string, expirationAt: string | undefin
     plan: 'trial',
     is_test_user: isTestEvent
   })
-}
-
-/**
- * Send WhyLeaving email directly to an email address (user not in DB)
- */
-async function sendWhyLeavingToEmail(email: string, churnReason: string | null, isTestEvent: boolean, locale: string = 'en'): Promise<void> {
-  // Import Resend here to avoid circular dependency
-  const { Resend } = await import('resend')
-  const resend = new Resend(RESEND_API_KEY.value())
-
-  // Create a minimal user object for email generation
-  const fakeUser = {
-    id: 'unknown',
-    email,
-    locale, // Use locale derived from country_code
-    role: 'delivery' as const,
-    churn_reason: churnReason,
-    dry_run: isTestEvent
-  }
-
-  // Generate email content
-  const { generateEmail } = await import('../services/emailGenerator')
-  const { subject, body } = generateEmail(fakeUser as any, 'WhyLeaving')
-
-  const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
-
-  if (isTestEvent) {
-    console.log(`[DRY RUN] Would send WhyLeaving to ${email}`)
-    // Log but don't send
-    await db.collection('email_logs').add({
-      user_id: 'unknown_revenuecat',
-      email_name: 'WhyLeaving',
-      segment: 'churn',
-      status: 'dry_run',
-      scheduled_at: new Date(),
-      to_email: email,
-      churn_reason: churnReason
-    })
-  } else {
-    // Actually send
-    const result = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject,
-      text: body
-    })
-
-    await db.collection('email_logs').add({
-      user_id: 'unknown_revenuecat',
-      email_name: 'WhyLeaving',
-      segment: 'churn',
-      status: 'sent',
-      scheduled_at: new Date(),
-      sent_at: new Date(),
-      to_email: email,
-      churn_reason: churnReason,
-      resend_id: result.data?.id
-    })
-
-    console.log(`WhyLeaving sent to ${email} (user not in DB)`)
-  }
-}
-
-/**
- * Notify Harold when a user cancels but we can't find them or their email
- */
-async function notifyMissingUser(appUserId: string, churnReason: string | null, isTestEvent: boolean): Promise<void> {
-  const { Resend } = await import('resend')
-  const resend = new Resend(RESEND_API_KEY.value())
-
-  const FROM_EMAIL = 'Harold <harold@easyway-planner.com>'
-  const TO_EMAIL = 'harold@easyway-planner.com'
-
-  const subject = `[Email Nudge] User cancelled but not found`
-  const body = `A user cancelled their subscription but we couldn't find them in the database or get their email.
-
-RevenueCat ID: ${appUserId}
-Cancel reason: ${churnReason || 'unknown'}
-Environment: ${isTestEvent ? 'SANDBOX' : 'PRODUCTION'}
-
-You may want to check RevenueCat for more details.`
-
-  if (isTestEvent) {
-    console.log(`[DRY RUN] Would notify Harold about missing user ${appUserId}`)
-    await db.collection('email_logs').add({
-      user_id: appUserId,
-      email_name: 'MissingUserNotification',
-      segment: 'internal',
-      status: 'dry_run',
-      scheduled_at: new Date(),
-      to_email: TO_EMAIL,
-      churn_reason: churnReason
-    })
-  } else {
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: TO_EMAIL,
-      subject,
-      text: body
-    })
-
-    await db.collection('email_logs').add({
-      user_id: appUserId,
-      email_name: 'MissingUserNotification',
-      segment: 'internal',
-      status: 'sent',
-      scheduled_at: new Date(),
-      sent_at: new Date(),
-      to_email: TO_EMAIL,
-      churn_reason: churnReason
-    })
-
-    console.log(`Notified Harold about missing user ${appUserId}`)
-  }
 }

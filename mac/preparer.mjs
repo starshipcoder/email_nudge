@@ -38,6 +38,15 @@ export function tourneesPar(base, liens) {
   };
 }
 
+// Les annulations des 7 derniers jours d'une personne inconnue d'email_nudge : le fondateur en est prévenu par ntfy
+// (BUG-EW-6, à la place de l'alerte du webhook), sans adresse ni nom.
+export function annulationsSansInscrit(faits, inscrits, maintenant) {
+  const connus = new Set(inscrits.map((u) => u.revenuecat_id).filter(Boolean));
+  return faits.filter((f) => ['rc_cancellation_event', 'rc_trial_cancelled_event'].includes(f.nom) && maintenant.getTime() - f.temps <= FENETRE_RESILIATION)
+    .filter((f) => !f.ids.some((i) => connus.has(i)))
+    .map((f) => ({ id: `${f.nom}:${f.transaction || f.temps}`, essai: f.nom === 'rc_trial_cancelled_event' }));
+}
+
 export function candidats(faits, inscrits, maintenant) {
   const parRc = new Map();
   for (const u of inscrits) if (u.revenuecat_id) parRc.set(u.revenuecat_id, u);
@@ -136,5 +145,5 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
       expirees += 1;
     }
   }
-  return { creees, expirees, ...(erreurs ? { erreurs } : {}) };
+  return { creees, expirees, ...(erreurs ? { erreurs } : {}), sans_inscrit: annulationsSansInscrit(faits, inscrits, maintenant) };
 }

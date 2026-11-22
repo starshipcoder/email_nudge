@@ -43,3 +43,23 @@ test('le veilleur : rien au démarrage, puis seulement le nouveau ; une suite d�
   await v({ actions: [{ id: 'c', type: 'essai_annule' }], reponses: [], actif: false });
   assert.equal(envois.length, 3);
 });
+
+test('une annulation d’une personne absente d’email_nudge sonne une fois, sans adresse (BUG-EW-6)', async () => {
+  const { annulationsSansInscrit } = await import('../preparer.mjs');
+  const T = new Date('2026-12-02T10:00:00Z');
+  const faits = [{ nom: 'rc_trial_cancelled_event', temps: T.getTime() - 3600000, ids: ['rcX'], transaction: 'E1' },
+    { nom: 'rc_cancellation_event', temps: T.getTime() - 3600000, ids: ['rcA'], transaction: 'P1' }];
+  const orph = annulationsSansInscrit(faits, [{ id: 'a@exemple.fr', revenuecat_id: 'rcA' }], T);
+  assert.deepEqual(orph, [{ id: 'rc_trial_cancelled_event:E1', essai: true }]);
+  const envois = [];
+  const v = veilleur({ envoyer: async (m) => { envois.push(m); return { envoye: true }; } });
+  await v({ orphelines: [] });
+  await v({ orphelines: orph });
+  await v({ orphelines: orph });
+  await v({ orphelines: null, echec: 'x' });
+  await v({ orphelines: orph });
+  const ghost = envois.filter((m) => /absente d'email_nudge/.test(m.texte));
+  assert.equal(ghost.length, 1);
+  assert.match(ghost[0].texte, /^1 annulation .*\(1 essai, 0 abonnement\)/);
+  assert.doesNotMatch(ghost[0].texte, /rcX|@/);
+});

@@ -36,6 +36,10 @@ export function texteActions(actions) {
   const detail = actions.slice(0, 5).map((a) => `${TYPES[a.type] ?? 'action'}${a.langue ? ` (${a.langue})` : ''}`).join(', ');
   return `${n} action${n > 1 ? 's' : ''} à relire : ${detail}${n > 5 ? '…' : ''}`;
 }
+export const texteOrphelines = (liste) => {
+  const n = liste.length; const essais = liste.filter((o) => o.essai).length;
+  return `${n} annulation${n > 1 ? 's' : ''} d'une personne absente d'email_nudge (${essais} essai${essais > 1 ? 's' : ''}, ${n - essais} abonnement${n - essais > 1 ? 's' : ''}) : pas d'adresse, rien à envoyer`;
+};
 export const texteReponses = (n) => `${n} réponse${n > 1 ? 's' : ''} reçue${n > 1 ? 's' : ''}, à lire dans Iris CRM`;
 
 export async function envoyerNtfy({ titre, texte, priorite = 'default', tags = 'envelope', sujet = lireSujet(), fetcher = fetch }) {
@@ -48,17 +52,21 @@ export async function envoyerNtfy({ titre, texte, priorite = 'default', tags = '
 // Ce qui est nouveau depuis la passe d'avant : les actions à relire et les réponses non lues jamais vues, et une passe
 // qui échoue (une seule notification par suite d'échecs). Au démarrage, ce qui est déjà là ne sonne pas.
 export function veilleur({ envoyer = envoyerNtfy } = {}) {
-  let vuesActions = null; let vuesReponses = null; let enEchec = false;
-  return async ({ actions = [], reponses = [], echec = null, actif = true }) => {
+  let vuesActions = null; let vuesReponses = null; let vuesOrphelines = null; let enEchec = false;
+  return async ({ actions = [], reponses = [], orphelines = null, echec = null, actif = true }) => {
     const nouvelles = vuesActions ? actions.filter((a) => !vuesActions.has(a.id)) : [];
     const nouvellesRep = vuesReponses ? reponses.filter((m) => !vuesReponses.has(m.id)) : [];
+    // Une passe en échec ne dit rien des annulations : la liste d'avant est gardée.
+    const nouvellesOrph = orphelines && vuesOrphelines ? orphelines.filter((o) => !vuesOrphelines.has(o.id)) : [];
     vuesActions = new Set(actions.map((a) => a.id));
     vuesReponses = new Set(reponses.map((m) => m.id));
+    if (orphelines) vuesOrphelines = new Set(orphelines.map((o) => o.id));
     const envoyes = [];
     if (!actif) { enEchec = Boolean(echec); return envoyes; }
     if (echec && !enEchec) envoyes.push(await envoyer({ titre: 'Iris CRM : problème', texte: echec, priorite: 'high', tags: 'warning' }));
     enEchec = Boolean(echec);
     if (nouvelles.length) envoyes.push(await envoyer({ titre: 'Iris CRM', texte: texteActions(nouvelles) }));
+    if (nouvellesOrph.length) envoyes.push(await envoyer({ titre: 'Iris CRM : annulation sans inscrit', texte: texteOrphelines(nouvellesOrph), tags: 'ghost' }));
     if (nouvellesRep.length) envoyes.push(await envoyer({ titre: 'Iris CRM : réponse', texte: texteReponses(nouvellesRep.length), priorite: 'high', tags: 'speech_balloon' }));
     return envoyes;
   };

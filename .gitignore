@@ -34,3 +34,7 @@ npm-debug.log*
 # Secrets
 *.pem
 *.key
+
+# Secrets de l’émulateur Firebase (BUG-EW-6)
+.secret.local
+functions/.secret.local

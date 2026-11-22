@@ -39,8 +39,8 @@ test('la préparation crée chaque action une seule fois, dans la langue et la v
   const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'Prénom, créateur d’Easy Way' }] });
   const faits = [essai('rcA', 40, 'T1'), essai('rcB', 50, 'T2', { store: 'PLAY_STORE' })];
   const tournees = (rc) => (rc === 'rcA' ? 3 : 0);
-  assert.deepEqual(await preparer({ db, faits, tournees, maintenant: T }), { creees: 2, expirees: 0 });
-  assert.deepEqual(await preparer({ db, faits, tournees, maintenant: T }), { creees: 0, expirees: 0 });
+  assert.deepEqual(await preparer({ db, faits, tournees, maintenant: T }), { creees: 2, expirees: 0, sans_inscrit: [] });
+  assert.deepEqual(await preparer({ db, faits, tournees, maintenant: T }), { creees: 0, expirees: 0, sans_inscrit: [] });
   const actions = await db.lister('crm_actions');
   const ana = actions.find((a) => a.user_id === 'ana@exemple.fr');
   const bob = actions.find((a) => a.user_id === 'bob@exemple.com');
@@ -57,7 +57,7 @@ test('sans signature réglée, rien n’est préparé ; une action dont l’éch
   const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general' }], crm_actions: [{ id: 'x', statut: 'prete', echeance: iso(-1) }] });
   assert.equal((await preparer({ db, faits: [essai('rcA', 40, 'T1')], tournees: () => 0, maintenant: T })).raison, 'signature à régler');
   await db.ecrire('crm_reglages', 'general', { signature: 'S' });
-  assert.deepEqual(await preparer({ db, faits: [], tournees: () => 0, maintenant: T }), { creees: 0, expirees: 1 });
+  assert.deepEqual(await preparer({ db, faits: [], tournees: () => 0, maintenant: T }), { creees: 0, expirees: 1, sans_inscrit: [] });
   assert.equal(db.donnees.crm_actions.get('x').statut, 'expiree');
 });
 
