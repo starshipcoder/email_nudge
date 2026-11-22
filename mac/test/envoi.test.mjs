@@ -176,8 +176,15 @@ test('une résiliation déjà échue reste une résiliation ; le plafond compte 
   assert.equal((await deux.porte.envoyerAction('essai_j2__a')).raison, 'plafond du jour');
 });
 
-test('plus de pied ajouté aux e-mails', () => {
-  assert.equal(piedDePage('fr', 'moi@exemple.fr'), '');
+test('plus de pied STOP ; la ligne WhatsApp du fondateur dans la langue de la personne, s’il a réglé son numéro', async () => {
+  assert.equal(piedDePage('fr', null), '');
+  assert.equal(piedDePage('fr', '33600000000'), "\n\nVous pouvez aussi m'écrire sur WhatsApp : https://wa.me/33600000000");
+  assert.match(piedDePage('de', '33600000000'), /auf WhatsApp schreiben: https:\/\/wa\.me\/33600000000$/);
+  assert.match(piedDePage('nl', '33600000000'), /message me on WhatsApp/);
+  assert.equal(piedDePage('fr', 'pas un numéro'), '');
+  const { porte, envoyes } = monter({ reglages: { ...REGLAGES, whatsapp: '33600000000' } });
+  await porte.envoyerAction('essai_j2__a');
+  assert.equal(envoyes[0].message.text, "Bonjour\n\nVous pouvez aussi m'écrire sur WhatsApp : https://wa.me/33600000000");
 });
 
 test('e-mail d’essai annulé : pas à qui a repris son essai ou payé, relu chez RevenueCat', () => {

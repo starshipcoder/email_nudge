@@ -2,6 +2,7 @@
 // Tout envoi passe par envoyerAction : coupe-circuit, mode à blanc, anti-doublon, désinscription,
 // abonnement relu chez RevenueCat, écart de 72 h, plafond du jour, adresse de test.
 import { createHash } from 'node:crypto';
+import { WHATSAPP, langueDe } from './langues.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -13,9 +14,11 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export const cleUtilisateur = (userId) => createHash('sha256').update(String(userId)).digest('hex').slice(0, 24);
 
 // Plus de pied « répondez STOP » (fondateur, 22/11 : « on ne met pas le STOP dans les mails »). La désinscription
-// reste possible depuis la fiche, et une réponse qui la demande se traite à la main.
-export function piedDePage() {
-  return '';
+// reste possible depuis la fiche. À la place, s'il est réglé, le lien WhatsApp du fondateur (EW-53).
+export const lienWhatsapp = (numero) => (/^\d{8,15}$/.test(String(numero ?? '')) ? `https://wa.me/${numero}` : null);
+export function piedDePage(langue, whatsapp) {
+  const lien = lienWhatsapp(whatsapp);
+  return lien ? `\n\n${WHATSAPP[langueDe(langue)](lien)}` : '';
 }
 
 // Ce que RevenueCat dit de l'abonnement, réduit à ce qui décide un envoi.
@@ -75,7 +78,7 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       if (!action) return { statut: 'bloquee', raison: 'action introuvable' };
       const user = await db.lire('users', action.user_id);
       const fiche = (await db.lire('crm_fiches', cleUtilisateur(action.user_id))) ?? {};
-      const texte = `${action.corps}${piedDePage(action.langue ?? user?.locale, reglages.repondre_a)}`;
+      const texte = `${action.corps}${piedDePage(action.langue ?? user?.locale, reglages.whatsapp)}`;
 
       if (canal === 'test_moi') {
         if (reglages.a_blanc !== false) return { statut: 'a_blanc', raison: 'essai à blanc' };

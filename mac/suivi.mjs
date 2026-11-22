@@ -96,6 +96,14 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
         await db.ecrire('crm_reglages', 'general', { signature, maj_le: maintenant() });
         return this.reglages();
       }
+      // Le numéro WhatsApp du fondateur, au format international, chiffres seuls (33612345678) ; vide pour retirer la ligne.
+      if (cle === 'whatsapp') {
+        const numero = String(valeur ?? '').replace(/[\s.()-]/g, '').replace(/^\+/, '').replace(/^00/, '');
+        if (numero && !/^[1-9]\d{7,14}$/.test(numero)) throw new Error('Le numéro s’écrit au format international, par exemple +33 6 12 34 56 78.');
+        await db.ecrire('crm_reglages', 'general', { whatsapp: numero || null, maj_le: maintenant() });
+        await journaliser(numero ? 'numéro WhatsApp réglé' : 'numéro WhatsApp retiré', null);
+        return this.reglages();
+      }
       if (cle === 'plafond_jour') {
         if (!Number.isInteger(valeur) || valeur < 1 || valeur > 90) throw new Error('Le plafond va de 1 à 90 par jour (Resend gratuit : 100).');
         await db.ecrire('crm_reglages', 'general', { plafond_jour: valeur, maj_le: maintenant() });

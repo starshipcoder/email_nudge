@@ -38,13 +38,15 @@ export function direSource(l) {
   return `${nom}, par défaut (ni langue ni pays connus)`;
 }
 
-export const PIED = {
-  fr: (a) => `Pour ne plus recevoir d'e-mails d'Easy Way, répondez simplement STOP (${a}).`,
-  en: (a) => `To stop receiving emails from Easy Way, just reply STOP (${a}).`,
-  de: (a) => `Wenn Sie keine E-Mails von Easy Way mehr erhalten möchten, antworten Sie einfach STOP (${a}).`,
-  es: (a) => `Para dejar de recibir correos de Easy Way, responda simplemente STOP (${a}).`,
-  it: (a) => `Per non ricevere più e-mail da Easy Way, risponda semplicemente STOP (${a}).`,
-  pt: (a) => `Para deixar de receber e-mails da Easy Way, responda simplesmente STOP (${a}).`,
+// La ligne WhatsApp à la fin de chaque e-mail (EW-53, fondateur, 22/11 : « pour que les gens puissent me contacter, et ça
+// fait plus humain »). Plus de pied « répondez STOP » depuis le 22/11.
+export const WHATSAPP = {
+  fr: (lien) => `Vous pouvez aussi m'écrire sur WhatsApp : ${lien}`,
+  en: (lien) => `You can also message me on WhatsApp: ${lien}`,
+  de: (lien) => `Sie können mir auch auf WhatsApp schreiben: ${lien}`,
+  es: (lien) => `También puede escribirme por WhatsApp: ${lien}`,
+  it: (lien) => `Può anche scrivermi su WhatsApp: ${lien}`,
+  pt: (lien) => `Também me pode escrever no WhatsApp: ${lien}`,
 };
 
 export const ARRETER = {

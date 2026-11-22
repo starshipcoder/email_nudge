@@ -189,3 +189,11 @@ test('la notification de 9 h dit les réponses et ce qui ne va pas, sans guillem
   assert.equal(texteNotification(0), 'Aucune action ce matin.');
   assert.equal(texteNotification(2, 1, 'la passe a échoué : "x"'), '2 actions restent à faire. 1 réponse à lire. Attention : la passe a échoué : x.');
 });
+
+test('le numéro WhatsApp se règle au format international, et se retire', async () => {
+  const s = suivi(baseEnMemoire());
+  assert.equal((await s.changerReglage('whatsapp', '+33 6 00 00 00 00')).whatsapp, '33600000000');
+  assert.equal((await s.changerReglage('whatsapp', '0033 600000000')).whatsapp, '33600000000');
+  await assert.rejects(() => s.changerReglage('whatsapp', '06 00'), /format international/);
+  assert.equal((await s.changerReglage('whatsapp', '')).whatsapp, null);
+});

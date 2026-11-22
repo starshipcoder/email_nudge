@@ -86,7 +86,7 @@ async function uneAction(id) {
     <div class="carte"><h2>Le texte</h2>
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
-      <p class="doux">Le texte part tel quel, sans pied ajouté.</p>
+      <p class="doux">À l’envoi, la ligne WhatsApp est ajoutée à la fin, dans sa langue, si ton numéro est réglé.</p>
       ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${['resiliation', 'essai_annule'].includes(a.type) ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
         <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
@@ -250,6 +250,8 @@ async function reglages() {
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
+      <dt>WhatsApp</dt><dd><input type="text" data-reglage="whatsapp" value="${r.whatsapp ? `+${echapper(r.whatsapp)}` : ''}" placeholder="+33 6 12 34 56 78"> <span class="message" data-msg="whatsapp"></span>
+        <p class="doux">Ajoute à la fin de chaque e-mail « Vous pouvez aussi m’écrire sur WhatsApp », avec ton lien. Vide : pas de ligne. Le numéro est visible par chaque destinataire.</p></dd>
       <dt>Plafond par jour</dt><dd><input type="text" data-reglage="plafond_jour" value="${r.plafond_jour ?? 90}" class="petit"> <span class="message" data-msg="plafond_jour"></span></dd>
     </dl><p class="doux">Sans les trois adresses, aucun e-mail ne part ; sans signature, rien n’est préparé.</p></div>`;
   vue.querySelectorAll('[data-reglage]').forEach((champ) => champ.addEventListener('change', async () => {
