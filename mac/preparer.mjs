@@ -38,6 +38,29 @@ export function tourneesPar(base, liens) {
   };
 }
 
+// EW-55 : les annulations vues dans l'heure. Le webhook RevenueCat de Firebase pose `churned_at` sur la fiche en temps
+// réel ; la fiche ne dit pas sûrement si c'était un essai ou un abonnement (`plan` est souvent faux), donc RevenueCat est
+// relu pour chaque fiche annulée depuis moins de 7 jours. Une carte refusée (billing issue) n'est pas un départ.
+export async function faitsDesFiches(users, lireRevenueCat, maintenant) {
+  const t = maintenant.getTime();
+  const recents = users.filter((u) => u.revenuecat_id && u.churned_at && t - new Date(u.churned_at).getTime() <= FENETRE_RESILIATION);
+  const faits = [];
+  for (const u of recents) {
+    let abonne;
+    try { abonne = await lireRevenueCat(u.revenuecat_id); } catch { continue; }
+    const subs = Object.values(abonne?.subscriber?.subscriptions ?? {})
+      .filter((s) => s.unsubscribe_detected_at && !s.billing_issues_detected_at && !s.refunded_at && t - new Date(s.unsubscribe_detected_at).getTime() <= FENETRE_RESILIATION);
+    for (const s of subs) {
+      const essai = s.period_type === 'trial';
+      const temps = new Date(s.unsubscribe_detected_at).getTime();
+      faits.push({ nom: essai ? 'rc_trial_cancelled_event' : 'rc_cancellation_event', temps, ids: [String(u.revenuecat_id)],
+        transaction: `fiche-${u.revenuecat_id}-${temps}`, fin: s.expires_date ?? null, type: essai ? 'TRIAL' : 'NORMAL', raison: 'UNSUBSCRIBE',
+        store: s.store ? String(s.store).toUpperCase() : null, source: 'fiche' });
+    }
+  }
+  return faits;
+}
+
 // Les annulations des 7 derniers jours d'une personne inconnue d'email_nudge : le fondateur en est prévenu par ntfy
 // (BUG-EW-6, à la place de l'alerte du webhook), sans adresse ni nom.
 export function annulationsSansInscrit(faits, inscrits, maintenant) {
@@ -133,8 +156,12 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
     // L'ancien nom d'une résiliation (avant le 22/11, une par personne) : celle déjà écrite pour ce départ ne se double pas.
     const ancienne = c.type === 'resiliation' ? existantes.get(`resiliation__${cleUtilisateur(c.user.id)}`) : null;
     if (ancienne && new Date(ancienne.cree_le).getTime() >= c.fait.temps) continue;
+    // Un même départ vu par la fiche Firebase puis par la base Mixpanel (EW-55) : une action de ce type pour cette
+    // personne dans les 7 jours suffit.
+    if (['resiliation', 'essai_annule'].includes(c.type) && [...existantes.values()].some((a) => a.type === c.type && a.user_id === c.user.id
+      && Math.abs(new Date(a.cree_le).getTime() - c.fait.temps) <= FENETRE_RESILIATION)) continue;
     const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour, choixLangue, enRetard });
-    try { await db.creer('crm_actions', id, champs); creees += 1; } catch (erreur) {
+    try { await db.creer('crm_actions', id, champs); existantes.set(id, { id, ...champs }); creees += 1; } catch (erreur) {
       if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
     }
   }

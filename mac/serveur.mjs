@@ -6,8 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
-import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
-import { lireFaits, preparer, tourneesPar } from './preparer.mjs';
+import { diagnosticRevenueCat, porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
+import { faitsDesFiches, lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
 import { versionsEnVente } from './versions.mjs';
@@ -32,14 +32,25 @@ export async function passeDuMac(db) {
   try {
     const lecteur = { all: (sql, ...p) => base.prepare(sql).all(...p) };
     const carte = new Map(liens ? liens.prepare('SELECT abonne, personne FROM liens').all().map((r) => [r.abonne, r.personne]) : []);
-    const faits = lireFaits(lecteur, Date.now() - 30 * 86400000);
+    // Les événements RevenueCat de la base Mixpanel (jusqu'à la veille), plus les annulations des fiches Firebase, posées en
+    // temps réel par le webhook et confirmées chez RevenueCat (EW-55) : un départ se voit à la passe qui suit.
+    let parFiche = [];
+    let lectures = 0; let echecs = 0; let raison = null;
+    const lire = revenueCatReel();
+    const lireCompte = async (rc) => { lectures += 1; try { return await lire(rc); } catch (e) { echecs += 1; raison ??= String(e?.message ?? e).slice(0, 80); throw e; } };
+    try {
+      parFiche = await faitsDesFiches(await db.lister('users', ['revenuecat_id', 'churned_at']), lireCompte, new Date());
+      if (lectures) console.log('fiches', JSON.stringify({ annulees_7j: lectures, revenuecat_en_echec: echecs, raison, departs: parFiche.length }));
+    }
+    catch (e) { console.error('fiches', e.message); }
+    const faits = [...lireFaits(lecteur, Date.now() - 30 * 86400000), ...parFiche];
     const sources = await ouvrirSources();
     try {
       const dossierPour = (rc) => (rc ? dossierDe({ rc, sources, maintenant: new Date() }) : null);
       // Une base de plus d'un jour et demi : les textes n'affirment rien sur l'usage sans relecture (audit du 22/11).
       const enRetard = !sources.fin || Date.now() - sources.fin * 1000 > 36 * 3600000;
       const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour, enRetard });
-      return { ...r, base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null, base_en_retard: enRetard };
+      return { ...r, par_fiche: parFiche.length, base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null, base_en_retard: enRetard };
     } finally { fermerSources(sources); }
   } finally {
     base.close();
@@ -284,6 +295,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Iris CRM : http://localhost:${port}`);
   });
+  diagnosticRevenueCat().then((d) => console.log('revenuecat', JSON.stringify(d))).catch(() => {});
   // La liste des inscrits se charge d'avance : le premier clic sur Utilisateurs n'attend pas.
   s.utilisateurs().catch((e) => console.error('inscrits', e.message));
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.

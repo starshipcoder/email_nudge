@@ -173,7 +173,7 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
 }
 
 // Les vrais services, avec les clés du trousseau (TODO-EW-9). Rien n'est affiché.
-async function cleTrousseau(service) {
+export async function cleTrousseau(service) {
   const { stdout } = await run('security', ['find-generic-password', '-s', service, '-w']);
   return stdout.trim();
 }
@@ -199,4 +199,15 @@ export function revenueCatReel({ fetcher = fetch } = {}) {
     if (!reponse.ok) throw new Error(`RevenueCat ${reponse.status}`);
     return reponse.json();
   };
+}
+
+// Diagnostic au démarrage : la clé RevenueCat du trousseau marche-t-elle sur l'API v1 (celle qu'Iris utilise) ou v2 ?
+// Seuls les codes de réponse sont écrits dans le journal, jamais la clé.
+export async function diagnosticRevenueCat({ fetcher = fetch } = {}) {
+  let cle;
+  try { cle = await cleTrousseau('easyway-crm-revenuecat'); } catch { return { trousseau: 'absente' }; }
+  const h = { Authorization: `Bearer ${cle}` };
+  const v1 = await fetcher('https://api.revenuecat.com/v1/subscribers/diagnostic-iris-crm', { headers: h }).then((r) => r.status).catch(() => 'injoignable');
+  const v2 = await fetcher('https://api.revenuecat.com/v2/projects', { headers: h }).then((r) => r.status).catch(() => 'injoignable');
+  return { longueur: cle.length, commence_par_sk: cle.startsWith('sk_'), v1, v2 };
 }

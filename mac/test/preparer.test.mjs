@@ -134,3 +134,40 @@ test('une création ratée pour une autre raison qu’un doublon est comptée, p
   const r = await preparer({ db, faits: [essai('rcA', 40, 'T1')], tournees: () => 1, maintenant: T });
   assert.equal(r.erreurs, 1);
 });
+
+test('une annulation sur la fiche Firebase devient un fait, d’après RevenueCat : essai, abonnement, carte refusée (EW-55)', async () => {
+  const { faitsDesFiches } = await import('../preparer.mjs');
+  const iso2 = (n) => new Date(h(n)).toISOString();
+  const users = [
+    { id: 'ana@exemple.fr', revenuecat_id: 'rcA', churned_at: iso2(-2) },
+    { id: 'bob@exemple.com', revenuecat_id: 'rcB', churned_at: iso2(-3) },
+    { id: 'cla@exemple.fr', revenuecat_id: 'rcC', churned_at: iso2(-1) },
+    { id: 'vieux@exemple.fr', revenuecat_id: 'rcV', churned_at: iso2(-24 * 9) },
+    { id: 'sans@exemple.fr', churned_at: iso2(-1) },
+  ];
+  const abonnes = {
+    rcA: { subscriber: { subscriptions: { p: { period_type: 'trial', unsubscribe_detected_at: iso2(-2), expires_date: iso2(100), store: 'app_store' } } } },
+    rcB: { subscriber: { subscriptions: { p: { period_type: 'normal', unsubscribe_detected_at: iso2(-3), expires_date: iso2(200), store: 'play_store' } } } },
+    rcC: { subscriber: { subscriptions: { p: { period_type: 'normal', unsubscribe_detected_at: iso2(-1), billing_issues_detected_at: iso2(-1), expires_date: iso2(5) } } } },
+  };
+  const lus = [];
+  const faits = await faitsDesFiches(users, async (rc) => { lus.push(rc); return abonnes[rc]; }, T);
+  assert.deepEqual(lus.sort(), ['rcA', 'rcB', 'rcC'], 'RevenueCat relu seulement pour les annulations récentes');
+  assert.deepEqual(faits.map((f) => [f.nom, f.ids[0], f.type, f.raison]), [
+    ['rc_trial_cancelled_event', 'rcA', 'TRIAL', 'UNSUBSCRIBE'],
+    ['rc_cancellation_event', 'rcB', 'NORMAL', 'UNSUBSCRIBE'],
+  ]);
+  const c = candidats(faits, inscrits, T);
+  assert.deepEqual(c.map((x) => [x.type, x.user.id]).sort(), [['essai_annule', 'ana@exemple.fr'], ['resiliation', 'bob@exemple.com']]);
+  // RevenueCat qui ne répond pas : rien, sans casser.
+  assert.deepEqual(await faitsDesFiches(users.slice(0, 1), async () => { throw new Error('RevenueCat 500'); }, T), []);
+});
+
+test('le même départ vu par la fiche puis par Mixpanel le lendemain ne fait qu’une action (EW-55)', async () => {
+  const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
+  const parFiche = [{ nom: 'rc_trial_cancelled_event', temps: h(-2), ids: ['rcA'], transaction: 'fiche-rcA', type: 'TRIAL', raison: 'UNSUBSCRIBE' }];
+  await preparer({ db, faits: parFiche, tournees: () => 0, maintenant: T });
+  const parMixpanel = [{ nom: 'rc_trial_cancelled_event', temps: h(-2.2), ids: ['rcA'], transaction: 'T-vrai', type: 'TRIAL' }];
+  await preparer({ db, faits: parMixpanel, tournees: () => 0, maintenant: new Date(h(20)) });
+  assert.equal((await db.lister('crm_actions')).filter((a) => a.type === 'essai_annule').length, 1);
+});
