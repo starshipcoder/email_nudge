@@ -251,7 +251,7 @@ async function reglages() {
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
       <dt>WhatsApp</dt><dd><input type="text" data-reglage="whatsapp" value="${r.whatsapp ? `+${echapper(r.whatsapp)}` : ''}" placeholder="+33 6 12 34 56 78"> <span class="message" data-msg="whatsapp"></span>
-        <p class="doux">Ajoute à la fin de chaque e-mail « WhatsApp : 06 … » en français, « WhatsApp: +33 6 … (I am French) » dans les autres langues. Vide : pas de ligne. Le numéro est visible par chaque destinataire.</p></dd>
+        <p class="doux">Ajoute à la fin de chaque e-mail « WhatsApp : 06 … » en français, « WhatsApp: +33 6 … 🇫🇷 » dans les autres langues. Vide : pas de ligne. Le numéro est visible par chaque destinataire.</p></dd>
       <dt>Plafond par jour</dt><dd><input type="text" data-reglage="plafond_jour" value="${r.plafond_jour ?? 90}" class="petit"> <span class="message" data-msg="plafond_jour"></span></dd>
     </dl><p class="doux">Sans les trois adresses, aucun e-mail ne part ; sans signature, rien n’est préparé.</p></div>`;
   vue.querySelectorAll('[data-reglage]').forEach((champ) => champ.addEventListener('change', async () => {

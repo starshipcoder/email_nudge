@@ -83,3 +83,14 @@ test('chaque modèle et chaque brouillon existe dans les six langues, sans trou'
     if (l !== 'fr') assert.match(b.traduction_fr.corps, /trop cher/);
   }
 });
+
+test('le texte court de l’essai annulé existe dans les six langues, une seule question, signé', async () => {
+  const { ESSAI_COURT, brouillonEssaiAnnule } = await import('../brouillons.mjs');
+  for (const l of LANGUES) {
+    const b = brouillonEssaiAnnule({ questionnaire: null }, l, 'Prénom');
+    assert.ok(ESSAI_COURT[l], l);
+    assert.equal((b.corps.match(/[?]/g) ?? []).length, 1, l);
+    assert.match(b.corps, /Prénom$/, l);
+    if (l !== 'fr') assert.match(b.traduction_fr.corps, /Qu'est-ce qui ne vous a pas convenu \?/);
+  }
+});

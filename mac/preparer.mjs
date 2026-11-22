@@ -3,6 +3,7 @@
 import { cleUtilisateur } from './envoi.mjs';
 import { arreter, dateFin, rendre, rendreAvecTraduction } from './modeles.mjs';
 import { brouillonAvecTraduction, resumer } from './dossier.mjs';
+import { brouillonEssaiAnnule, reponseRecente } from './brouillons.mjs';
 import { langueDePersonne } from './langues.mjs';
 
 const H = 3600 * 1000;
@@ -90,9 +91,11 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
   }
   if (c.type === 'essai_annule') {
     // Sans dossier, un dossier vide : l'ouverture, la question ouverte et la fin, sans fait inventé.
-    const { d: sur, doute } = dossierSur(dossier);
+    const { d: sur, doute: douteUsage } = dossierSur(dossier);
     const d = sur ?? { questionnaire: null, usage: USAGE_VIDE };
-    const { sujet, corps, traduction_fr } = brouillonAvecTraduction(d, langue, signature, 'essai');
+    const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(d, langue, signature);
+    // Le texte court n'affirme rien sur l'usage : rien à vérifier ; celui qui part de sa réponse, si.
+    const doute = douteUsage && reponseRecente(d);
     return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
       ...(traduction_fr ? { traduction_fr } : {}), ...(doute ? { a_verifier: INCONNU } : {}),
       ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),

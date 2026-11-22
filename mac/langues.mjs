@@ -40,16 +40,10 @@ export function direSource(l) {
 
 // La ligne WhatsApp à la fin de chaque e-mail (EW-53, fondateur, 22/11 : « pour que les gens puissent me contacter, et ça
 // fait plus humain »). Plus de pied « répondez STOP » depuis le 22/11.
-// Le fondateur, 22/11 : « WhatsApp : 06 52 50 55 00 » pour les Français, « WhatsApp: +33 6 52 50 55 00 (I am French) »
-// pour les autres, la parenthèse dans leur langue (elle explique l'indicatif). Pas de lien.
-export const WHATSAPP = {
-  fr: (national) => `WhatsApp : ${national}`,
-  en: (_, international) => `WhatsApp: ${international} (I am French)`,
-  de: (_, international) => `WhatsApp: ${international} (ich bin Franzose)`,
-  es: (_, international) => `WhatsApp: ${international} (soy francés)`,
-  it: (_, international) => `WhatsApp: ${international} (sono francese)`,
-  pt: (_, international) => `WhatsApp: ${international} (sou francês)`,
-};
+// Le fondateur, 22/11 : « WhatsApp : 06 52 50 55 00 » pour les Français ; pour les autres, le numéro international suivi
+// du drapeau français, qui explique l'indicatif (d'abord « (I am French) », remplacé par le drapeau le même jour). Pas de lien.
+const ETRANGER = (_, international) => `WhatsApp: ${international} 🇫🇷`;
+export const WHATSAPP = { fr: (national) => `WhatsApp : ${national}`, en: ETRANGER, de: ETRANGER, es: ETRANGER, it: ETRANGER, pt: ETRANGER };
 
 export const ARRETER = {
   APP_STORE: {

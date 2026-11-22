@@ -179,9 +179,9 @@ test('une résiliation déjà échue reste une résiliation ; le plafond compte 
 test('plus de pied STOP ; la ligne WhatsApp du fondateur dans la langue de la personne, s’il a réglé son numéro', async () => {
   assert.equal(piedDePage('fr', null), '');
   assert.equal(piedDePage('fr', '33600000000'), '\n\nWhatsApp : 06 00 00 00 00');
-  assert.equal(piedDePage('en', '33600000000'), '\n\nWhatsApp: +33 6 00 00 00 00 (I am French)');
-  assert.equal(piedDePage('de', '33600000000'), '\n\nWhatsApp: +33 6 00 00 00 00 (ich bin Franzose)');
-  assert.match(piedDePage('nl', '33600000000'), /\(I am French\)$/);
+  assert.equal(piedDePage('en', '33600000000'), '\n\nWhatsApp: +33 6 00 00 00 00 🇫🇷');
+  assert.equal(piedDePage('de', '33600000000'), '\n\nWhatsApp: +33 6 00 00 00 00 🇫🇷');
+  assert.match(piedDePage('nl', '33600000000'), /🇫🇷$/);
   assert.equal(piedDePage('fr', 'pas un numéro'), '');
   const { porte, envoyes } = monter({ reglages: { ...REGLAGES, whatsapp: '33600000000' } });
   await porte.envoyerAction('essai_j2__a');

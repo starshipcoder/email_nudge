@@ -143,7 +143,7 @@ export const T = {
 // L'annulation d'un essai (EW-52, fondateur, 22/11 : « il faudrait écrire à tout le monde ») : le même e-mail, avec
 // son ouverture et les deux questions qui parlaient d'abonnement.
 export const ESSAI = {
-  fr: { sujet: "Votre essai d'Easy Way", pris: "Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.",
+  fr: { sujet: 'Votre essai Easy Way', pris: "Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.",
     questions: { noNeedOfPremiumFeature: "Qu'est-ce qui vous aurait fait continuer après l'essai ?", other: "Si vous avez une minute : qu'est-ce qui vous a fait arrêter l'essai ?" } },
   en: { sujet: 'Your Easy Way trial', pris: 'You cancelled your Easy Way trial. It is done: you will not be charged.',
     questions: { noNeedOfPremiumFeature: 'What would have made you continue after the trial?', other: 'If you have a minute: what made you stop the trial?' } },
@@ -156,6 +156,25 @@ export const ESSAI = {
   pt: { sujet: 'O seu teste do Easy Way', pris: 'Cancelou o seu teste do Easy Way. Está feito: não lhe será cobrado nada.',
     questions: { noNeedOfPremiumFeature: 'O que o teria feito continuar depois do teste?', other: 'Se tiver um minuto: o que o fez parar o teste?' } },
 };
+
+// L'essai annulé sans réponse au questionnaire de l'app (EW-54, validé par le fondateur le 22/11) : court, une question.
+// Le questionnaire de l'app répond déjà à 78 % de ceux qui le voient : l'e-mail sert surtout à qui ne l'a pas vu.
+export const ESSAI_COURT = {
+  fr: { sujet: 'Votre essai Easy Way', corps: "Bonjour,\n\nVous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.\n\nQu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même." },
+  en: { sujet: 'Your Easy Way trial', corps: "Hello,\n\nYou cancelled your Easy Way trial, you will not be charged.\n\nWhat didn't work for you? One line in reply helps me a lot, I read everything myself." },
+  de: { sujet: 'Ihr Easy Way Test', corps: 'Hallo,\n\nSie haben Ihren Easy Way Test gekündigt, Ihnen wird nichts berechnet.\n\nWas hat für Sie nicht gepasst? Eine Zeile als Antwort hilft mir sehr, ich lese alles selbst.' },
+  es: { sujet: 'Su prueba de Easy Way', corps: 'Hola:\n\nHa cancelado su prueba de Easy Way, no se le cobrará nada.\n\n¿Qué no le convenció? Una línea en respuesta me ayuda mucho, leo todo yo mismo.' },
+  it: { sujet: 'La sua prova di Easy Way', corps: "Buongiorno,\n\nHa annullato la sua prova di Easy Way, non le verrà addebitato nulla.\n\nChe cosa non l'ha convinta? Una riga in risposta mi aiuta molto, leggo tutto io stesso." },
+  pt: { sujet: 'O seu teste do Easy Way', corps: 'Olá,\n\nCancelou o seu teste do Easy Way, não lhe será cobrado nada.\n\nO que não o convenceu? Uma linha em resposta ajuda-me muito, leio tudo eu próprio.' },
+};
+
+// L'e-mail d'essai annulé : court sans réponse au questionnaire, sinon parti de sa réponse ; et sa traduction française.
+export function brouillonEssaiAnnule(d, langue, signature) {
+  if (d && reponseRecente(d)) return brouillonAvecTraduction(d, langue, signature, 'essai');
+  const court = (lg) => { const t = ESSAI_COURT[lg] ?? ESSAI_COURT.en; return { sujet: t.sujet, corps: `${t.corps}\n\n${signature}` }; };
+  const b = court(langue);
+  return langue === 'fr' ? b : { ...b, traduction_fr: court('fr') };
+}
 
 // La question : celle de sa réponse au questionnaire, sinon celle du problème vu, sinon la question ouverte.
 // Une réponse au questionnaire de plus de 60 jours ne parle plus de ce départ : elle n'est pas citée.

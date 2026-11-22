@@ -96,7 +96,11 @@ test('l’annulation d’essai s’écrit depuis le dossier, une seule fois, et 
   assert.equal(new Date(a.echeance).getTime(), h(-24) + 7 * 24 * 3600000);
   const b = actions.find((x) => x.user_id === 'bob@exemple.com');
   assert.match(b.corps, /^Hello,/);
-  assert.match(b.corps, /what made you stop the trial\?/);
+  // Sans réponse au questionnaire : le texte court validé le 22/11 (EW-54).
+  assert.equal(b.sujet, 'Your Easy Way trial');
+  assert.match(b.corps, /What didn't work for you\?/);
+  assert.equal(b.traduction_fr.sujet, 'Votre essai Easy Way');
+  assert.ok(b.corps.split(/\s+/).length <= 40);
   assert.equal((b.corps.match(/\?/g) ?? []).length, 1);
 });
 
