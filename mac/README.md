@@ -1,4 +1,4 @@
-# Suivi Easy Way, la page du Mac
+# Iris CRM, la page du Mac pour suivre les utilisateurs d'Easy Way
 
 La page de suivi des utilisateurs d'Easy Way, servie sur le Mac seulement (`http://localhost:4810`). Elle lit et écrit la base Firestore `email-nudge` par la connexion Google du Mac (`gcloud auth application-default login`) ; aucune clé dans ce dossier.
 

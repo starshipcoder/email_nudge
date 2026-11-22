@@ -37,7 +37,7 @@ export async function passeDuMac(db) {
 
 export function notifier(n) {
   const texte = n === 0 ? 'Aucune action ce matin.' : `${n} action${n > 1 ? 's' : ''} ${n > 1 ? 'restent' : 'reste'} à faire.`;
-  execFile('osascript', ['-e', `display notification "${texte}" with title "Suivi Easy Way" sound name "default"`]);
+  execFile('osascript', ['-e', `display notification "${texte}" with title "Iris CRM" sound name "default"`]);
 }
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
@@ -193,7 +193,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     return r;
   };
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
-    console.log(`Suivi Easy Way : http://localhost:${port}`);
+    console.log(`Iris CRM : http://localhost:${port}`);
   });
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
   const passe = () => preparerMaintenant().then((r) => console.log('passe', new Date().toISOString(), JSON.stringify(r))).catch((e) => console.error('passe', e.message));
