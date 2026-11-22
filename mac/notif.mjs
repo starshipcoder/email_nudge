@@ -27,7 +27,7 @@ export function creerSujet(fichier = FICHIER_SUJET) {
   return sujet;
 }
 
-const TYPES = { essai_j2: 'fin d’essai', resiliation: 'résiliation', essai_annule: 'essai annulé', bug_corrige: 'bug corrigé',
+const TYPES = { essai_j2: 'fin d’essai', resiliation: 'résiliation', essai_annule: 'essai annulé', bug_corrige: 'bug corrigé', demande_avis: 'demande d’avis',
   campagne_relance: 'relance de campagne', onboarding: 'onboarding', libre: 'e-mail' };
 
 // Le texte, sans adresse ni nom : « 2 actions à relire : essai annulé (it), résiliation (de) ».

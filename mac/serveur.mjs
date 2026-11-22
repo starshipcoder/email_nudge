@@ -15,6 +15,8 @@ import { brouillonAvecTraduction, dossierDe, fermerSources, ouvrirSources, resum
 import { brouillonEssaiAnnule } from './brouillons.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
 import { veilleur } from './notif.mjs';
+import { preparerAvis } from './avis.mjs';
+import { personneDe } from './dossier.mjs';
 import { cleUtilisateur } from './envoi.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -277,6 +279,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (r.erreurs) problemes.push(`${r.erreurs} action(s) non créée(s)`);
       if (r.raison) problemes.push(r.raison);
       if (r.base_en_retard) problemes.push('base Mixpanel en retard');
+      // La demande d'avis (EW-56) : revenue dans l'app depuis le « bug corrigé », d'après la base Mixpanel du Mac.
+      try {
+        const sources = await ouvrirSources();
+        try {
+          const revenuDepuis = async (rc, ms) => {
+            if (!sources.mixpanel) return null;
+            const p = personneDe(sources, rc);
+            if (p === rc && !sources.ids?.has(rc)) return null;
+            return Boolean(sources.mixpanel.prepare(`SELECT 1 FROM propres WHERE utilisateur = ? AND a_exclure = '' AND temps > ? AND nom NOT LIKE 'rc\\_%' ESCAPE '\\' LIMIT 1`).get(p, Math.floor(ms / 1000)));
+          };
+          r.avis = (await preparerAvis({ db, revenuDepuis })).creees;
+        } finally { fermerSources(sources); }
+      } catch (e) { r.avis = `erreur : ${e.message}`; problemes.push(`demande d'avis : ${e.message}`); }
       try {
         const b = await bg.preparer(); r.bugs = b.creees;
         if (b.erreurs) problemes.push(`${b.erreurs} bug(s) corrigé(s) non créé(s)`);

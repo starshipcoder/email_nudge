@@ -37,8 +37,8 @@ async function bandeau() {
   }
 }
 
-const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', essai_annule: 'Essai annulé', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', libre: 'Message' };
-const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'onboarding', 'gros', 'campagne_relance', 'libre'];
+const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', essai_annule: 'Essai annulé', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', demande_avis: 'Demande d’avis', libre: 'Message' };
+const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'demande_avis', 'onboarding', 'gros', 'campagne_relance', 'libre'];
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
