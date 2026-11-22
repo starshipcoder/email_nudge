@@ -140,3 +140,8 @@ test('le dossier dit jusqu’où vont ses données, et une base en retard se voi
   assert.match(vieux.a_jour.texte, /la mise à jour de nuit est en retard/);
   assert.equal(resumer(dossierDe({ rc: 'rcA', sources: sources(), maintenant: T })).a_jour.en_retard, true, 'sans fin connue, en retard');
 });
+
+test('en français, chaque zone se dit sans « de les » ni « de le »', async () => {
+  const { T: textes } = await import('../brouillons.mjs');
+  for (const z of Object.values(textes.fr.zones)) assert.doesNotMatch(textes.fr.zone(z), /\bde (les|le) /, z);
+});

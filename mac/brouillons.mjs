@@ -16,7 +16,7 @@ export const T = {
     sujet: 'Votre abonnement Easy Way', bonjour: 'Bonjour,',
     pris: "Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.",
     tournees: (n, s) => `Vous avez lancé ${n} tournées avec l'app${s ? ` en ${s} semaine${s > 1 ? 's' : ''}` : ''}.`,
-    zone: (z) => `Vous vous serviez surtout de ${z}, sans avoir encore lancé de tournée.`,
+    zone: (z) => `Vous avez surtout utilisé ${z}, sans avoir encore lancé de tournée.`,
     vu: (q) => `En regardant de mon côté, je vois que ${q}.`, et: ', et ',
     indique: (r) => `Dans l'app, vous avez indiqué ${r}.`, ecrit: (t) => ` Vous avez écrit : « ${t} ».`,
     fin: "Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.",
