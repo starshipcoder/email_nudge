@@ -140,14 +140,34 @@ export const T = {
   },
 };
 
+// L'annulation d'un essai (EW-52, fondateur, 22/11 : « il faudrait écrire à tout le monde ») : le même e-mail, avec
+// son ouverture et les deux questions qui parlaient d'abonnement.
+export const ESSAI = {
+  fr: { sujet: "Votre essai d'Easy Way", pris: "Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.",
+    questions: { noNeedOfPremiumFeature: "Qu'est-ce qui vous aurait fait continuer après l'essai ?", other: "Si vous avez une minute : qu'est-ce qui vous a fait arrêter l'essai ?" } },
+  en: { sujet: 'Your Easy Way trial', pris: 'You cancelled your Easy Way trial. It is done: you will not be charged.',
+    questions: { noNeedOfPremiumFeature: 'What would have made you continue after the trial?', other: 'If you have a minute: what made you stop the trial?' } },
+  de: { sujet: 'Ihr Easy Way Test', pris: 'Sie haben Ihren Easy Way Test gekündigt. Das ist erledigt: Ihnen wird nichts berechnet.',
+    questions: { noNeedOfPremiumFeature: 'Was hätte Sie dazu gebracht, nach dem Test weiterzumachen?', other: 'Wenn Sie eine Minute haben: Warum haben Sie den Test beendet?' } },
+  es: { sujet: 'Su prueba de Easy Way', pris: 'Ha cancelado su prueba de Easy Way. Ya está hecho: no se le cobrará nada.',
+    questions: { noNeedOfPremiumFeature: '¿Qué le habría hecho continuar después de la prueba?', other: 'Si tiene un minuto: ¿qué le hizo dejar la prueba?' } },
+  it: { sujet: 'La sua prova di Easy Way', pris: 'Ha annullato la sua prova di Easy Way. È fatto: non le verrà addebitato nulla.',
+    questions: { noNeedOfPremiumFeature: "Che cosa l'avrebbe convinta a continuare dopo la prova?", other: "Se ha un minuto: che cosa l'ha fatta smettere la prova?" } },
+  pt: { sujet: 'O seu teste do Easy Way', pris: 'Cancelou o seu teste do Easy Way. Está feito: não lhe será cobrado nada.',
+    questions: { noNeedOfPremiumFeature: 'O que o teria feito continuar depois do teste?', other: 'Se tiver um minuto: o que o fez parar o teste?' } },
+};
+
 // La question : celle de sa réponse au questionnaire, sinon celle du problème vu, sinon la question ouverte.
 export function cleQuestion(d) {
   if (d.questionnaire) return T.fr.questions[d.questionnaire.raison] ? d.questionnaire.raison : 'other';
   return d.usage.signaux.length ? 'probleme' : 'other';
 }
 
-export function brouillonResiliation(d, langue, signature) {
-  const L = T[langue] ?? T.en;
+// sorte : 'resiliation' (un abonnement payé) ou 'essai' (un essai annulé).
+export function brouillonResiliation(d, langue, signature, sorte = 'resiliation') {
+  const base = T[langue] ?? T.en;
+  const E = sorte === 'essai' ? (ESSAI[langue] ?? ESSAI.en) : null;
+  const L = E ? { ...base, sujet: E.sujet, pris: E.pris, questions: { ...base.questions, ...E.questions } } : base;
   const u = d.usage; const r = d.questionnaire?.raison;
   const semaines = u.premier_jour && u.dernier_jour ? Math.max(1, Math.round((new Date(u.dernier_jour) - new Date(u.premier_jour)) / (7 * JOUR))) : null;
   const zone = u.zones.find((z) => L.zones[z.zone])?.zone;
@@ -165,7 +185,7 @@ export function brouillonResiliation(d, langue, signature) {
 }
 
 // Le brouillon et, s'il n'est pas en français, le même rendu en français pour la relecture du fondateur.
-export function brouillonAvecTraduction(d, langue, signature) {
-  const b = brouillonResiliation(d, langue, signature);
-  return langue === 'fr' ? b : { ...b, traduction_fr: brouillonResiliation(d, 'fr', signature) };
+export function brouillonAvecTraduction(d, langue, signature, sorte = 'resiliation') {
+  const b = brouillonResiliation(d, langue, signature, sorte);
+  return langue === 'fr' ? b : { ...b, traduction_fr: brouillonResiliation(d, 'fr', signature, sorte) };
 }

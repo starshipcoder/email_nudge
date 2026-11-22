@@ -33,8 +33,8 @@ async function bandeau() {
   }
 }
 
-const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', libre: 'Message' };
-const ORDRE = ['essai_j2', 'resiliation', 'bug_corrige', 'onboarding', 'gros', 'campagne_relance', 'libre'];
+const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', essai_annule: 'Essai annulé', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', libre: 'Message' };
+const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'onboarding', 'gros', 'campagne_relance', 'libre'];
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
@@ -77,7 +77,7 @@ async function uneAction(id) {
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
       <p class="doux">Le pied « répondez STOP » est ajouté à l’envoi.</p>
-      ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${a.type === 'resiliation' ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
+      ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${['resiliation', 'essai_annule'].includes(a.type) ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
         <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
     ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>

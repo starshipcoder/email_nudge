@@ -39,6 +39,7 @@ export function gardeFouType(type, ab, maintenant) {
     if (new Date(ab.essai_fin).getTime() - maintenant.getTime() < 12 * 3600 * 1000) return 'trop tard';
   }
   if (type === 'resiliation' && !ab.payant_annule) return 'plus résilié';
+  if (type === 'essai_annule' && (ab.essai_en_cours || ab.payant_actif)) return 'a repris son essai ou payé';
   if (type === 'onboarding' && !ab.aucun) return 'déjà abonné';
   return null;
 }
@@ -94,7 +95,7 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
         return { statut: 'bloquee', raison: 'trop tard' };
       }
-      if (['essai_j2', 'resiliation', 'onboarding'].includes(action.type)) {
+      if (['essai_j2', 'resiliation', 'essai_annule', 'onboarding'].includes(action.type)) {
         if (!user.revenuecat_id) return bloquer(action, "pas d'identifiant RevenueCat", true);
         const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t);
         if (raison) return bloquer(action, raison, true);

@@ -127,14 +127,14 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         if (!db) return json(res, 503, { erreur: 'Base absente.' });
         const { id } = await lireCorps(req);
         const a = await db.lire('crm_actions', String(id ?? ''));
-        if (!a || a.type !== 'resiliation' || !['prete', 'reportee'].includes(a.statut)) throw new Error('Seule une action de résiliation encore ouverte se refait.');
+        if (!a || !['resiliation', 'essai_annule'].includes(a.type) || !['prete', 'reportee'].includes(a.statut)) throw new Error('Seule une résiliation ou un essai annulé encore ouvert se refait.');
         const d = await lire(await db.lire('users', a.user_id));
         if (!d) throw new Error('Pas de dossier : identifiant RevenueCat ou base Mixpanel absents.');
         const { signature } = (await db.lire('crm_reglages', 'general')) ?? {};
         if (!signature) throw new Error('Régler la signature d’abord.');
         const u = await db.lire('users', a.user_id);
         const l = langueDePersonne({ locale: u?.locale, pays: d.pays, choix: (await db.lire('crm_fiches', cleUtilisateur(a.user_id)))?.langue });
-        const { sujet, corps, traduction_fr } = brouillonAvecTraduction(d, l.langue, signature);
+        const { sujet, corps, traduction_fr } = brouillonAvecTraduction(d, l.langue, signature, a.type === 'essai_annule' ? 'essai' : 'resiliation');
         await db.ecrire('crm_actions', a.id, { sujet, corps, traduction_fr: traduction_fr ?? null, langue: l.langue, langue_source: l.source,
           a_retraduire: false, variante: 'dossier', resume: resumer(d), maj_le: new Date() });
         return json(res, 200, await db.lire('crm_actions', a.id));

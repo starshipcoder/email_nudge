@@ -130,3 +130,9 @@ test('pied de page dans la langue de la personne', () => {
   assert.match(piedDePage('de', 'moi@exemple.fr'), /antworten Sie einfach STOP/);
   assert.match(piedDePage('nl', 'moi@exemple.fr'), /just reply STOP/);
 });
+
+test('e-mail d’essai annulé : pas à qui a repris son essai ou payé, relu chez RevenueCat', () => {
+  assert.equal(gardeFouType('essai_annule', lireAbonne(ESSAI, MAINTENANT), MAINTENANT), 'a repris son essai ou payé');
+  assert.equal(gardeFouType('essai_annule', lireAbonne(PAYANT_ANNULE, MAINTENANT), MAINTENANT), null);
+  assert.equal(gardeFouType('essai_annule', lireAbonne({ subscriber: { subscriptions: {} } }, MAINTENANT), MAINTENANT), null);
+});

@@ -14,7 +14,7 @@ export function lireFaits(base, depuisMs) {
   const evts = base.all(
     `SELECT p.nom, p.temps, e.proprietes FROM propres p JOIN evenements e ON e.id = p.id
      WHERE p.nom IN ('rc_trial_started_event','rc_trial_cancelled_event','rc_trial_converted_event','rc_expiration_event',
-                     'rc_cancellation_event','rc_uncancellation_event','rc_renewal_event')
+                     'rc_cancellation_event','rc_uncancellation_event','rc_renewal_event','rc_initial_purchase_event')
        AND p.a_exclure = '' AND p.temps >= ? ORDER BY p.temps`, Math.floor(depuisMs / 1000));
   return evts.map((e) => {
     const p = JSON.parse(e.proprietes);
@@ -45,7 +45,12 @@ export function candidats(faits, inscrits, maintenant) {
     .filter((f) => t - f.temps <= FENETRE_RESILIATION)
     .filter((f) => !apres(f, ['rc_uncancellation_event', 'rc_renewal_event']))
     .map((f) => ({ type: 'resiliation', fait: f, user: inscritDe(f) })).filter((c) => c.user);
-  return [...essais, ...resiliations];
+  // L'annulation d'un essai (EW-52) : sauf si la personne a payé ou repris ensuite, quel que soit l'abonnement.
+  const paieEnsuite = (f) => faits.some((g) => g.temps > f.temps && g.ids.some((i) => f.ids.includes(i))
+    && ['rc_initial_purchase_event', 'rc_trial_converted_event', 'rc_uncancellation_event', 'rc_renewal_event'].includes(g.nom));
+  const essaisAnnules = faits.filter((f) => f.nom === 'rc_trial_cancelled_event' && t - f.temps <= FENETRE_RESILIATION && !paieEnsuite(f))
+    .map((f) => ({ type: 'essai_annule', fait: f, user: inscritDe(f) })).filter((c) => c.user);
+  return [...essais, ...resiliations, ...essaisAnnules];
 }
 
 export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null }) {
@@ -62,6 +67,15 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
     return { id: `essai_j2__${cle}__${c.fait.transaction}`, type: 'essai_j2', variante: n > 0 ? 'usage' : 'peu_usage', user_id: c.user.id,
       statut: 'prete', sujet, corps, langue, ...source, ...(traduction_fr ? { traduction_fr } : {}),
       echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
+  }
+  if (c.type === 'essai_annule') {
+    // Sans dossier, un dossier vide : l'ouverture, la question ouverte et la fin, sans fait inventé.
+    const d = dossier ?? { questionnaire: null, usage: { tournees: 0, zones: [], signaux: [], premier_jour: null, dernier_jour: null } };
+    const { sujet, corps, traduction_fr } = brouillonAvecTraduction(d, langue, signature, 'essai');
+    return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
+      ...(traduction_fr ? { traduction_fr } : {}),
+      ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
+      echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
   }
   const { sujet, corps, traduction_fr } = dossier ? brouillonAvecTraduction(dossier, langue, signature) : rendreAvecTraduction('resiliation', langue, () => ({ signature }));
   return { id: `resiliation__${cle}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
