@@ -128,3 +128,15 @@ test('un inscrit non abonné se relie à sa personne par l’id RevenueCat que l
   assert.equal(indexIds(mp, base).get('rcX'), 'pX');
   assert.equal(personneDe({ liens: new Map([['rcX', 'lien']]), ids }, 'rcX'), 'lien');
 });
+
+test('le dossier dit jusqu’où vont ses données, et une base en retard se voit', () => {
+  const s = sources();
+  s.fin = Math.floor(Date.parse('2026-11-21T22:59:00Z') / 1000);
+  const r = resumer(dossierDe({ rc: 'rcA', sources: s, maintenant: T }));
+  assert.deepEqual(r.a_jour, { texte: 'Données jusqu’au 21/11 à 23 h 59.'.replace('’', "'"), en_retard: false });
+  s.fin = sec(-3);
+  const vieux = resumer(dossierDe({ rc: 'rcA', sources: s, maintenant: T }));
+  assert.equal(vieux.a_jour.en_retard, true);
+  assert.match(vieux.a_jour.texte, /la mise à jour de nuit est en retard/);
+  assert.equal(resumer(dossierDe({ rc: 'rcA', sources: sources(), maintenant: T })).a_jour.en_retard, true, 'sans fin connue, en retard');
+});

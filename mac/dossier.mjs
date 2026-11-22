@@ -28,7 +28,9 @@ export async function ouvrirSources(dossier = DOSSIER_MIXPANEL) {
   liensBase?.close();
   const mixpanel = ouvrir('easyway.sqlite');
   return { mixpanel, utilisateurs: ouvrir('easyway-utilisateurs.sqlite'), liens, zones: lireZones(),
-    ids: mixpanel ? indexIds(mixpanel, path.join(dossier, 'easyway.sqlite')) : new Map() };
+    ids: mixpanel ? indexIds(mixpanel, path.join(dossier, 'easyway.sqlite')) : new Map(),
+    // La fin de la base, en secondes : le dossier dit jusqu'à quand vont ses données (INT-EW-68).
+    fin: mixpanel?.prepare('SELECT max(temps) t FROM evenements').get()?.t ?? null };
 }
 
 // L'identifiant RevenueCat d'un inscrit vers sa personne dans Mixpanel, comme liens_revenuecat.py et absents_mixpanel.py :
@@ -112,7 +114,10 @@ export function dossierDe({ rc, sources, maintenant = new Date() }) {
   };
   const pays = mp?.prepare(`SELECT json_extract(e.proprietes, '$.mp_country_code') c, count(*) n FROM propres p JOIN evenements e ON e.id = p.id
     WHERE p.utilisateur = ? AND c IS NOT NULL GROUP BY c ORDER BY n DESC LIMIT 1`).get(personne)?.c ?? null;
-  return { rc, personne, pays, questionnaire, usage, abonnement, calcule_le: date(t) };
+  // Jusqu'où vont les données : la passe de nuit ajoute la veille ; plus d'un jour et demi de retard, elle a cassé.
+  const a_jour = { base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null,
+    en_retard: !sources.fin || t - sources.fin * 1000 > 36 * 3600000 };
+  return { rc, personne, pays, questionnaire, usage, abonnement, a_jour, calcule_le: date(t) };
 }
 
 const depuis = (d, maintenant) => (d.usage.dernier_jour ? Math.round((maintenant - new Date(`${d.usage.dernier_jour}T12:00:00Z`).getTime()) / JOUR) : null);
@@ -141,7 +146,15 @@ export function resumer(d, maintenant = new Date(`${d.calcule_le}T12:00:00Z`)) {
   faits.push(`Activité : ${tendance(u.semaines)}${j !== null ? ` (plus rien depuis ${j} jours)` : ''}.`.replace(' (plus rien depuis 0 jours)', ''));
   if (d.questionnaire) faits.push(`Questionnaire de départ (${jj(d.questionnaire.le)}) : ${RAISONS[d.questionnaire.raison] ?? d.questionnaire.raison}${d.questionnaire.texte ? ` ; il a écrit « ${d.questionnaire.texte} »` : ''}.`);
   else faits.push('Pas de réponse au questionnaire de départ.');
-  return { faits, question: T.fr.questions[cleQuestion(d)], semaines: u.semaines, pays: d.pays };
+  return { faits, question: T.fr.questions[cleQuestion(d)], semaines: u.semaines, pays: d.pays, a_jour: direAJour(d.a_jour) };
+}
+
+const heureParis = (iso) => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  .format(new Date(iso)).replace(' ', ' à ').replace(':', ' h ');
+// Ce que le fondateur lit en tête du dossier.
+export function direAJour(a) {
+  if (!a?.base_jusqu_a) return { texte: 'Base Mixpanel absente : dossier vide.', en_retard: true };
+  return { texte: `Données jusqu'au ${heureParis(a.base_jusqu_a)}${a.en_retard ? ' : la mise à jour de nuit est en retard.' : '.'}`, en_retard: Boolean(a.en_retard) };
 }
 
 export { brouillonResiliation, brouillonAvecTraduction } from './brouillons.mjs';

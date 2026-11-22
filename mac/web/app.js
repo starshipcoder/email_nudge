@@ -58,7 +58,9 @@ function carteDossier(resume) {
   if (!resume) return '<div class="carte"><h2>Dossier</h2><p class="doux">Pas de dossier : pas d’identifiant RevenueCat, ou la base Mixpanel du Mac est absente.</p></div>';
   const max = Math.max(1, ...resume.semaines);
   const barres = resume.semaines.map((n) => `<span class="barre-semaine h${Math.round((n / max) * 4)}" title="${n} jour(s) actif(s)"></span>`).join('');
-  return `<div class="carte"><h2>Dossier</h2><ul>${resume.faits.map((f) => `<li>${echapper(f)}</li>`).join('')}</ul>
+  const aJour = resume.a_jour ?? { texte: 'Date des données inconnue (dossier d’avant le 22/11).', en_retard: true };
+  return `<div class="carte"><h2>Dossier</h2><p class="${aJour.en_retard ? 'message erreur' : 'doux'}">${echapper(aJour.texte)}</p>
+    <ul>${resume.faits.map((f) => `<li>${echapper(f)}</li>`).join('')}</ul>
     <p class="doux">Jours actifs par semaine, 12 dernières semaines :</p><div class="semaines">${barres}</div>
     <p><strong>Question à lui poser :</strong> ${echapper(resume.question)}</p></div>`;
 }
