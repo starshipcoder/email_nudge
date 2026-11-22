@@ -28,9 +28,9 @@ test('par sorte et par langue : envoyés, réponses et désinscriptions dans les
   const messages = [{ sens: 'recu', cle: cleUtilisateur('d@exemple.fr'), le: j(-9) }];
   const lignes = mesurer({ envois, actions, fiches, messages, maintenant: T });
   assert.deepEqual(lignes, [
-    { type: 'essai_annule', langue: 'en', envoyes: 1, reponses_7j: 0, desinscrits_7j: 0, en_attente: 1 },
-    { type: 'essai_annule', langue: 'fr', envoyes: 2, reponses_7j: 1, desinscrits_7j: 1, en_attente: 0 },
-    { type: 'resiliation', langue: 'de', envoyes: 1, reponses_7j: 1, desinscrits_7j: 0, en_attente: 0 },
+    { type: 'essai_annule', langue: 'en', envoyes: 1, reponses_7j: 0, desinscrits_7j: 0, en_attente: 1, rebonds: 0, plaintes: 0 },
+    { type: 'essai_annule', langue: 'fr', envoyes: 2, reponses_7j: 1, desinscrits_7j: 1, en_attente: 0, rebonds: 0, plaintes: 0 },
+    { type: 'resiliation', langue: 'de', envoyes: 1, reponses_7j: 1, desinscrits_7j: 0, en_attente: 0, rebonds: 0, plaintes: 0 },
   ]);
   const s = parSorte(lignes);
   assert.equal(s.find((x) => x.type === 'essai_annule').taux_reponse, 50, 'sur les 2 envois dont les 7 jours sont passés');

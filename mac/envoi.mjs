@@ -111,6 +111,8 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         || (verrou.statut === 'en_cours' && age > 10 * 60000 && age < 23 * 3600000));
       if (verrou && !reprise) return bloquer(action, verrou.statut === 'en_cours' && age >= 23 * 3600000 ? 'envoi coupé il y a plus de 23 h : vérifier dans Resend' : 'déjà envoyé', false);
       if (fiche.desinscrit) return bloquer(action, 'désinscrit', true);
+      // Un rebond chez Resend (livraison.mjs) : l'adresse ne reçoit pas, on ne lui écrit plus.
+      if (fiche.adresse_invalide) return bloquer(action, 'adresse en rebond', true);
       if (!user || !EMAIL.test(user.id)) return bloquer(action, "pas d'adresse", true);
       if (action.type === 'campagne_relance') {
         const membre = await db.lire('crm_membres', `${action.campagne_id}__${cleUtilisateur(action.user_id)}`);

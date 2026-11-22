@@ -215,8 +215,9 @@ async function fiche(id) {
   });
   const etatDesinscription = document.getElementById('etat-desinscription');
   const boutonDesinscrire = document.getElementById('desinscrire');
-  const { desinscrit } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);
-  etatDesinscription.textContent = desinscrit ? 'Désinscrit : plus aucun e-mail ne partira.' : 'Reçoit les e-mails d’Easy Way.';
+  const { desinscrit, plainte, rebond } = await api(`desinscrit?id=${encodeURIComponent(f.id)}`);
+  etatDesinscription.textContent = desinscrit ? `Désinscrit${plainte ? ' après une plainte pour courrier indésirable' : ''} : plus aucun e-mail ne partira.`
+    : rebond ? 'Adresse en rebond : un e-mail n’a pas été reçu, plus aucun ne partira.' : 'Reçoit les e-mails d’Easy Way.';
   boutonDesinscrire.hidden = desinscrit;
   let confirmeDesinscription = false;
   boutonDesinscrire.addEventListener('click', async () => {

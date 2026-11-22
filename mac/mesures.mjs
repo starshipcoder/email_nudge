@@ -23,8 +23,10 @@ export function mesurer({ envois = [], actions = [], fiches = [], messages = [],
     const dans7j = (d) => d && new Date(d).getTime() > le && new Date(d).getTime() - le <= DELAI_REPONSE;
     const repondu = dans7j(fiche.a_repondu_le) || (recus.get(cle) ?? []).some((r) => r > le && r - le <= DELAI_REPONSE);
     const k = `${a.type}|${a.langue ?? '?'}`;
-    const l = lignes.get(k) ?? { type: a.type, langue: a.langue ?? '?', envoyes: 0, reponses_7j: 0, desinscrits_7j: 0, en_attente: 0 };
+    const l = lignes.get(k) ?? { type: a.type, langue: a.langue ?? '?', envoyes: 0, reponses_7j: 0, desinscrits_7j: 0, en_attente: 0, rebonds: 0, plaintes: 0 };
     l.envoyes += 1;
+    if (e.livraison === 'bounced') l.rebonds += 1;
+    if (e.livraison === 'complained') l.plaintes += 1;
     if (repondu) l.reponses_7j += 1;
     if (dans7j(fiche.desinscrit_le)) l.desinscrits_7j += 1;
     if (t - le < DELAI_REPONSE && !repondu) l.en_attente += 1;
@@ -37,8 +39,8 @@ export function mesurer({ envois = [], actions = [], fiches = [], messages = [],
 export function parSorte(lignes) {
   const m = new Map();
   for (const l of lignes) {
-    const s = m.get(l.type) ?? { type: l.type, envoyes: 0, reponses_7j: 0, desinscrits_7j: 0, en_attente: 0 };
-    for (const k of ['envoyes', 'reponses_7j', 'desinscrits_7j', 'en_attente']) s[k] += l[k];
+    const s = m.get(l.type) ?? { type: l.type, envoyes: 0, reponses_7j: 0, desinscrits_7j: 0, en_attente: 0, rebonds: 0, plaintes: 0 };
+    for (const k of ['envoyes', 'reponses_7j', 'desinscrits_7j', 'en_attente', 'rebonds', 'plaintes']) s[k] += l[k];
     m.set(l.type, s);
   }
   return [...m.values()].map((s) => {
@@ -57,6 +59,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   else {
     console.log(`Mesures d'Iris CRM au ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}`);
     if (!sortes.length) console.log('Aucun e-mail réel envoyé.');
-    for (const s of sortes) console.log(`${s.type} : ${s.envoyes} envoyés, ${s.reponses_7j} réponses en 7 jours (${s.taux_reponse ?? '—'} %), ${s.desinscrits_7j} désinscriptions, ${s.en_attente} encore dans leurs 7 jours`);
+    for (const s of sortes) console.log(`${s.type} : ${s.envoyes} envoyés, ${s.reponses_7j} réponses en 7 jours (${s.taux_reponse ?? '—'} %), ${s.desinscrits_7j} désinscriptions, ${s.rebonds} rebonds, ${s.plaintes} plaintes, ${s.en_attente} encore dans leurs 7 jours`);
   }
 }

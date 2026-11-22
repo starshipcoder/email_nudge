@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
-import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
+import { cleTrousseau, porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
 import { faitsDesFiches, lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
@@ -16,6 +16,8 @@ import { brouillonEssaiAnnule } from './brouillons.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
 import { veilleur } from './notif.mjs';
 import { preparerAvis } from './avis.mjs';
+import { relireLivraisons, resendLecture } from './livraison.mjs';
+import { envoyerNtfy } from './notif.mjs';
 import { personneDe } from './dossier.mjs';
 import { cleUtilisateur } from './envoi.mjs';
 import { execFile } from 'node:child_process';
@@ -171,7 +173,11 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const { id, langue } = await lireCorps(req);
         return json(res, 200, { ok: await s.choisirLangue(String(id ?? ''), langue ? String(langue) : null) });
       }
-      if (route === 'GET /api/desinscrit') return json(res, 200, { desinscrit: await s.desinscrit(url.searchParams.get('id') ?? '') });
+      if (route === 'GET /api/desinscrit') {
+        const id = url.searchParams.get('id') ?? '';
+        const f = db ? (await db.lire('crm_fiches', cleUtilisateur(id))) ?? {} : {};
+        return json(res, 200, { desinscrit: await s.desinscrit(id), plainte: f.raison_desinscription === 'plainte', rebond: Boolean(f.adresse_invalide) });
+      }
       if (route === 'POST /api/desinscrire') {
         const { id } = await lireCorps(req);
         return json(res, 200, { desinscrit: await s.desinscrire(id) });
@@ -279,6 +285,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (r.erreurs) problemes.push(`${r.erreurs} action(s) non créée(s)`);
       if (r.raison) problemes.push(r.raison);
       if (r.base_en_retard) problemes.push('base Mixpanel en retard');
+      // Les retours de livraison (INT-EW-76) : rebonds et plaintes, relus chez Resend ; une plainte sonne tout de suite.
+      try {
+        const l = await relireLivraisons({ db, lireEmail: resendLecture({ cle: () => cleTrousseau('easyway-crm-resend') }) });
+        r.livraison = { lus: l.lus, rebonds: l.rebonds.length, plaintes: l.plaintes.length };
+        if (l.erreur) problemes.push(`retours de Resend illisibles (${l.erreur})`);
+        const { notif_telephone: actif = true } = (await db.lire('crm_reglages', 'general')) ?? {};
+        if (actif !== false && l.plaintes.length) await envoyerNtfy({ titre: 'Iris CRM : plainte', texte: `${l.plaintes.length} plainte(s) pour courrier indésirable : la personne est désinscrite. À lire dans le journal.`, priorite: 'high', tags: 'rotating_light' }).catch(() => {});
+        if (actif !== false && l.rebonds.length) await envoyerNtfy({ titre: 'Iris CRM : rebond', texte: `${l.rebonds.length} e-mail(s) rebondi(s) : l'adresse ne reçoit pas, plus d'envoi.`, tags: 'leftwards_arrow_with_hook' }).catch(() => {});
+      } catch (e) { problemes.push(`retours de Resend : ${e.message}`); }
       // La demande d'avis (EW-56) : revenue dans l'app depuis le « bug corrigé », d'après la base Mixpanel du Mac.
       try {
         const sources = await ouvrirSources();
@@ -310,6 +325,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Iris CRM : http://localhost:${port}`);
   });
+  // La clé Resend sait-elle lire l'état des e-mails (INT-EW-76) ? Une lecture de la liste, qui ne crée rien ; le code seul au journal.
+  cleTrousseau('easyway-crm-resend').then((cle) => fetch('https://api.resend.com/emails?limit=1', { headers: { Authorization: `Bearer ${cle}` } }))
+    .then(async (r) => console.log('resend lecture', r.status, r.ok ? '' : (await r.text()).slice(0, 120))).catch((e) => console.error('resend lecture', e.message));
   // La liste des inscrits se charge d'avance : le premier clic sur Utilisateurs n'attend pas.
   s.utilisateurs().catch((e) => console.error('inscrits', e.message));
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
