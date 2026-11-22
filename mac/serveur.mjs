@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clientFirestore } from './firestore.mjs';
 import { filtrer, suivi } from './suivi.mjs';
-import { diagnosticRevenueCat, porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
+import { porteEnvoi, resendReel, revenueCatReel } from './envoi.mjs';
 import { faitsDesFiches, lireFaits, preparer, tourneesPar } from './preparer.mjs';
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
@@ -295,7 +295,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Iris CRM : http://localhost:${port}`);
   });
-  diagnosticRevenueCat().then((d) => console.log('revenuecat', JSON.stringify(d))).catch(() => {});
   // La liste des inscrits se charge d'avance : le premier clic sur Utilisateurs n'attend pas.
   s.utilisateurs().catch((e) => console.error('inscrits', e.message));
   // Une passe au démarrage puis toutes les heures ; à 9 h, une notification du Mac avec le nombre d'actions.
