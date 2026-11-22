@@ -62,7 +62,7 @@ test('une traduction corrigée bloque l’envoi jusqu’à ce que le texte soit 
   await s.modifierTexte('x', 'Hallo', 'Guten Tag, anderer Text');
   assert.equal((await porte.envoyerAction('x')).statut, 'envoye');
   assert.match(envoyes[0].text, /^Guten Tag, anderer Text/);
-  assert.match(envoyes[0].text, /antworten Sie einfach STOP/);
+  assert.equal(envoyes[0].text, 'Guten Tag, anderer Text', 'tel quel, sans pied STOP');
   assert.doesNotMatch(envoyes[0].text, /Bonjour/);
   assert.equal(db.donnees.crm_fiches.get(cleUtilisateur('b@exemple.de')).user_id, 'b@exemple.de');
 });

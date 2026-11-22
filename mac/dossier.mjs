@@ -117,7 +117,8 @@ export function dossierDe({ rc, sources, maintenant = new Date() }) {
   // Jusqu'où vont les données : la passe de nuit ajoute la veille ; plus d'un jour et demi de retard, elle a cassé.
   const a_jour = { base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null,
     en_retard: !sources.fin || t - sources.fin * 1000 > 36 * 3600000 };
-  return { rc, personne, pays, questionnaire, usage, abonnement, a_jour, calcule_le: date(t) };
+  // lie : la personne est retrouvée dans Mixpanel (sinon son usage est vide parce qu'inconnu, pas parce qu'elle n'a rien fait).
+  return { rc, personne, lie: personne !== rc || jours.length > 0, pays, questionnaire, usage, abonnement, a_jour, calcule_le: date(t) };
 }
 
 const depuis = (d, maintenant) => (d.usage.dernier_jour ? Math.round((maintenant - new Date(`${d.usage.dernier_jour}T12:00:00Z`).getTime()) / JOUR) : null);

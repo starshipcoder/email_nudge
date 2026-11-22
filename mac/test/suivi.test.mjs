@@ -171,3 +171,21 @@ test('le fil réunit la page, Gmail et WhatsApp ; « A répondu » arrête les r
   assert.equal(db.donnees.crm_membres.get('c1__k').statut, 'repondu');
   assert.equal(db.donnees.crm_actions.get('campagne_relance__x').statut, 'ignoree');
 });
+
+test('les réponses reçues non lues remontent ; « Lu » les retire ; une réponse WhatsApp notée est déjà lue (audit du 22/11)', async () => {
+  const db = baseEnMemoire({ users: [{ id: 'a@exemple.fr' }], crm_messages: [
+    { id: 'g1', user_id: 'a@exemple.fr', sens: 'recu', source: 'gmail', le: '2026-11-22T09:00:00Z', extrait: 'Merci' },
+    { id: 'g2', user_id: 'a@exemple.fr', sens: 'envoye', source: 'gmail', le: '2026-11-21T09:00:00Z' }] });
+  const s = suivi(db);
+  assert.deepEqual((await s.reponses()).map((m) => m.id), ['g1']);
+  await s.reponseLue('g1');
+  assert.equal((await s.reponses()).length, 0);
+  await s.noterMessage('a@exemple.fr', { sens: 'recu', source: 'whatsapp', extrait: 'ok' });
+  assert.equal((await s.reponses()).length, 0);
+});
+
+test('la notification de 9 h dit les réponses et ce qui ne va pas, sans guillemet', async () => {
+  const { texteNotification } = await import('../serveur.mjs');
+  assert.equal(texteNotification(0), 'Aucune action ce matin.');
+  assert.equal(texteNotification(2, 1, 'la passe a échoué : "x"'), '2 actions restent à faire. 1 réponse à lire. Attention : la passe a échoué : x.');
+});

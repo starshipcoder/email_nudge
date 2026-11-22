@@ -25,8 +25,12 @@ async function bandeau() {
   try {
     const r = await api('reglages');
     const [classe, texte] = r.envois_coupes ? ['coupes', 'Envois coupés'] : r.a_blanc ? ['blanc', 'À blanc : rien ne part vraiment'] : ['actifs', 'Envois actifs'];
-    b.className = `bandeau ${classe}`;
-    b.textContent = texte;
+    // La santé de la dernière passe (audit du 22/11) : une passe en échec ou trop ancienne se voit ici.
+    const sante = await api('sante').catch(() => ({}));
+    const vieille = !sante.le || Date.now() - new Date(sante.le).getTime() > 2 * 3600000;
+    const souci = vieille ? 'pas de passe depuis plus de 2 h' : sante.ok === false ? (sante.problemes ?? []).join(', ') : '';
+    b.className = `bandeau ${souci ? 'coupes' : classe}`;
+    b.textContent = `${texte} · ${souci ? `Attention : ${souci}` : `dernière passe ${dateHeure(sante.le)}`}`;
   } catch {
     b.className = 'bandeau coupes';
     b.textContent = 'Base injoignable';
@@ -38,14 +42,18 @@ const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'onboar
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
-  const { actions } = await api('aujourdhui');
+  const { actions, reponses = [] } = await api('aujourdhui');
   const groupes = ORDRE.map((type) => [type, actions.filter((a) => a.type === type)]).filter(([, l]) => l.length);
   vue.innerHTML = `<div class="outils"><h1><span class="grand">${actions.length}</span> action${actions.length > 1 ? 's' : ''} ${actions.length > 1 ? 'restent' : 'reste'}</h1>
       <button id="preparer">Préparer maintenant</button><span class="message" id="msg-preparer"></span></div>
+    ${reponses.length ? `<div class="carte"><h2>Réponses à lire (${reponses.length})</h2><table><tbody>
+      ${reponses.map((m) => `<tr><td><a href="#fiche-${encodeURIComponent(m.user_id ?? '')}">${echapper(m.user_id ?? '')}</a></td><td>${echapper(m.extrait)}</td><td>${dateHeure(m.le)}</td>
+        <td><button data-lu="${echapper(m.id)}">Lu</button></td></tr>`).join('')}</tbody></table></div>` : ''}
     ${groupes.length ? groupes.map(([type, liste]) => `<div class="carte"><h2>${TYPES[type] ?? type} (${liste.length})</h2><table><tbody>
       ${liste.map((a) => `<tr data-action="${echapper(a.id)}"><td>${echapper(a.sujet)}</td><td>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</td><td>${resteAvant(a.echeance)}</td></tr>`).join('')}
       </tbody></table></div>`).join('') : '<div class="carte"><p class="doux">Rien à faire pour l’instant. Les rappels de fin d’essai et les e-mails aux résiliés arrivent ici à chaque passe, toutes les heures.</p></div>'}`;
   vue.querySelectorAll('[data-action]').forEach((tr) => tr.addEventListener('click', () => { location.hash = `action-${encodeURIComponent(tr.dataset.action)}`; }));
+  vue.querySelectorAll('[data-lu]').forEach((b) => b.addEventListener('click', async () => { await api('reponse-lue', { id: b.dataset.lu }); aujourdhui(); }));
   document.getElementById('preparer').addEventListener('click', async () => {
     const msg = document.getElementById('msg-preparer');
     try { const r = await api('preparer', {}); msg.textContent = r.raison ? r.raison : `${r.creees} nouvelle(s), ${r.expirees} expirée(s)`; if (r.creees || r.expirees) setTimeout(aujourdhui, 800); }
@@ -72,17 +80,19 @@ async function uneAction(id) {
     <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span></h1>
     <div class="carte"><dl class="grille"><dt>Pour</dt><dd><a href="#fiche-${encodeURIComponent(a.user_id)}">${echapper(a.user_id)}</a></dd>
       <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(NOMS_LANGUES[a.langue] ?? a.langue ?? '')}${a.langue_source ? ` (${echapper(SOURCES_LANGUE[a.langue_source] ?? a.langue_source)}${a.pays ? ` : ${echapper(a.pays)}` : ''})` : ''}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
+    ${a.a_verifier ? `<div class="carte"><p class="message erreur">À vérifier avant l’envoi : ${echapper(a.a_verifier)}.</p>${ouverte ? '<div class="outils"><button id="verifie">C’est vérifié, le texte peut partir</button></div>' : ''}</div>` : ''}
+    ${a.derniere_erreur ? `<div class="carte"><p class="message erreur">Le dernier envoi a échoué, rien n’est parti : ${echapper(a.derniere_erreur)}. Tu peux réessayer.</p></div>` : ''}
     <div id="dossier-action"></div>
     <div class="carte"><h2>Le texte</h2>
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
-      <p class="doux">Le pied « répondez STOP » est ajouté à l’envoi.</p>
+      <p class="doux">Le texte part tel quel, sans pied ajouté.</p>
       ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${['resiliation', 'essai_annule'].includes(a.type) ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
         <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
     ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>
       ${a.a_retraduire ? '<p class="message erreur">La traduction a été corrigée : refais le texte ci-dessus dans sa langue, puis « Enregistrer le texte ». L’envoi est bloqué d’ici là.</p>' : ''}
-      ${a.a_verifier ? `<p class="message erreur">À vérifier : ${echapper(a.a_verifier)}.</p>` : ''}
+
       <input type="text" id="sujet-fr" value="${echapper(a.traduction_fr.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps-fr" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.traduction_fr.corps)}</textarea>
       <p class="doux">Seul le texte du dessus part. Si tu corriges cette traduction, l’envoi attend que le texte du dessus soit refait.</p>
@@ -92,6 +102,9 @@ async function uneAction(id) {
   else api(`dossier?id=${encodeURIComponent(a.user_id)}`).then((r) => { zoneDossier.innerHTML = carteDossier(r.resume); }).catch(() => {});
   if (!ouverte) return;
   const msg = document.getElementById('msg-action');
+  document.getElementById('verifie')?.addEventListener('click', async () => {
+    try { await api('action', { id: a.id, op: 'verifie' }); await uneAction(a.id); } catch (e) { msg.className = 'message erreur'; msg.textContent = e.message; }
+  });
   document.getElementById('rebrouillon')?.addEventListener('click', async () => {
     try { await api('rebrouillon', { id: a.id }); await uneAction(a.id); document.getElementById('msg-action').textContent = 'Brouillon refait depuis le dossier : relis-le avant d’envoyer.'; }
     catch (e) { dire(e.message, true); }
@@ -288,7 +301,7 @@ function formulaireCampagne(c) {
     <dt>Relance après</dt><dd><input type="text" data-champ="relance_apres_jours" value="${c.relance_apres_jours ?? ''}" class="petit"> jours (vide : pas de relance ; 3 à 30)</dd>
     <dt>Sujet de relance</dt><dd><input type="text" data-champ="relance_sujet" value="${echapper(c.relance_sujet ?? '')}" class="large"></dd>
     <dt>Texte de relance</dt><dd><textarea data-champ="relance_corps" rows="7">${echapper(c.relance_corps ?? '')}</textarea></dd>
-  </dl><p class="doux">{{signature}} prend la signature des réglages. Le pied « répondez STOP » est ajouté à l’envoi.</p>
+  </dl><p class="doux">{{signature}} prend la signature des réglages.</p>
   <div class="outils"><button id="enregistrer">Enregistrer</button><button id="apercu">Voir qui est concerné</button>
     <button id="preparer-campagne" class="choisi">Préparer</button><button id="clore" class="danger">Abandonner</button></div>
   <p class="message" id="msg-campagne"></p></div>`;

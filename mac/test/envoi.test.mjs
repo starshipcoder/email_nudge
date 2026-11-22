@@ -25,14 +25,15 @@ function monter({ reglages = REGLAGES, user = {}, action = {}, fiche = null, abo
   return { db, porte, envoyes };
 }
 
-test('un envoi réel part une fois, avec le pied, la désinscription et la clé d’idempotence', async () => {
+test('un envoi réel part une fois, tel quel, sans pied STOP, avec la clé d’idempotence', async () => {
   const { db, porte, envoyes } = monter();
   assert.deepEqual(await porte.envoyerAction('essai_j2__a'), { statut: 'envoye' });
   assert.equal(envoyes.length, 1);
   assert.equal(envoyes[0].cle, 'essai_j2__a');
   assert.equal(envoyes[0].message.to, 'ana@exemple.fr');
-  assert.match(envoyes[0].message.text, /répondez simplement STOP/);
-  assert.equal(envoyes[0].message.headers['List-Unsubscribe'], '<mailto:moi@exemple.fr?subject=STOP>');
+  // Fondateur, 22/11 : « on ne met pas le STOP dans les mails ».
+  assert.equal(envoyes[0].message.text, 'Bonjour');
+  assert.equal(envoyes[0].message.headers, undefined);
   assert.equal(db.donnees.crm_envois.get('essai_j2__a').statut, 'envoye');
   assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'envoyee');
   // Deuxième fois : refusé.
@@ -118,17 +119,65 @@ test('m’envoyer un essai : le texte part à l’adresse de test, l’action ne
   assert.equal(db.donnees.crm_envois?.size ?? 0, 0);
 });
 
-test('une erreur de Resend est notée, l’action passe en erreur', async () => {
-  const { db, porte } = monter({ resend: async () => { throw new Error('Resend 422 : domaine'); } });
+test('une erreur de Resend est notée, l’action reste prête, la personne n’est pas retenue 72 h, et un nouvel essai part', async () => {
+  let echoue = true;
+  const envoyes = [];
+  const { db, porte } = monter({ resend: async (m, cle) => { if (echoue) throw new Error('Resend 429 : trop vite'); envoyes.push({ m, cle }); return { id: 'r2' }; } });
   assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'erreur');
   assert.equal(db.donnees.crm_envois.get('essai_j2__a').statut, 'erreur');
-  assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'erreur');
+  assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'prete');
+  assert.match(db.donnees.crm_actions.get('essai_j2__a').derniere_erreur, /429/);
+  assert.equal(db.donnees.crm_fiches.get(cleUtilisateur('ana@exemple.fr')).dernier_envoi_le, null);
+  echoue = false;
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  assert.equal(envoyes[0].cle, 'essai_j2__a', 'la même clé d’idempotence');
 });
 
-test('pied de page dans la langue de la personne', () => {
-  assert.match(piedDePage('fr', 'moi@exemple.fr'), /répondez simplement STOP/);
-  assert.match(piedDePage('de', 'moi@exemple.fr'), /antworten Sie einfach STOP/);
-  assert.match(piedDePage('nl', 'moi@exemple.fr'), /just reply STOP/);
+test('un envoi coupé en route se reprend après 10 minutes, pas avant, et pas après 23 h', async () => {
+  const { db, porte, envoyes } = monter();
+  await db.creer('crm_envois', 'essai_j2__a', { statut: 'en_cours', le: new Date(MAINTENANT.getTime() - 5 * 60000) });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).raison, 'déjà envoyé');
+  await db.ecrire('crm_envois', 'essai_j2__a', { le: new Date(MAINTENANT.getTime() - 24 * 3600000) });
+  assert.match((await porte.envoyerAction('essai_j2__a')).raison, /plus de 23 h/);
+  await db.ecrire('crm_envois', 'essai_j2__a', { le: new Date(MAINTENANT.getTime() - 30 * 60000) });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  assert.equal(envoyes.length, 1);
+});
+
+test('à blanc : l’action reste prête, sans écart de 72 h, et part pour de vrai ensuite', async () => {
+  const { db, porte, envoyes } = monter({ reglages: { ...REGLAGES, a_blanc: true } });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'a_blanc');
+  assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'prete');
+  assert.equal(db.donnees.crm_fiches.get(cleUtilisateur('ana@exemple.fr'))?.dernier_envoi_le, undefined);
+  await db.ecrire('crm_reglages', 'general', { a_blanc: false });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  assert.equal(envoyes.length, 1);
+});
+
+test('un point à vérifier bloque l’envoi jusqu’à « C’est vérifié »', async () => {
+  const { db, porte, envoyes } = monter({ action: { a_verifier: 'le titre public est en français' } });
+  assert.match((await porte.envoyerAction('essai_j2__a')).raison, /^à vérifier/);
+  const { suivi } = await import('../suivi.mjs');
+  await suivi(db, { maintenant: () => MAINTENANT }).verifier('essai_j2__a');
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  assert.equal(envoyes.length, 1);
+});
+
+test('une résiliation déjà échue reste une résiliation ; le plafond compte les envois en route, pas ceux à blanc', async () => {
+  const echu = { subscriber: { subscriptions: { p: { period_type: 'normal', expires_date: jours(-1), unsubscribe_detected_at: jours(-5) } } } };
+  assert.equal(gardeFouType('resiliation', lireAbonne(echu, MAINTENANT), MAINTENANT), null);
+  const rembourse = { subscriber: { subscriptions: { p: { period_type: 'normal', expires_date: jours(-1), unsubscribe_detected_at: jours(-5), refunded_at: jours(-4) } } } };
+  assert.equal(gardeFouType('resiliation', lireAbonne(rembourse, MAINTENANT), MAINTENANT), 'plus résilié');
+  const { db, porte } = monter({ reglages: { ...REGLAGES, plafond_jour: 1 } });
+  await db.creer('crm_envois', 'blanc', { statut: 'a_blanc', le: MAINTENANT });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  const deux = monter({ reglages: { ...REGLAGES, plafond_jour: 1 } });
+  await deux.db.creer('crm_envois', 'route', { statut: 'en_cours', le: MAINTENANT });
+  assert.equal((await deux.porte.envoyerAction('essai_j2__a')).raison, 'plafond du jour');
+});
+
+test('plus de pied ajouté aux e-mails', () => {
+  assert.equal(piedDePage('fr', 'moi@exemple.fr'), '');
 });
 
 test('e-mail d’essai annulé : pas à qui a repris son essai ou payé, relu chez RevenueCat', () => {

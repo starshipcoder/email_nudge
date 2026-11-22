@@ -4,7 +4,6 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PIED, langueDe } from './langues.mjs';
 
 const run = promisify(execFile);
 export const PLAFOND_JOUR = 90; // Resend gratuit : 100 par jour
@@ -13,8 +12,10 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export const cleUtilisateur = (userId) => createHash('sha256').update(String(userId)).digest('hex').slice(0, 24);
 
-export function piedDePage(langue, adresseReponse) {
-  return `\n\n--\n${PIED[langueDe(langue)](adresseReponse)}`;
+// Plus de pied « répondez STOP » (fondateur, 22/11 : « on ne met pas le STOP dans les mails »). La désinscription
+// reste possible depuis la fiche, et une réponse qui la demande se traite à la main.
+export function piedDePage() {
+  return '';
 }
 
 // Ce que RevenueCat dit de l'abonnement, réduit à ce qui décide un envoi.
@@ -25,6 +26,8 @@ export function lireAbonne(abonne, maintenant) {
   const payant = actifs.find((s) => s.period_type !== 'trial');
   return {
     aucun: subs.length === 0,
+    // Un abonnement payé arrêté par la personne et déjà échu : toujours un résilié (l'e-mail garde ses 7 jours).
+    payant_parti: !payant && subs.some((s) => s.period_type !== 'trial' && s.unsubscribe_detected_at && !s.refunded_at),
     essai_en_cours: Boolean(essai && !essai.unsubscribe_detected_at),
     essai_fin: essai?.expires_date ?? null,
     payant_annule: Boolean(payant && payant.unsubscribe_detected_at),
@@ -33,14 +36,17 @@ export function lireAbonne(abonne, maintenant) {
 }
 
 // Le garde-fou propre à chaque type d'envoi, d'après l'abonnement relu juste avant.
-export function gardeFouType(type, ab, maintenant) {
+export function gardeFouType(type, ab, maintenant, filtre = null) {
   if (type === 'essai_j2') {
     if (!ab.essai_en_cours || ab.payant_actif) return 'déjà payé ou annulé';
     if (new Date(ab.essai_fin).getTime() - maintenant.getTime() < 12 * 3600 * 1000) return 'trop tard';
   }
-  if (type === 'resiliation' && !ab.payant_annule) return 'plus résilié';
+  if (type === 'resiliation' && !ab.payant_annule && !ab.payant_parti) return 'plus résilié';
   if (type === 'essai_annule' && (ab.essai_en_cours || ab.payant_actif)) return 'a repris son essai ou payé';
   if (type === 'onboarding' && !ab.aucun) return 'déjà abonné';
+  // Une campagne visait un public à sa préparation : il est relu avant chaque envoi (audit du 22/11).
+  if (['campagne', 'campagne_relance'].includes(type) && filtre === 'payants' && !ab.payant_actif) return 'plus payant';
+  if (['campagne', 'campagne_relance'].includes(type) && filtre === 'essais' && !ab.essai_en_cours) return 'plus en essai';
   return null;
 }
 
@@ -82,7 +88,15 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
       if (action.statut !== 'prete') return bloquer(action, 'déjà traitée', false);
       // La traduction française a été corrigée : le texte dans la langue de la personne doit être refait d'abord.
       if (action.a_retraduire) return { statut: 'bloquee', raison: 'traduction à refaire' };
-      if (await db.lire('crm_envois', actionId)) return bloquer(action, 'déjà envoyé', false);
+      // Un point à vérifier (titre à traduire, usage inconnu) : le fondateur le lève en corrigeant le texte ou par « C'est vérifié ».
+      if (action.a_verifier) return { statut: 'bloquee', raison: `à vérifier : ${action.a_verifier}` };
+      // Le verrou d'envoi. Après une erreur de Resend, ou un envoi coupé en route depuis plus de 10 minutes (moins de
+      // 23 h : la clé d'idempotence de Resend dure 24 h, un second essai ne fait pas de double), on peut réessayer.
+      const verrou = await db.lire('crm_envois', actionId);
+      const age = verrou?.le ? t.getTime() - new Date(verrou.le).getTime() : 0;
+      const reprise = Boolean(verrou) && (verrou.statut === 'erreur' || verrou.statut === 'a_blanc'
+        || (verrou.statut === 'en_cours' && age > 10 * 60000 && age < 23 * 3600000));
+      if (verrou && !reprise) return bloquer(action, verrou.statut === 'en_cours' && age >= 23 * 3600000 ? 'envoi coupé il y a plus de 23 h : vérifier dans Resend' : 'déjà envoyé', false);
       if (fiche.desinscrit) return bloquer(action, 'désinscrit', true);
       if (!user || !EMAIL.test(user.id)) return bloquer(action, "pas d'adresse", true);
       if (action.type === 'campagne_relance') {
@@ -95,9 +109,10 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
         return { statut: 'bloquee', raison: 'trop tard' };
       }
-      if (['essai_j2', 'resiliation', 'essai_annule', 'onboarding'].includes(action.type)) {
+      const campagneCiblee = ['campagne', 'campagne_relance'].includes(action.type) && ['payants', 'essais'].includes(action.filtre);
+      if (['essai_j2', 'resiliation', 'essai_annule', 'onboarding'].includes(action.type) || campagneCiblee) {
         if (!user.revenuecat_id) return bloquer(action, "pas d'identifiant RevenueCat", true);
-        const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t);
+        const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t, action.filtre ?? null);
         if (raison) return bloquer(action, raison, true);
       }
       // « Ton bug est corrigé » répond à sa demande : l'écart de 72 h ne le retient pas.
@@ -105,33 +120,39 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         return { statut: 'bloquee', raison: 'trop tôt' };
       }
       const depuis = debutJourParis(t);
-      const duJour = (await db.lister('crm_envois')).filter((e) => ['envoye', 'a_blanc'].includes(e.statut) && new Date(e.le) >= depuis);
+      // Le plafond compte les vrais envois et ceux en route, pas les essais à blanc.
+      const duJour = (await db.lister('crm_envois')).filter((e) => ['envoye', 'en_cours'].includes(e.statut) && new Date(e.le) >= depuis);
       if (duJour.length >= (reglages.plafond_jour ?? PLAFOND_JOUR)) return { statut: 'bloquee', raison: 'plafond du jour' };
 
       const test = Boolean(user.is_test_user || fiche.test);
       const destinataire = test ? reglages.adresse_test : user.id;
-      try {
-        await db.creer('crm_envois', actionId, { le: t, statut: 'en_cours', type: action.type, rc: user.revenuecat_id ?? null,
-          destinataire_reel: test ? 'adresse_test' : 'utilisateur', sujet: action.sujet, texte });
-      } catch {
-        return { statut: 'bloquee', raison: 'déjà envoyé' };
-      }
-      await db.ecrire('crm_fiches', cleUtilisateur(action.user_id), { user_id: action.user_id, dernier_envoi_le: t, maj_le: t });
-
+      const champsVerrou = { le: t, statut: 'en_cours', type: action.type, rc: user.revenuecat_id ?? null,
+        destinataire_reel: test ? 'adresse_test' : 'utilisateur', sujet: action.sujet, texte };
       if (reglages.a_blanc !== false) {
-        await db.ecrire('crm_envois', actionId, { statut: 'a_blanc' });
-        await db.ecrire('crm_actions', actionId, { statut: 'a_blanc', maj_le: t });
+        // À blanc : noté, mais l'action reste prête et rien ne compte comme envoyé (ni l'écart de 72 h, ni une relance).
+        await db.ecrire('crm_envois', actionId, { ...champsVerrou, statut: 'a_blanc' });
+        await db.ecrire('crm_actions', actionId, { a_blanc_le: t, maj_le: t });
         return { statut: 'a_blanc' };
       }
+      if (reprise) await db.ecrire('crm_envois', actionId, { ...champsVerrou, reprise_de: verrou.statut });
+      else {
+        try { await db.creer('crm_envois', actionId, champsVerrou); } catch (erreur) {
+          if (/existe déjà/.test(String(erreur?.message))) return { statut: 'bloquee', raison: 'déjà envoyé' };
+          return { statut: 'erreur', raison: `verrou impossible : ${erreur?.message}` };
+        }
+      }
+      const envoiAvant = fiche.dernier_envoi_le ?? null;
+      await db.ecrire('crm_fiches', cleUtilisateur(action.user_id), { user_id: action.user_id, dernier_envoi_le: t, maj_le: t });
       try {
-        const { id } = await envoyerResend({ from: reglages.expediteur, to: destinataire, reply_to: reglages.repondre_a, subject: action.sujet, text: texte,
-          headers: { 'List-Unsubscribe': `<mailto:${reglages.repondre_a}?subject=STOP>` } }, actionId);
+        const { id } = await envoyerResend({ from: reglages.expediteur, to: destinataire, reply_to: reglages.repondre_a, subject: action.sujet, text: texte }, actionId);
         await db.ecrire('crm_envois', actionId, { statut: 'envoye', resend_id: id ?? null });
         await db.ecrire('crm_actions', actionId, { statut: 'envoyee', maj_le: t });
         return { statut: 'envoye' };
       } catch (erreur) {
+        // Rien n'est parti : l'action reste prête pour un nouvel essai, et la personne n'est pas retenue 72 h.
         await db.ecrire('crm_envois', actionId, { statut: 'erreur', erreur: String(erreur.message).slice(0, 300) });
-        await db.ecrire('crm_actions', actionId, { statut: 'erreur', maj_le: t });
+        await db.ecrire('crm_actions', actionId, { derniere_erreur: String(erreur.message).slice(0, 300), maj_le: t });
+        await db.ecrire('crm_fiches', cleUtilisateur(action.user_id), { dernier_envoi_le: envoiAvant, maj_le: t });
         return { statut: 'erreur', raison: erreur.message };
       }
     },

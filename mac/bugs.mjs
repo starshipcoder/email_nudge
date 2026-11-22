@@ -95,7 +95,7 @@ export function bugs(db, { maintenant = () => new Date(), lireRetours, lireVersi
       if (!signature) return { creees: 0, raison: 'signature à régler', versions };
       const fiches = new Map((await db.lister('crm_fiches')).map((f) => [f.id, f]));
       const users = new Map((await db.lister('users', ['revenuecat_id', 'locale'])).map((u) => [u.id, u]));
-      let creees = 0;
+      let creees = 0; let erreurs = 0;
       for (const b of await db.lister('crm_bugs')) {
         if (b.action_id || !b.user_id || !users.has(b.user_id) || fiches.get(cleUtilisateur(b.user_id))?.desinscrit) continue;
         const enVente = (b.plateforme ? [b.plateforme] : ['ios', 'android']).filter((p) => versions[p]?.version && compareVersions(versions[p].version, b.version_corrigee) >= 0);
@@ -112,10 +112,13 @@ export function bugs(db, { maintenant = () => new Date(), lireRetours, lireVersi
             ...(traduction_fr ? { traduction_fr, a_verifier: 'le titre public est en français : le traduire dans le texte' } : {}),
             bug: b.id, bug_ew: b.bug_ew, echeance: new Date(t.getTime() + 30 * JOUR), cree_le: t });
           creees += 1;
-        } catch { /* même personne, même version : une seule action */ }
+        } catch (erreur) {
+          // Même personne, même version : une seule action. Toute autre erreur laisse le bug à refaire à la passe suivante.
+          if (!/existe déjà/.test(String(erreur?.message))) { erreurs += 1; continue; }
+        }
         await db.ecrire('crm_bugs', b.id, { action_id: id, maj_le: t });
       }
-      return { creees, versions };
+      return { creees, erreurs, versions };
     },
   };
 }

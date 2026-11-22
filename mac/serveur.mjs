@@ -34,7 +34,10 @@ export async function passeDuMac(db) {
     const sources = await ouvrirSources();
     try {
       const dossierPour = (rc) => (rc ? dossierDe({ rc, sources, maintenant: new Date() }) : null);
-      return await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour });
+      // Une base de plus d'un jour et demi : les textes n'affirment rien sur l'usage sans relecture (audit du 22/11).
+      const enRetard = !sources.fin || Date.now() - sources.fin * 1000 > 36 * 3600000;
+      const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour, enRetard });
+      return { ...r, base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null, base_en_retard: enRetard };
     } finally { fermerSources(sources); }
   } finally {
     base.close();
@@ -42,9 +45,17 @@ export async function passeDuMac(db) {
   }
 }
 
-export function notifier(n) {
-  const texte = n === 0 ? 'Aucune action ce matin.' : `${n} action${n > 1 ? 's' : ''} ${n > 1 ? 'restent' : 'reste'} à faire.`;
-  execFile('osascript', ['-e', `display notification "${texte}" with title "Iris CRM" sound name "default"`]);
+// Le texte de 9 h : les actions, les réponses à lire, et ce qui ne va pas (une passe en échec ne se tait plus).
+export function texteNotification(n, reponses = 0, alerte = '') {
+  const parts = [n === 0 ? 'Aucune action ce matin.' : `${n} action${n > 1 ? 's' : ''} ${n > 1 ? 'restent' : 'reste'} à faire.`];
+  if (reponses) parts.push(`${reponses} réponse${reponses > 1 ? 's' : ''} à lire.`);
+  if (alerte) parts.push(`Attention : ${alerte}.`);
+  // Ni guillemet ni barre oblique inverse : le texte passe dans une chaîne AppleScript.
+  return parts.join(' ').replace(/["\\]/g, '').slice(0, 240);
+}
+
+export function notifier(n, reponses = 0, alerte = '') {
+  execFile('osascript', ['-e', `display notification "${texteNotification(n, reponses, alerte)}" with title "Iris CRM" sound name "default"`]);
 }
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
@@ -164,7 +175,9 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         return json(res, 200, await s.changerReglage(cle, valeur));
       }
       if (route === 'GET /api/journal') return json(res, 200, { lignes: await s.journal() });
-      if (route === 'GET /api/aujourdhui') return json(res, 200, { actions: await s.aujourdhui() });
+      if (route === 'GET /api/aujourdhui') return json(res, 200, { actions: await s.aujourdhui(), reponses: await s.reponses() });
+      if (route === 'POST /api/reponse-lue') return json(res, 200, { ok: await s.reponseLue((await lireCorps(req)).id) });
+      if (route === 'GET /api/sante') return json(res, 200, db ? (await db.lire('crm_sante', 'passe')) ?? {} : {});
       if (route === 'GET /api/action') {
         const a = await s.action(url.searchParams.get('id') ?? '');
         return a ? json(res, 200, a) : json(res, 404, { erreur: 'Action introuvable.' });
@@ -173,6 +186,7 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const { id, op, sujet, corps } = await lireCorps(req);
         if (op === 'texte') return json(res, 200, await s.modifierTexte(id, sujet, corps));
         if (op === 'traduction') return json(res, 200, await s.modifierTraduction(id, sujet, corps));
+        if (op === 'verifie') return json(res, 200, await s.verifier(id));
         return json(res, 200, await s.traiterAction(id, op));
       }
       if (route.endsWith('/api/campagnes') || route.includes('/api/campagne')) {
@@ -231,11 +245,26 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   };
   const paysPour = async (rc) => (await lireDossier({ revenuecat_id: rc }))?.pays ?? null;
   const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions, paysPour });
+  // Chaque passe laisse son état dans crm_sante/passe : la page l'affiche en haut, la notification de 9 h le dit.
   const preparerMaintenant = async () => {
-    const r = { ...(await passeDuMac(db)), relances: await camp.relances() };
-    try { const b = await bg.preparer(); r.bugs = b.creees; r.versions = Object.fromEntries(Object.entries(b.versions).map(([k, v]) => [k, v.version ?? v.erreur])); }
-    catch (e) { r.bugs = `erreur : ${e.message}`; }
-    return r;
+    const le = new Date();
+    try {
+      const r = { ...(await passeDuMac(db)), relances: await camp.relances() };
+      const problemes = [];
+      if (r.erreurs) problemes.push(`${r.erreurs} action(s) non créée(s)`);
+      if (r.raison) problemes.push(r.raison);
+      if (r.base_en_retard) problemes.push('base Mixpanel en retard');
+      try {
+        const b = await bg.preparer(); r.bugs = b.creees;
+        if (b.erreurs) problemes.push(`${b.erreurs} bug(s) corrigé(s) non créé(s)`);
+        r.versions = Object.fromEntries(Object.entries(b.versions).map(([k, v]) => [k, v.version ?? v.erreur]));
+      } catch (e) { r.bugs = `erreur : ${e.message}`; problemes.push(`bugs : ${e.message}`); }
+      await db.ecrire('crm_sante', 'passe', { le, ok: !problemes.length, problemes, base_jusqu_a: r.base_jusqu_a ?? null }).catch(() => {});
+      return r;
+    } catch (erreur) {
+      await db.ecrire('crm_sante', 'passe', { le, ok: false, problemes: [`la passe a échoué : ${String(erreur?.message ?? erreur).slice(0, 200)}`] }).catch(() => {});
+      throw erreur;
+    }
   };
   http.createServer(application(s, { port, porte, preparerMaintenant, camp, bg, db })).listen(port, '127.0.0.1', () => {
     console.log(`Iris CRM : http://localhost:${port}`);
@@ -251,6 +280,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const heure = Number(maintenant.toLocaleString('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', hour12: false }));
     if (heure !== 9 || jour === dernierJour) return;
     dernierJour = jour;
-    try { notifier((await s.aujourdhui()).length); } catch (e) { console.error('notification', e.message); }
+    try {
+      const sante = (await db.lire('crm_sante', 'passe')) ?? {};
+      const vieille = !sante.le || Date.now() - new Date(sante.le).getTime() > 2 * 3600000;
+      const alerte = vieille ? 'pas de passe depuis plus de 2 h' : sante.ok === false ? (sante.problemes ?? []).join(', ') : '';
+      notifier((await s.aujourdhui()).length, (await s.reponses()).length, alerte);
+    } catch (e) { notifier(0, 0, `Iris CRM ne lit plus sa base : ${e.message}`); }
   }, 60 * 1000);
 }

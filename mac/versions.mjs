@@ -48,9 +48,10 @@ async function jetonGoogle(fetcher) {
   return (await r.json()).access_token;
 }
 
-// La version de la sortie en production terminée (status completed), ou la plus avancée en cours de déploiement.
+// La version de la sortie en production terminée (status completed). Un déploiement progressif (inProgress) n'est
+// pas « en vente » : presque personne ne peut encore la recevoir (audit du 22/11).
 export function versionDePiste(piste) {
-  const sorties = (piste?.releases ?? []).filter((s) => ['completed', 'inProgress'].includes(s.status));
+  const sorties = (piste?.releases ?? []).filter((s) => s.status === 'completed');
   const noms = sorties.map((s) => String(s.name ?? '').trim()).filter((n) => /^\d/.test(n));
   if (!noms.length) return null;
   return noms.sort((a, b) => compareVersions(b, a))[0].split(/[\s(]/)[0];

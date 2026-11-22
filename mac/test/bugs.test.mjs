@@ -96,11 +96,24 @@ test('l’écart de 72 h ne bloque pas « ton bug est corrigé » : c’est une 
 test('versions : ordre, et version de la piste de production', () => {
   assert.equal(compareVersions('7.6.10', '7.6.9'), 1);
   assert.equal(compareVersions('7.6.9+812', '7.6.9'), 0);
-  assert.equal(versionDePiste({ releases: [{ name: '7.6.7 (800)', status: 'completed' }, { name: '7.6.8 (812)', status: 'inProgress' }, { name: '7.7.0', status: 'draft' }] }), '7.6.8');
+  // Un déploiement progressif n'est pas en vente (audit du 22/11) : seule la sortie terminée compte.
+  assert.equal(versionDePiste({ releases: [{ name: '7.6.7 (800)', status: 'completed' }, { name: '7.6.8 (812)', status: 'inProgress' }, { name: '7.7.0', status: 'draft' }] }), '7.6.7');
 });
 
 test('le trousseau rend une clé JSON en hexadécimal : elle se décode', () => {
   const json = '{\n  "a": 1\n}';
   assert.equal(texteDuTrousseau(Buffer.from(json).toString('hex') + '\n'), json);
   assert.equal(texteDuTrousseau('{"a":1}'), '{"a":1}');
+});
+
+test('une création d’action ratée laisse le bug à refaire, au lieu de le marquer fait (audit du 22/11)', async () => {
+  const { db, b } = monter({ versions: { ios: { version: '7.6.9' }, android: { version: '7.6.9' } } });
+  await b.noter('111', { titre: 'la carte qui restait blanche', version_corrigee: '7.6.9' });
+  const creer = db.creer;
+  db.creer = async () => { throw new Error('Firestore 503'); };
+  const r = await b.preparer();
+  assert.deepEqual([r.creees, r.erreurs], [0, 1]);
+  assert.equal((await db.lire('crm_bugs', '111')).action_id, undefined);
+  db.creer = creer;
+  assert.equal((await b.preparer()).creees, 1);
 });

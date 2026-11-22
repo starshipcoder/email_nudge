@@ -145,3 +145,15 @@ test('en français, chaque zone se dit sans « de les » ni « de le »', async 
   const { T: textes } = await import('../brouillons.mjs');
   for (const z of Object.values(textes.fr.zones)) assert.doesNotMatch(textes.fr.zone(z), /\bde (les|le) /, z);
 });
+
+test('audit du 22/11 : « 1 tournée » au singulier, une réponse de plus de 60 jours n’est pas citée, une personne inconnue de Mixpanel n’est pas « reliée »', async () => {
+  const { T: textes, brouillonResiliation: b } = await import('../brouillons.mjs');
+  assert.equal(textes.fr.tournees(1, null), "Vous avez lancé 1 tournée avec l'app.");
+  assert.equal(textes.en.tournees(1, null), 'You started 1 route with the app.');
+  const vieux = { questionnaire: { raison: 'tooExpensive', texte: '', le: '2026-01-01' }, calcule_le: '2026-11-22', usage: { tournees: 0, zones: [], signaux: [] } };
+  assert.doesNotMatch(b(vieux, 'fr', 'S').corps, /trop cher/);
+  assert.match(b({ ...vieux, questionnaire: { ...vieux.questionnaire, le: '2026-11-01' } }, 'fr', 'S').corps, /trop cher/);
+  const d = dossierDe({ rc: 'inconnu', sources: sources(), maintenant: T });
+  assert.equal(d.lie, false);
+  assert.equal(dossierDe({ rc: 'rcA', sources: sources(), maintenant: T }).lie, true);
+});

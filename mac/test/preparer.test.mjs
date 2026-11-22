@@ -99,3 +99,34 @@ test('l’annulation d’essai s’écrit depuis le dossier, une seule fois, et 
   assert.match(b.corps, /what made you stop the trial\?/);
   assert.equal((b.corps.match(/\?/g) ?? []).length, 1);
 });
+
+test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne qui revient puis repart a son e-mail ; un usage inconnu se signale', async () => {
+  const faits = [
+    { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcA'], transaction: 'P1', type: 'NORMAL', raison: 'CUSTOMER_SUPPORT' },
+    { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcB'], transaction: 'P2', type: 'NORMAL', raison: 'DEVELOPER_INITIATED' },
+    { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcC'], transaction: 'P3', type: 'NORMAL', raison: 'UNSUBSCRIBE' },
+  ];
+  assert.deepEqual(candidats(faits, inscrits, T).map((c) => c.user.id), ['cla@exemple.fr']);
+
+  // L'ancienne résiliation (une par personne, avant le 22/11) écrite pour ce départ ne se double pas ; un départ plus récent, si.
+  const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }],
+    crm_actions: [{ id: `resiliation__${(await import('../envoi.mjs')).cleUtilisateur('cla@exemple.fr')}`, type: 'resiliation', statut: 'envoyee', cree_le: new Date(h(-20)) }] });
+  await preparer({ db, faits, tournees: () => 0, maintenant: T });
+  assert.equal((await db.lister('crm_actions')).length, 1);
+  const retour = [{ ...faits[2], temps: h(-2), transaction: 'P4' }];
+  await preparer({ db, faits: retour, tournees: () => 0, maintenant: T });
+  assert.equal((await db.lister('crm_actions')).length, 2);
+
+  // Rappel de fin d'essai sans données Mixpanel : le texte « pas encore de tournée » attend une vérification.
+  const db2 = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
+  await preparer({ db: db2, faits: [essai('rcA', 40, 'T1')], tournees: () => null, maintenant: T });
+  const [a] = await db2.lister('crm_actions');
+  assert.match(a.a_verifier, /données Mixpanel/);
+});
+
+test('une création ratée pour une autre raison qu’un doublon est comptée, pas tue', async () => {
+  const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
+  db.creer = async () => { throw new Error('Firestore 503'); };
+  const r = await preparer({ db, faits: [essai('rcA', 40, 'T1')], tournees: () => 1, maintenant: T });
+  assert.equal(r.erreurs, 1);
+});

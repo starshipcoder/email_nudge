@@ -15,7 +15,7 @@ export const T = {
   fr: {
     sujet: 'Votre abonnement Easy Way', bonjour: 'Bonjour,',
     pris: "Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.",
-    tournees: (n, s) => `Vous avez lancé ${n} tournées avec l'app${s ? ` en ${s} semaine${s > 1 ? 's' : ''}` : ''}.`,
+    tournees: (n, s) => `Vous avez lancé ${n} tournée${n > 1 ? 's' : ''} avec l'app${s ? ` en ${s} semaine${s > 1 ? 's' : ''}` : ''}.`,
     zone: (z) => `Vous avez surtout utilisé ${z}, sans avoir encore lancé de tournée.`,
     vu: (q) => `En regardant de mon côté, je vois que ${q}.`, et: ', et ',
     indique: (r) => `Dans l'app, vous avez indiqué ${r}.`, ecrit: (t) => ` Vous avez écrit : « ${t} ».`,
@@ -36,7 +36,7 @@ export const T = {
   en: {
     sujet: 'Your Easy Way subscription', bonjour: 'Hello,',
     pris: 'You cancelled your Easy Way subscription. It is done, there is nothing else to do.',
-    tournees: (n, s) => `You started ${n} routes with the app${s ? ` over ${s} week${s > 1 ? 's' : ''}` : ''}.`,
+    tournees: (n, s) => `You started ${n} route${n > 1 ? 's' : ''} with the app${s ? ` over ${s} week${s > 1 ? 's' : ''}` : ''}.`,
     zone: (z) => `You mostly used ${z}, without starting a route yet.`,
     vu: (q) => `Looking on my side, I can see that ${q}.`, et: ', and ',
     indique: (r) => `In the app, you said ${r}.`, ecrit: (t) => ` You wrote: "${t}".`,
@@ -57,7 +57,7 @@ export const T = {
   de: {
     sujet: 'Ihr Easy Way Abo', bonjour: 'Hallo,',
     pris: 'Sie haben Ihr Abo von Easy Way gekündigt. Das ist erledigt, Sie müssen nichts weiter tun.',
-    tournees: (n, s) => `Sie haben mit der App ${n} Routen gestartet${s ? `, in ${s} Woche${s > 1 ? 'n' : ''}` : ''}.`,
+    tournees: (n, s) => `Sie haben mit der App ${n} Route${n > 1 ? 'n' : ''} gestartet${s ? `, in ${s} Woche${s > 1 ? 'n' : ''}` : ''}.`,
     zone: (z) => `Sie haben vor allem ${z} genutzt, ohne schon eine Route zu starten.`,
     vu: (q) => `Auf meiner Seite sehe ich, dass ${q}.`, et: ', und dass ',
     indique: (r) => `In der App haben Sie angegeben, ${r}.`, ecrit: (t) => ` Sie haben geschrieben: „${t}“.`,
@@ -78,7 +78,7 @@ export const T = {
   es: {
     sujet: 'Su suscripción a Easy Way', bonjour: 'Hola:',
     pris: 'Ha cancelado su suscripción a Easy Way. Ya está hecho, no tiene que hacer nada más.',
-    tournees: (n, s) => `Ha iniciado ${n} rutas con la app${s ? ` en ${s} semana${s > 1 ? 's' : ''}` : ''}.`,
+    tournees: (n, s) => `Ha iniciado ${n} ruta${n > 1 ? 's' : ''} con la app${s ? ` en ${s} semana${s > 1 ? 's' : ''}` : ''}.`,
     zone: (z) => `Usaba sobre todo ${z}, sin haber iniciado todavía una ruta.`,
     vu: (q) => `Mirando por mi parte, veo que ${q}.`, et: ', y que ',
     indique: (r) => `En la app, indicó ${r}.`, ecrit: (t) => ` Escribió: «${t}».`,
@@ -99,7 +99,7 @@ export const T = {
   it: {
     sujet: 'Il suo abbonamento a Easy Way', bonjour: 'Buongiorno,',
     pris: 'Ha disdetto il suo abbonamento a Easy Way. È fatto, non deve fare altro.',
-    tournees: (n, s) => `Ha avviato ${n} percorsi con l'app${s ? ` in ${s} settiman${s > 1 ? 'e' : 'a'}` : ''}.`,
+    tournees: (n, s) => `Ha avviato ${n} percors${n > 1 ? 'i' : 'o'} con l'app${s ? ` in ${s} settiman${s > 1 ? 'e' : 'a'}` : ''}.`,
     zone: (z) => `Usava soprattutto ${z}, senza aver ancora avviato un percorso.`,
     vu: (q) => `Guardando dalla mia parte, vedo che ${q}.`, et: ', e che ',
     indique: (r) => `Nell'app ha indicato ${r}.`, ecrit: (t) => ` Ha scritto: «${t}».`,
@@ -120,7 +120,7 @@ export const T = {
   pt: {
     sujet: 'A sua assinatura do Easy Way', bonjour: 'Olá,',
     pris: 'Cancelou a sua assinatura do Easy Way. Está feito, não precisa de fazer mais nada.',
-    tournees: (n, s) => `Iniciou ${n} rotas com a app${s ? ` em ${s} semana${s > 1 ? 's' : ''}` : ''}.`,
+    tournees: (n, s) => `Iniciou ${n} rota${n > 1 ? 's' : ''} com a app${s ? ` em ${s} semana${s > 1 ? 's' : ''}` : ''}.`,
     zone: (z) => `Usava sobretudo ${z}, sem ter ainda iniciado uma rota.`,
     vu: (q) => `Vendo do meu lado, percebo que ${q}.`, et: ', e que ',
     indique: (r) => `Na app, indicou ${r}.`, ecrit: (t) => ` Escreveu: «${t}».`,
@@ -158,8 +158,13 @@ export const ESSAI = {
 };
 
 // La question : celle de sa réponse au questionnaire, sinon celle du problème vu, sinon la question ouverte.
+// Une réponse au questionnaire de plus de 60 jours ne parle plus de ce départ : elle n'est pas citée.
+export const QUESTIONNAIRE_JOURS = 60;
+export const reponseRecente = (d) => Boolean(d.questionnaire) && (!d.questionnaire.le || !d.calcule_le
+  || (new Date(d.calcule_le) - new Date(d.questionnaire.le)) <= QUESTIONNAIRE_JOURS * JOUR);
+
 export function cleQuestion(d) {
-  if (d.questionnaire) return T.fr.questions[d.questionnaire.raison] ? d.questionnaire.raison : 'other';
+  if (d.questionnaire && reponseRecente(d)) return T.fr.questions[d.questionnaire.raison] ? d.questionnaire.raison : 'other';
   return d.usage.signaux.length ? 'probleme' : 'other';
 }
 
@@ -168,7 +173,7 @@ export function brouillonResiliation(d, langue, signature, sorte = 'resiliation'
   const base = T[langue] ?? T.en;
   const E = sorte === 'essai' ? (ESSAI[langue] ?? ESSAI.en) : null;
   const L = E ? { ...base, sujet: E.sujet, pris: E.pris, questions: { ...base.questions, ...E.questions } } : base;
-  const u = d.usage; const r = d.questionnaire?.raison;
+  const u = d.usage; const r = reponseRecente(d) ? d.questionnaire?.raison : null;
   const semaines = u.premier_jour && u.dernier_jour ? Math.max(1, Math.round((new Date(u.dernier_jour) - new Date(u.premier_jour)) / (7 * JOUR))) : null;
   const zone = u.zones.find((z) => L.zones[z.zone])?.zone;
   const phrases = [];

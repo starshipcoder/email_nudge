@@ -67,7 +67,8 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
   async function suivreMembre(action, r) {
     const id = membreId(action.campagne_id, action.user_id);
     const t = maintenant();
-    if (['envoye', 'a_blanc'].includes(r.statut)) {
+    // Seul un vrai envoi compte : un envoi à blanc ne fait pas un membre « envoyé », donc pas de relance (audit du 22/11).
+    if (r.statut === 'envoye') {
       await db.ecrire('crm_membres', id, action.type === 'campagne' ? { statut: 'envoye', envoye_le: t } : { statut: 'relance', relance_le: t });
     } else if (r.statut === 'bloquee' && !ARRETS.has(r.raison) && !/^réglage manquant/.test(r.raison) && action.type === 'campagne') {
       await db.ecrire('crm_membres', id, { statut: 'exclu', raison_exclusion: r.raison });
@@ -106,7 +107,8 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
     // Fige les membres et crée une action par membre, avec la signature des réglages.
     async preparer(id) {
       const c = await lireCampagne(id);
-      if (c.statut !== 'brouillon') throw new Error('Seul un brouillon se prépare.');
+      if (!['brouillon', 'en_preparation'].includes(c.statut)) throw new Error('Seul un brouillon se prépare.');
+      await db.ecrire('crm_campagnes', id, { statut: 'en_preparation', maj_le: maintenant() });
       const { signature } = (await db.lire('crm_reglages', 'general')) ?? {};
       if (!signature) throw new Error('Régler la signature d’abord.');
       const ids = await concernes(c);
@@ -115,11 +117,13 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
       const t = maintenant();
       const rendu = { sujet: rendreTexte(c.sujet, signature), corps: rendreTexte(c.corps, signature),
         relance_sujet: c.relance_apres_jours ? rendreTexte(c.relance_sujet, signature) : null, relance_corps: c.relance_apres_jours ? rendreTexte(c.relance_corps, signature) : null };
+      // Reprenable : une préparation coupée en route se relance, ce qui existe déjà est gardé tel quel.
+      const deja = (erreur) => { if (!/existe déjà/.test(String(erreur?.message))) throw erreur; };
       for (const userId of ids) {
         const cle = cleUtilisateur(userId);
-        await db.creer('crm_membres', membreId(id, userId), { campagne_id: id, user_id: userId, statut: 'a_envoyer' });
-        await db.creer('crm_actions', `campagne__${cle}__${id}`, { type: 'campagne', campagne_id: id, user_id: userId, statut: 'prete',
-          sujet: rendu.sujet, corps: rendu.corps, langue: c.langue, echeance: new Date(t.getTime() + 30 * JOUR), cree_le: t });
+        await db.creer('crm_membres', membreId(id, userId), { campagne_id: id, user_id: userId, statut: 'a_envoyer' }).catch(deja);
+        await db.creer('crm_actions', `campagne__${cle}__${id}`, { type: 'campagne', campagne_id: id, user_id: userId, statut: 'prete', filtre: c.filtre,
+          sujet: rendu.sujet, corps: rendu.corps, langue: c.langue, echeance: new Date(t.getTime() + 30 * JOUR), cree_le: t }).catch(deja);
       }
       await db.ecrire('crm_campagnes', id, { statut: 'preparee', rendu, prepare_le: t, maj_le: t });
       return { membres: ids.length };
@@ -134,7 +138,8 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
       for (const [i, a] of pretes.entries()) {
         const r = await porte.envoyerAction(a.id);
         await suivreMembre(a, r);
-        if (['envoye', 'a_blanc'].includes(r.statut)) envoyes += 1;
+        if (r.statut === 'envoye') envoyes += 1;
+        else if (r.statut === 'a_blanc') { envoyes += 1; continue; }
         else if (r.statut === 'bloquee' && (ARRETS.has(r.raison) || /^réglage manquant/.test(r.raison))) {
           if (r.raison === 'trop tôt') { restants += 1; continue; }
           restants += pretes.length - i;
@@ -178,7 +183,7 @@ export function campagnes(db, { porte, maintenant = () => new Date() }) {
           if (t.getTime() - new Date(m.envoye_le).getTime() < c.relance_apres_jours * JOUR) continue;
           try {
             await db.creer('crm_actions', `campagne_relance__${cleUtilisateur(m.user_id)}__${c.id}`, { type: 'campagne_relance', campagne_id: c.id,
-              user_id: m.user_id, statut: 'prete', sujet: c.rendu.relance_sujet, corps: c.rendu.relance_corps, langue: c.langue,
+              user_id: m.user_id, statut: 'prete', filtre: c.filtre, sujet: c.rendu.relance_sujet, corps: c.rendu.relance_corps, langue: c.langue,
               echeance: new Date(t.getTime() + 7 * JOUR), cree_le: t });
             n += 1;
           } catch { /* déjà là */ }

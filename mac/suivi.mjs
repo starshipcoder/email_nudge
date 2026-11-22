@@ -138,7 +138,8 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       if (sens === 'recu' && !texte) throw new Error('Coller la réponse reçue.');
       const { cleUtilisateur } = await import('./envoi.mjs');
       const t = maintenant();
-      await db.ajouter('crm_messages', { user_id: id, cle: cleUtilisateur(id), sens, source, le: t, extrait: texte || 'lien WhatsApp ouvert' });
+      // Une réponse WhatsApp notée par le fondateur est déjà lue.
+      await db.ajouter('crm_messages', { user_id: id, cle: cleUtilisateur(id), sens, source, le: t, extrait: texte || 'lien WhatsApp ouvert', ...(sens === 'recu' ? { lu: true } : {}) });
       if (sens === 'recu') await this.aRepondu(id);
       return true;
     },
@@ -188,8 +189,28 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       const a = await db.lire('crm_actions', id);
       if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
       if (!String(sujet ?? '').trim() || !String(corps ?? '').trim() || String(corps).length > 5000) throw new Error('Sujet et texte requis (5 000 caractères au plus).');
-      await db.ecrire('crm_actions', id, { sujet: String(sujet).trim(), corps: String(corps), modifie_a_la_main: true, a_retraduire: false, maj_le: maintenant() });
+      // Corriger le texte lève aussi le point à vérifier (titre traduit, usage relu).
+      await db.ecrire('crm_actions', id, { sujet: String(sujet).trim(), corps: String(corps), modifie_a_la_main: true, a_retraduire: false, a_verifier: null, maj_le: maintenant() });
       return db.lire('crm_actions', id);
+    },
+    // « C'est vérifié » : le fondateur a relu le point signalé et garde le texte tel quel.
+    async verifier(id) {
+      const a = await db.lire('crm_actions', id);
+      if (!a || !['prete', 'reportee'].includes(a.statut)) throw new Error('Action introuvable ou déjà traitée.');
+      await db.ecrire('crm_actions', id, { a_verifier: null, verifie: a.a_verifier ?? null, verifie_le: maintenant(), maj_le: maintenant() });
+      return db.lire('crm_actions', id);
+    },
+    // Les réponses reçues qu'il n'a pas encore lues (Gmail, ou notées à la main), la plus récente d'abord.
+    async reponses() {
+      return (await db.lister('crm_messages')).filter((m) => m.sens === 'recu' && !m.lu)
+        .map((m) => ({ id: m.id, user_id: m.user_id, source: m.source, le: m.le, sujet: m.sujet ?? '', extrait: m.extrait ?? '' }))
+        .sort((a, b) => String(b.le ?? '').localeCompare(String(a.le ?? '')));
+    },
+    async reponseLue(id) {
+      const m = await db.lire('crm_messages', String(id ?? ''));
+      if (!m || m.sens !== 'recu') throw new Error('Réponse introuvable.');
+      await db.ecrire('crm_messages', m.id, { lu: true, lu_le: maintenant() });
+      return true;
     },
     // La traduction française corrigée par le fondateur : le texte dans la langue de la personne est à refaire avant l'envoi.
     async modifierTraduction(id, sujet, corps) {
