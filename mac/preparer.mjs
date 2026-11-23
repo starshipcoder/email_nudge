@@ -106,7 +106,7 @@ function dossierSur(dossier) {
 export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null, enRetard = false }) {
   const cle = cleUtilisateur(c.user.id);
   // Le dossier de la personne, s'il se lit : son pays (pour la langue), son usage et sa réponse au questionnaire.
-  const dossier = dossierPour?.(c.user.revenuecat_id) ?? null;
+  const dossier = dossierPour?.(c.user.revenuecat_id, c.user) ?? null;
   const l = langueDePersonne({ locale: c.user.locale, pays: dossier?.pays, choix: choixLangue(cle) });
   const langue = l.langue;
   const source = { langue_source: l.source, ...(l.pays ? { pays: l.pays } : {}) };
@@ -147,7 +147,8 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
 export async function preparer({ db, faits, tournees, maintenant = new Date(), dossierPour = null, enRetard = false }) {
   const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
   if (!reglages.signature) return { creees: 0, expirees: 0, raison: 'signature à régler' };
-  const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user']);
+  // Les champs du questionnaire : la réponse envoyée par l'app passe avant Mixpanel dans le dossier (INT-EW-79).
+  const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user', 'churn_survey_reason', 'churn_survey_text', 'churn_survey_answered_at']);
   const fiches = new Map((await db.lister('crm_fiches')).map((f) => [f.id, f]));
   const choixLangue = (cle) => fiches.get(cle)?.langue ?? null;
   let creees = 0; let erreurs = 0;

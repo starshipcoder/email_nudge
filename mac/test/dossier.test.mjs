@@ -44,7 +44,7 @@ function sources() {
 test('le dossier réunit le questionnaire, l’usage semaine par semaine, l’abonnement et le métier', () => {
   const d = dossierDe({ rc: 'rcA', sources: sources(), maintenant: T });
   assert.equal(d.personne, 'p1');
-  assert.deepEqual(d.questionnaire, { raison: 'tooExpensive', texte: 'trop cher pour moi seul', le: jour(-2) });
+  assert.deepEqual(d.questionnaire, { raison: 'tooExpensive', texte: 'trop cher pour moi seul', le: jour(-2), source: 'Mixpanel' });
   assert.equal(d.usage.tournees, 9);
   assert.equal(d.usage.jours_actifs, 19);
   assert.equal(d.usage.dernier_jour, jour(-23));
@@ -156,4 +156,39 @@ test('audit du 22/11 : « 1 tournée » au singulier, une réponse de plus de 60
   const d = dossierDe({ rc: 'inconnu', sources: sources(), maintenant: T });
   assert.equal(d.lie, false);
   assert.equal(dossierDe({ rc: 'rcA', sources: sources(), maintenant: T }).lie, true);
+});
+
+// INT-EW-79 : l'app envoie la réponse à email_nudge dès qu'elle est donnée ; Iris la lit dans users d'abord.
+const ficheApp = { id: 'inscrit-invente', revenuecat_id: 'rcA', churn_survey_reason: '_MainChurnReason.missingFeatures',
+  churn_survey_text: '  il manque la synchro agenda ', churn_survey_answered_at: '2026-11-21T09:30:00.000Z' };
+
+test('la réponse de l’app, rangée dans users, passe avant celle de Mixpanel, et sa source se dit', () => {
+  const d = dossierDe({ rc: 'rcA', sources: sources(), maintenant: T, user: ficheApp });
+  assert.deepEqual(d.questionnaire, { raison: 'missingFeatures', texte: 'il manque la synchro agenda', le: '2026-11-21', source: 'app' });
+  const r = resumer(d);
+  const fait = r.faits.find((f) => /Questionnaire de départ/.test(f));
+  assert.match(fait, /\(21\/11, source : app\)/);
+  assert.match(fait, /il manque des fonctions/);
+  assert.match(fait, /synchro agenda/);
+});
+
+test('sans réponse dans users, la réponse vient de Mixpanel et le dit', () => {
+  const d = dossierDe({ rc: 'rcA', sources: sources(), maintenant: T, user: { id: 'inscrit-invente', revenuecat_id: 'rcA' } });
+  assert.equal(d.questionnaire.source, 'Mixpanel');
+  assert.match(resumer(d).faits.find((f) => /Questionnaire de départ/.test(f)), /source : Mixpanel/);
+});
+
+test('la réponse de l’app se lit même si Mixpanel ne connaît pas la personne', () => {
+  const d = dossierDe({ rc: 'inconnu', sources: sources(), maintenant: T, user: { ...ficheApp, revenuecat_id: 'inconnu', churn_survey_text: undefined } });
+  assert.deepEqual(d.questionnaire, { raison: 'missingFeatures', texte: '', le: '2026-11-21', source: 'app' });
+});
+
+test('la passe donne la fiche au dossier, avec les champs du questionnaire', async () => {
+  const { baseEnMemoire } = await import('../suivi.mjs');
+  const { preparer } = await import('../preparer.mjs');
+  const db = baseEnMemoire({ users: [ficheApp], crm_reglages: [{ id: 'general', signature: 'Prénom' }] });
+  const vus = [];
+  const faits = [{ nom: 'rc_trial_cancelled_event', temps: T.getTime() - 3600000, ids: ['rcA'], transaction: 'E1', type: 'TRIAL' }];
+  await preparer({ db, faits, tournees: () => 0, maintenant: T, dossierPour: (rc, user) => { vus.push(user); return null; } });
+  assert.equal(vus[0]?.churn_survey_reason, '_MainChurnReason.missingFeatures');
 });

@@ -71,17 +71,30 @@ export function lireZones(fichier = DICTIONNAIRE) {
 }
 export function fermerSources(s) { s?.mixpanel?.close(); s?.utilisateurs?.close(); }
 
-export function dossierDe({ rc, sources, maintenant = new Date() }) {
+// La réponse au questionnaire que l'app envoie à syncUser dès qu'elle est donnée (INT-EW-79), rangée dans users.
+// La raison a le même vocabulaire que l'événement Mixpanel Action-churn (« _MainChurnReason.tooExpensive »).
+export function questionnaireDeFiche(user) {
+  if (!user?.churn_survey_reason) return null;
+  const le = user.churn_survey_answered_at ? new Date(user.churn_survey_answered_at) : null;
+  return { raison: String(user.churn_survey_reason).split('.').pop() || 'other', texte: String(user.churn_survey_text ?? '').trim(),
+    le: le && !Number.isNaN(le.getTime()) ? date(le.getTime()) : null, source: 'app' };
+}
+
+// user : la fiche users de la personne, si on l'a ; sa réponse au questionnaire passe avant celle de Mixpanel.
+export function dossierDe({ rc, sources, maintenant = new Date(), user = null }) {
   const personne = personneDe(sources, rc);
   const mp = sources.mixpanel;
   const t = maintenant.getTime();
 
-  const churn = mp?.prepare(`SELECT e.proprietes, p.jour FROM propres p JOIN evenements e ON e.id = p.id
-    WHERE p.nom = 'Action-churn' AND p.a_exclure = '' AND p.utilisateur = ? ORDER BY p.temps DESC LIMIT 1`).get(personne);
-  let questionnaire = null;
-  if (churn) {
-    const p = JSON.parse(churn.proprietes);
-    questionnaire = { raison: String(p.reason ?? '').split('.').pop() || 'other', texte: String(p.text ?? '').trim(), le: churn.jour };
+  let questionnaire = questionnaireDeFiche(user);
+  if (!questionnaire) {
+    // Mixpanel en secours : la réponse d'avant l'envoi par l'app, ou une fiche sans elle (relevé de la nuit).
+    const churn = mp?.prepare(`SELECT e.proprietes, p.jour FROM propres p JOIN evenements e ON e.id = p.id
+      WHERE p.nom = 'Action-churn' AND p.a_exclure = '' AND p.utilisateur = ? ORDER BY p.temps DESC LIMIT 1`).get(personne);
+    if (churn) {
+      const p = JSON.parse(churn.proprietes);
+      questionnaire = { raison: String(p.reason ?? '').split('.').pop() || 'other', texte: String(p.text ?? '').trim(), le: churn.jour, source: 'Mixpanel' };
+    }
   }
 
   const ligne = sources.utilisateurs?.prepare('SELECT * FROM utilisateurs WHERE utilisateur = ?').get(personne) ?? null;
@@ -155,7 +168,7 @@ export function resumer(d, maintenant = new Date(`${d.calcule_le}T12:00:00Z`)) {
   }
   const j = depuis(d, maintenant.getTime());
   faits.push(`Activité : ${tendance(u.semaines)}${j !== null ? ` (plus rien depuis ${j} jours)` : ''}.`.replace(' (plus rien depuis 0 jours)', ''));
-  if (d.questionnaire) faits.push(`Questionnaire de départ (${jj(d.questionnaire.le)}) : ${RAISONS[d.questionnaire.raison] ?? d.questionnaire.raison}${d.questionnaire.texte ? ` ; il a écrit « ${d.questionnaire.texte} »` : ''}.`);
+  if (d.questionnaire) faits.push(`Questionnaire de départ (${[jj(d.questionnaire.le), d.questionnaire.source ? `source : ${d.questionnaire.source}` : ''].filter(Boolean).join(', ')}) : ${RAISONS[d.questionnaire.raison] ?? d.questionnaire.raison}${d.questionnaire.texte ? ` ; il a écrit « ${d.questionnaire.texte} »` : ''}.`);
   else faits.push('Pas de réponse au questionnaire de départ.');
   faits.push(...ecarts.map(direEcart));
   return { faits, ecarts: ecarts.map((e) => ({ id: e.id, ecart: e.ecart, source: `${e.repere.brique} ${e.repere.conclusion}` })), question: T.fr.questions[cleQuestion(d)], semaines: u.semaines, pays: d.pays, a_jour: direAJour(d.a_jour) };

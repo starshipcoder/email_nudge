@@ -1,5 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https'
-import { garderBesoins, garderLangue, garderMetier } from './valeurs'
+import { garderBesoins, garderLangue, garderMetier, garderReponseDepart } from './valeurs'
 import { defineSecret } from 'firebase-functions/params'
 import { db } from '../index'
 import { Role, Need, Locale } from '../types'
@@ -68,7 +68,7 @@ interface UserStatus {
 /**
  * Compute user status and next expected email
  */
-function computeUserStatus(userData: Record<string, any>): UserStatus {
+export function computeUserStatus(userData: Record<string, any>): UserStatus {
   const isTestUser = userData.is_test_user === true
   const blockers: string[] = []
 
@@ -258,6 +258,12 @@ interface SyncUserRequest {
   is_test_user?: boolean
   dry_run?: boolean
   has_replied?: boolean
+  // La réponse au questionnaire de départ (INT-EW-79), vérifiée par garderReponseDepart (valeurs.ts).
+  churn_survey_reason?: string
+  churn_survey_text?: string
+  churn_survey_answered_at?: string
+  app_sessions_total?: number
+  seniority_days?: number
   // Test-only: offset in seconds from server time for date fields
   // e.g., -120 means "2 minutes ago" relative to server time
   _test_time_offset_seconds?: number
@@ -347,6 +353,12 @@ export const syncUser = onRequest(
         if (besoins.inconnues.length) console.warn(`[syncUser] besoins inconnus gardés : ${besoins.inconnues.join(', ')}`)
         if (besoins.valeurs) updateData.needs = besoins.valeurs as Need[]
       }
+
+      // INT-EW-79 : la réponse au questionnaire de départ, pour Iris. Jamais churn_reason ni churned_at : ceux-là
+      // viennent du seul webhook RevenueCat et décident de WhyLeaving.
+      const depart = garderReponseDepart(data as unknown as Record<string, unknown>)
+      if (depart.ecartes.length) console.warn(`[syncUser] réponse au questionnaire : valeurs écartées : ${depart.ecartes.join(', ')}`)
+      Object.assign(updateData, depart.champs)
 
       if (data.plan !== undefined) {
         if (!VALID_PLANS.includes(data.plan)) {

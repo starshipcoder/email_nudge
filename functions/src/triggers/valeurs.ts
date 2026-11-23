@@ -29,3 +29,40 @@ export function garderLangue(valeur: unknown): { valeur: string | null, inconnue
   if (!/^[a-z]{2,3}$/.test(v)) return { valeur: null, inconnue: false }
   return { valeur: v, inconnue: !VALID_LOCALES.includes(v as Locale) }
 }
+
+// La réponse au questionnaire de départ que l'app envoie (INT-EW-79 ; contactonmap_pro-flutter,
+// email_nudge_repository.dart, churnSurveyFields). Préfixe churn_survey_ exprès : churn_reason et churned_at
+// viennent du seul webhook RevenueCat et décident de WhyLeaving ; cette fonction ne les renvoie jamais.
+// Comme pour les métiers : une valeur inattendue est écartée et signalée, le reste de l'envoi passe.
+// La raison est la chaîne de l'événement Mixpanel Action-churn (« _MainChurnReason.tooExpensive »).
+const FORME_RAISON = /^[A-Za-z_][A-Za-z0-9_.]{0,79}$/
+const TEXTE_MAX = 2000
+const COMPTE_MAX = 1000000
+
+export function garderReponseDepart(data: Record<string, unknown>): { champs: Record<string, unknown>, ecartes: string[] } {
+  const champs: Record<string, unknown> = {}
+  const ecartes: string[] = []
+  const r = data.churn_survey_reason
+  if (r !== undefined) {
+    if (typeof r === 'string' && FORME_RAISON.test(r.trim())) champs.churn_survey_reason = r.trim()
+    else ecartes.push('churn_survey_reason')
+  }
+  const t = data.churn_survey_text
+  if (t !== undefined) {
+    if (typeof t === 'string' && t.trim()) champs.churn_survey_text = t.trim().slice(0, TEXTE_MAX)
+    else ecartes.push('churn_survey_text')
+  }
+  const le = data.churn_survey_answered_at
+  if (le !== undefined) {
+    const d = typeof le === 'string' ? new Date(le) : null
+    if (d && !isNaN(d.getTime())) champs.churn_survey_answered_at = d
+    else ecartes.push('churn_survey_answered_at')
+  }
+  for (const champ of ['app_sessions_total', 'seniority_days']) {
+    const n = data[champ]
+    if (n === undefined) continue
+    if (typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= COMPTE_MAX) champs[champ] = n
+    else ecartes.push(champ)
+  }
+  return { champs, ecartes }
+}

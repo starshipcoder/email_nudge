@@ -57,6 +57,12 @@ export interface User {
   // Churn
   churned_at?: Date
   churn_reason?: string
+  // La réponse au questionnaire de départ envoyée par l'app (INT-EW-79) : lue par Iris, ne déclenche rien.
+  churn_survey_reason?: string
+  churn_survey_text?: string
+  churn_survey_answered_at?: Date
+  app_sessions_total?: number
+  seniority_days?: number
 
   // Email system
   email_whyleaving_sent: boolean

@@ -50,7 +50,7 @@ export async function passeDuMac(db) {
     const faits = [...lireFaits(lecteur, Date.now() - 30 * 86400000), ...parFiche];
     const sources = await ouvrirSources();
     try {
-      const dossierPour = (rc) => (rc ? dossierDe({ rc, sources, maintenant: new Date() }) : null);
+      const dossierPour = (rc, user = null) => (rc ? dossierDe({ rc, sources, maintenant: new Date(), user }) : null);
       // Une base de plus d'un jour et demi : les textes n'affirment rien sur l'usage sans relecture (audit du 22/11).
       const enRetard = !sources.fin || Date.now() - sources.fin * 1000 > 36 * 3600000;
       const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour, enRetard });
@@ -108,7 +108,7 @@ async function lireCorps(req) {
 export async function lireDossier(user) {
   if (!user?.revenuecat_id) return null;
   const sources = await ouvrirSources();
-  try { return sources.mixpanel ? dossierDe({ rc: user.revenuecat_id, sources, maintenant: new Date() }) : null; } finally { fermerSources(sources); }
+  try { return sources.mixpanel ? dossierDe({ rc: user.revenuecat_id, sources, maintenant: new Date(), user }) : null; } finally { fermerSources(sources); }
 }
 
 export function application(s, { port, porte = null, preparerMaintenant = null, camp = null, bg = null, db = null, dossierDe: lire = lireDossier }) {
