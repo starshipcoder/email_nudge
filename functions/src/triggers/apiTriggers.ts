@@ -49,6 +49,14 @@ const TEST_TIMEOUTS: Record<string, number> = {
   WhyLeaving: 30 * 1000
 }
 
+// INT-EW-79 : ce qui part dans les journaux de Cloud Functions, sans donnée qui désigne ou raconte une personne.
+const OMIS_DU_JOURNAL = ['email', 'phone_number', 'churn_survey_text'] as const
+export function pourJournal(objet: object): Record<string, unknown> {
+  const copie: Record<string, unknown> = { ...(objet as Record<string, unknown>) }
+  for (const cle of OMIS_DU_JOURNAL) if (copie[cle] !== undefined) copie[cle] = '[omis]'
+  return copie
+}
+
 function getTimeout(emailName: string, isTestUser: boolean): number {
   if (isTestUser) {
     return TEST_TIMEOUTS[emailName] || 0
@@ -289,9 +297,8 @@ export const syncUser = onRequest(
 
     const data = req.body as SyncUserRequest
 
-    // LOG: Print full request body to debug
-    console.log('[syncUser] Received request body:', JSON.stringify(data, null, 2))
-    console.log('[syncUser] phone_number field:', data.phone_number)
+    // INT-EW-79 : le journal ne garde ni l'e-mail, ni le téléphone, ni le texte libre du questionnaire.
+    console.log('[syncUser] Received request body:', JSON.stringify(pourJournal(data), null, 2))
 
     // Validate email (required, used as document ID)
     if (!data.email || typeof data.email !== 'string' || data.email.trim() === '') {
@@ -461,13 +468,13 @@ export const syncUser = onRequest(
           ...updateData
         }
         await userRef.set(newUser)
-        console.log(`[syncUser] Created new user: ${userId}`)
-        console.log(`[syncUser] Created with updateData:`, JSON.stringify(updateData, null, 2))
+        console.log('[syncUser] Created new user')
+        console.log(`[syncUser] Created with updateData:`, JSON.stringify(pourJournal(updateData), null, 2))
       } else {
         // Merge with existing user
         await userRef.update(updateData)
-        console.log(`[syncUser] Updated user: ${userId}`)
-        console.log(`[syncUser] Updated with data:`, JSON.stringify(updateData, null, 2))
+        console.log('[syncUser] Updated user')
+        console.log(`[syncUser] Updated with data:`, JSON.stringify(pourJournal(updateData), null, 2))
       }
 
       res.json({

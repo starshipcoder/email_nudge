@@ -73,6 +73,20 @@ describe('syncUser : la réponse au questionnaire de départ', () => {
     expect(u).not.toHaveProperty('churn_survey_text')
   })
 
+  it('le journal ne garde ni l’e-mail, ni le téléphone, ni le texte libre', async () => {
+    const espion = jest.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await appeler({ ...envoiApp, phone_number: '+33600000000' })
+      const ecrit = espion.mock.calls.map((args) => args.map(String).join(' ')).join('\n')
+      expect(ecrit).toContain('[syncUser]')
+      for (const secret of ['personne.inventee@example.test', '+33600000000', 'il manque la synchro agenda']) {
+        expect(ecrit).not.toContain(secret)
+      }
+    } finally {
+      espion.mockRestore()
+    }
+  })
+
   it('ne plante pas sur une valeur inattendue : elle est écartée, le reste passe', async () => {
     const r = await appeler({ ...envoiApp, churn_survey_reason: 42, app_sessions_total: 'trois', seniority_days: -1,
       churn_survey_answered_at: 'pas une date', churn_survey_text: '   ' })
