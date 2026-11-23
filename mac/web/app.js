@@ -91,12 +91,9 @@ async function uneAction(id) {
         <button id="envoyer" class="choisi">Envoyer à la personne</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
     ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>
-      ${a.a_retraduire ? '<p class="message erreur">La traduction a été corrigée : refais le texte ci-dessus dans sa langue, puis « Enregistrer le texte ». L’envoi est bloqué d’ici là.</p>' : ''}
-
-      <input type="text" id="sujet-fr" value="${echapper(a.traduction_fr.sujet)}" ${ouverte ? '' : 'disabled'}>
-      <textarea id="corps-fr" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.traduction_fr.corps)}</textarea>
-      <p class="doux">Seul le texte du dessus part. Si tu corriges cette traduction, l’envoi attend que le texte du dessus soit refait.</p>
-      ${ouverte ? '<div class="outils"><button id="enregistrer-fr">Enregistrer la traduction</button></div>' : ''}</div>` : ''}`;
+      <input type="text" value="${echapper(a.traduction_fr.sujet)}" readonly>
+      <textarea rows="16" readonly>${echapper(a.traduction_fr.corps)}</textarea>
+      <p class="doux">Seul le texte du dessus part. Pour changer un e-mail dans une autre langue, demande-le en session : les deux textes sont corrigés ensemble.</p></div>` : ''}`;
   const zoneDossier = document.getElementById('dossier-action');
   if (a.resume) zoneDossier.innerHTML = carteDossier(a.resume);
   else api(`dossier?id=${encodeURIComponent(a.user_id)}`).then((r) => { zoneDossier.innerHTML = carteDossier(r.resume); }).catch(() => {});
@@ -128,10 +125,6 @@ async function uneAction(id) {
     catch (e) { dire(e.message, true); }
   };
   document.getElementById('essai').addEventListener('click', async () => { try { if (await garderTexte()) await envoyer('test_moi'); } catch (e) { dire(e.message, true); } });
-  document.getElementById('enregistrer-fr')?.addEventListener('click', async () => {
-    try { await api('action', { id: a.id, op: 'traduction', sujet: document.getElementById('sujet-fr').value, corps: document.getElementById('corps-fr').value }); await uneAction(a.id); }
-    catch (e) { dire(e.message, true); }
-  });
   // Un clic : le texte affiché est enregistré s'il a changé, puis 5 secondes pour annuler avant que l'e-mail parte.
   const bouton = document.getElementById('envoyer');
   let compte = null;
