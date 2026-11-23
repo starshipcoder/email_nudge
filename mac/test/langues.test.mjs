@@ -94,3 +94,18 @@ test('le texte court de l’essai annulé existe dans les six langues, une seule
     if (l !== 'fr') assert.match(b.traduction_fr.corps, /Qu'est-ce qui ne vous a pas convenu \?/);
   }
 });
+
+// Fondateur, 23/11 (Q-EW-68) : le rappel de fin d'essai ne porte pas de lien de désinscription. C'est un e-mail sur le
+// paiement ; on se désinscrit depuis la fiche dans Iris (décidé le 22/11). Seul le chemin du store pour arrêter y figure.
+test('le rappel de fin d’essai n’a ni lien, ni désinscription, ni STOP, dans les six langues', () => {
+  for (const nom of ['essai_j2_usage', 'essai_j2_peu_usage']) {
+    for (const l of LANGUES) {
+      const vars = { date_fin: '04/12', n_tournees: 3, arreter: 'Réglages > Abonnements', signature: 'Signature inventée' };
+      const { sujet, corps } = rendre(nom, l, vars);
+      const texte = `${sujet}\n${corps}`;
+      assert.doesNotMatch(texte, /https?:\/\/|www\./, `${nom} ${l} : un lien`);
+      assert.doesNotMatch(texte, /\bSTOP\b/, `${nom} ${l} : un STOP`);
+      assert.doesNotMatch(texte, /d[ée]sinscri|unsubscri|abmeld|darse de baja|disiscri|descadastr/i, `${nom} ${l} : une désinscription`);
+    }
+  }
+});

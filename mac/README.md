@@ -41,6 +41,7 @@ Ce que le code tient aujourd'hui. Un agent qui code ici ne voit pas le cadrage d
 - Une relance ne part jamais à qui a répondu, ni à qui a répondu par Gmail après l'envoi (`envoi.mjs`, `envoyerAction` ; `campagnes.mjs`, `campagnes().repondu`) ; elle part 3 jours au moins après l'envoi (`campagnes.mjs`, `verifierCampagne`).
 
 **À qui on n'écrit plus**
+- Aucun e-mail ne porte de lien de désinscription ni de « STOP » : on se désinscrit depuis la fiche (fondateur, 22/11) ; le rappel de fin d'essai non plus, c'est un e-mail sur le paiement (fondateur, 23/11, Q-EW-68 ; `mac/test/langues.test.mjs`).
 - Désinscrit : jamais d'envoi, et on ne se réinscrit pas depuis la page (`envoi.mjs`, `envoyerAction` ; `suivi.mjs`, `suivi().desinscrire` ; `campagnes.mjs`, `concernes`).
 - Adresse en rebond chez Resend : plus d'envoi (`envoi.mjs`, `envoyerAction` ; `livraison.mjs`, `relireLivraisons`).
 - L'abonnement est relu chez RevenueCat juste avant l'envoi : une fin d'essai ne part pas à qui a payé ou annulé, ni moins de 12 h avant la fin ; une résiliation ne part pas à qui s'est réabonné ; une campagne aux payants ou aux essais ne part qu'à qui l'est encore (`envoi.mjs`, `lireAbonne` et `gardeFouType`).
