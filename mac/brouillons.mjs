@@ -1,6 +1,8 @@
 // Le brouillon de l'e-mail aux résiliés, écrit depuis le dossier (EW-50), dans les six langues de l'app (EW-51).
 // Un ou deux faits de son usage, sa réponse au questionnaire ou le problème vu, une seule question. Vouvoiement.
 
+import { ecartsDe } from './reperes.mjs';
+
 const JOUR = 86400000;
 
 // Les erreurs qui disent quelque chose de son expérience, et à partir de combien de fois.
@@ -33,7 +35,8 @@ export const T = {
       noNeedOfPremiumFeature: "Qu'est-ce qui vous aurait fait garder l'abonnement ?", missingFeatures: 'Quelle fonction vous a le plus manqué ?',
       tooBuggy: 'Quel problème vous a le plus gêné ? Je veux le corriger.', tooSlow: "À quel moment l'app était-elle trop lente ?",
       difficultToUse: "À quel moment l'app vous a-t-elle paru compliquée ?", other: "Si vous avez une minute : qu'est-ce qui vous a fait partir ?",
-      probleme: 'Est-ce ce problème qui vous a arrêté, ou autre chose ?' },
+      probleme: 'Est-ce ce problème qui vous a arrêté, ou autre chose ?',
+      jamais_demarre: "Qu'est-ce qui vous a manqué pour partir en tournée avec l'app ?" },
   },
   en: {
     sujet: 'Your Easy Way subscription', bonjour: 'Hello,',
@@ -54,7 +57,8 @@ export const T = {
       noNeedOfPremiumFeature: 'What would have made you keep the subscription?', missingFeatures: 'Which feature did you miss the most?',
       tooBuggy: 'Which problem bothered you the most? I want to fix it.', tooSlow: 'When was the app too slow?',
       difficultToUse: 'At what point did the app feel complicated?', other: 'If you have a minute: what made you leave?',
-      probleme: 'Was it this problem that stopped you, or something else?' },
+      probleme: 'Was it this problem that stopped you, or something else?',
+      jamais_demarre: 'What was missing for you to go out on a route with the app?' },
   },
   de: {
     sujet: 'Ihr Easy Way Abo', bonjour: 'Hallo,',
@@ -75,7 +79,8 @@ export const T = {
       noNeedOfPremiumFeature: 'Was hätte Sie dazu gebracht, das Abo zu behalten?', missingFeatures: 'Welche Funktion hat Ihnen am meisten gefehlt?',
       tooBuggy: 'Welcher Fehler hat Sie am meisten gestört? Ich möchte ihn beheben.', tooSlow: 'Wann war die App zu langsam?',
       difficultToUse: 'An welcher Stelle kam Ihnen die App kompliziert vor?', other: 'Wenn Sie eine Minute haben: Warum haben Sie gekündigt?',
-      probleme: 'War es dieses Problem, das Sie aufgehalten hat, oder etwas anderes?' },
+      probleme: 'War es dieses Problem, das Sie aufgehalten hat, oder etwas anderes?',
+      jamais_demarre: 'Was hat Ihnen gefehlt, um mit der App auf Tour zu gehen?' },
   },
   es: {
     sujet: 'Su suscripción a Easy Way', bonjour: 'Hola:',
@@ -96,7 +101,8 @@ export const T = {
       noNeedOfPremiumFeature: '¿Qué le habría hecho mantener la suscripción?', missingFeatures: '¿Qué función echó más de menos?',
       tooBuggy: '¿Qué problema le molestó más? Quiero corregirlo.', tooSlow: '¿En qué momento la app fue demasiado lenta?',
       difficultToUse: '¿En qué momento le pareció complicada la app?', other: 'Si tiene un minuto: ¿qué le hizo irse?',
-      probleme: '¿Fue este problema lo que le frenó, u otra cosa?' },
+      probleme: '¿Fue este problema lo que le frenó, u otra cosa?',
+      jamais_demarre: '¿Qué le faltó para salir de ruta con la app?' },
   },
   it: {
     sujet: 'Il suo abbonamento a Easy Way', bonjour: 'Buongiorno,',
@@ -117,7 +123,8 @@ export const T = {
       noNeedOfPremiumFeature: "Che cosa le avrebbe fatto tenere l'abbonamento?", missingFeatures: 'Quale funzione le è mancata di più?',
       tooBuggy: 'Quale problema le ha dato più fastidio? Voglio correggerlo.', tooSlow: "In quale momento l'app era troppo lenta?",
       difficultToUse: "In quale momento l'app le è sembrata complicata?", other: "Se ha un minuto: che cosa l'ha fatta andare via?",
-      probleme: "È stato questo problema a fermarla, o qualcos'altro?" },
+      probleme: "È stato questo problema a fermarla, o qualcos'altro?",
+      jamais_demarre: "Che cosa le è mancato per partire in giro con l'app?" },
   },
   pt: {
     sujet: 'A sua assinatura do Easy Way', bonjour: 'Olá,',
@@ -138,7 +145,8 @@ export const T = {
       noNeedOfPremiumFeature: 'O que o teria feito manter a assinatura?', missingFeatures: 'Que função lhe fez mais falta?',
       tooBuggy: 'Que problema o incomodou mais? Quero corrigi-lo.', tooSlow: 'Em que momento a app foi demasiado lenta?',
       difficultToUse: 'Em que momento a app lhe pareceu complicada?', other: 'Se tiver um minuto: o que o fez sair?',
-      probleme: 'Foi este problema que o travou, ou outra coisa?' },
+      probleme: 'Foi este problema que o travou, ou outra coisa?',
+      jamais_demarre: 'O que lhe faltou para sair em rota com a app?' },
   },
 };
 
@@ -190,8 +198,13 @@ export const QUESTIONNAIRE_JOURS = 60;
 export const reponseRecente = (d) => Boolean(d.questionnaire) && (!d.questionnaire.le || !d.calcule_le
   || (new Date(d.calcule_le) - new Date(d.questionnaire.le)) <= QUESTIONNAIRE_JOURS * JOUR);
 
+// Sans réponse, la question part du plus grand écart aux gens du même métier (INT-EW-71) : un import raté, le problème ;
+// une tournée jamais démarrée, ce qui a manqué pour partir.
+const QUESTION_ECART = { import: 'probleme', demarrage_payant: 'jamais_demarre', demarrage_essai: 'jamais_demarre' };
 export function cleQuestion(d) {
   if (d.questionnaire && reponseRecente(d)) return T.fr.questions[d.questionnaire.raison] ? d.questionnaire.raison : 'other';
+  const ecart = ecartsDe(d).find((e) => QUESTION_ECART[e.id] && (e.id !== 'import' || d.usage.signaux.length));
+  if (ecart) return QUESTION_ECART[ecart.id];
   return d.usage.signaux.length ? 'probleme' : 'other';
 }
 

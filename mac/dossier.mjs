@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { SIGNAUX, T, cleQuestion } from './brouillons.mjs';
 import { direParcours, parcoursDe } from './parcours.mjs';
+import { direEcart, ecartsDe } from './reperes.mjs';
 
 const JOUR = 86400000;
 const DOSSIER_MIXPANEL = path.join(os.homedir(), '.local/share/starshipcoder/mixpanel');
@@ -143,6 +144,8 @@ export function resumer(d, maintenant = new Date(`${d.calcule_le}T12:00:00Z`)) {
   const etapes = direParcours(d.parcours);
   if (u.metier && !d.parcours?.onboarding?.metier) faits.push(`Métier déclaré : ${u.metier}.`);
   faits.push(...etapes);
+  // Les écarts aux gens du même métier, le plus grand d'abord, chacun avec sa source (INT-EW-71).
+  const ecarts = ecartsDe(d);
   if (a.premier_paiement) faits.push(`Abonné ${a.formule ?? ''} depuis le ${jj(a.premier_paiement)} : ${a.paiements} paiement${a.paiements > 1 ? 's' : ''}${a.resilie_le ? `, résilié le ${jj(a.resilie_le)}` : ''}.`.replace('  ', ' '));
   if (u.jours_actifs || u.tournees) faits.push(`${u.tournees} tournées lancées, ${u.jours_actifs} jours actifs depuis le ${jj(u.premier_jour)}${u.zones.length ? ` ; surtout ${u.zones.slice(0, 3).map((z) => z.zone).join(', ')}` : ''}.`);
   if (u.zones_jamais.length) faits.push(`Jamais utilisé : ${u.zones_jamais.join(', ')}.`);
@@ -154,7 +157,8 @@ export function resumer(d, maintenant = new Date(`${d.calcule_le}T12:00:00Z`)) {
   faits.push(`Activité : ${tendance(u.semaines)}${j !== null ? ` (plus rien depuis ${j} jours)` : ''}.`.replace(' (plus rien depuis 0 jours)', ''));
   if (d.questionnaire) faits.push(`Questionnaire de départ (${jj(d.questionnaire.le)}) : ${RAISONS[d.questionnaire.raison] ?? d.questionnaire.raison}${d.questionnaire.texte ? ` ; il a écrit « ${d.questionnaire.texte} »` : ''}.`);
   else faits.push('Pas de réponse au questionnaire de départ.');
-  return { faits, question: T.fr.questions[cleQuestion(d)], semaines: u.semaines, pays: d.pays, a_jour: direAJour(d.a_jour) };
+  faits.push(...ecarts.map(direEcart));
+  return { faits, ecarts: ecarts.map((e) => ({ id: e.id, ecart: e.ecart, source: `${e.repere.brique} ${e.repere.conclusion}` })), question: T.fr.questions[cleQuestion(d)], semaines: u.semaines, pays: d.pays, a_jour: direAJour(d.a_jour) };
 }
 
 const heureParis = (iso) => new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
