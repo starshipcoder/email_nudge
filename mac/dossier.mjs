@@ -6,6 +6,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { SIGNAUX, T, cleQuestion } from './brouillons.mjs';
+import { direParcours, parcoursDe } from './parcours.mjs';
 
 const JOUR = 86400000;
 const DOSSIER_MIXPANEL = path.join(os.homedir(), '.local/share/starshipcoder/mixpanel');
@@ -120,7 +121,9 @@ export function dossierDe({ rc, sources, maintenant = new Date() }) {
   const a_jour = { base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null,
     en_retard: !sources.fin || t - sources.fin * 1000 > 36 * 3600000 };
   // lie : la personne est retrouvée dans Mixpanel (sinon son usage est vide parce qu'inconnu, pas parce qu'elle n'a rien fait).
-  return { rc, personne, lie: personne !== rc || jours.length > 0, pays, questionnaire, usage, abonnement, a_jour, calcule_le: date(t) };
+  // Le parcours : onboarding, imports, tournées (INT-EW-69).
+  const parcours = parcoursDe(mp, personne);
+  return { rc, personne, lie: personne !== rc || jours.length > 0, pays, questionnaire, usage, abonnement, parcours, a_jour, calcule_le: date(t) };
 }
 
 const depuis = (d, maintenant) => (d.usage.dernier_jour ? Math.round((maintenant - new Date(`${d.usage.dernier_jour}T12:00:00Z`).getTime()) / JOUR) : null);
@@ -137,7 +140,9 @@ function tendance(s) {
 export function resumer(d, maintenant = new Date(`${d.calcule_le}T12:00:00Z`)) {
   const faits = [];
   const u = d.usage; const a = d.abonnement;
-  if (u.metier) faits.push(`Métier déclaré : ${u.metier}.`);
+  const etapes = direParcours(d.parcours);
+  if (u.metier && !d.parcours?.onboarding?.metier) faits.push(`Métier déclaré : ${u.metier}.`);
+  faits.push(...etapes);
   if (a.premier_paiement) faits.push(`Abonné ${a.formule ?? ''} depuis le ${jj(a.premier_paiement)} : ${a.paiements} paiement${a.paiements > 1 ? 's' : ''}${a.resilie_le ? `, résilié le ${jj(a.resilie_le)}` : ''}.`.replace('  ', ' '));
   if (u.jours_actifs || u.tournees) faits.push(`${u.tournees} tournées lancées, ${u.jours_actifs} jours actifs depuis le ${jj(u.premier_jour)}${u.zones.length ? ` ; surtout ${u.zones.slice(0, 3).map((z) => z.zone).join(', ')}` : ''}.`);
   if (u.zones_jamais.length) faits.push(`Jamais utilisé : ${u.zones_jamais.join(', ')}.`);

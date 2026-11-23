@@ -6,6 +6,8 @@ const JOUR = 86400000;
 // Les erreurs qui disent quelque chose de son expérience, et à partir de combien de fois.
 export const SIGNAUX = {
   'Event-ImportExcelError': { min: 1, resume: 'import d’un fichier en échec' },
+  'Event-ImportCsvError': { min: 1, resume: 'import d’un fichier en échec' },
+  'Event-ImportGsheetError': { min: 1, resume: 'import de Google Sheets en échec' },
   'Event-geocoderError': { min: 5, resume: 'adresses non trouvées' },
   'contacts.contactbookIssue': { min: 3, resume: 'contacts du téléphone illisibles' },
   'Event-emptyMapState': { min: 3, resume: 'carte restée vide' },
@@ -139,6 +141,12 @@ export const T = {
       probleme: 'Foi este problema que o travou, ou outra coisa?' },
   },
 };
+
+// Les échecs d'import CSV et Google Sheets se disent comme celui d'Excel (INT-EW-69).
+for (const L of Object.values(T)) {
+  L.signaux['Event-ImportCsvError'] ??= L.signaux['Event-ImportExcelError'];
+  L.signaux['Event-ImportGsheetError'] ??= L.signaux['Event-ImportExcelError'];
+}
 
 // L'annulation d'un essai (EW-52, fondateur, 22/11 : « il faudrait écrire à tout le monde ») : le même e-mail, avec
 // son ouverture et les deux questions qui parlaient d'abonnement.
