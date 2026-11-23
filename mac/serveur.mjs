@@ -16,6 +16,7 @@ import { brouillonEssaiAnnule } from './brouillons.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
 import { ligneGestesDHier, veilleur, veilleurGestes } from './notif.mjs';
 import { preparerAvis } from './avis.mjs';
+import { estGros, preparerContacts, questionsDe } from './contacter.mjs';
 import { relireLivraisons, resendLecture } from './livraison.mjs';
 import { envoyerNtfy } from './notif.mjs';
 import { personneDe } from './dossier.mjs';
@@ -54,7 +55,11 @@ export async function passeDuMac(db) {
       // Une base de plus d'un jour et demi : les textes n'affirment rien sur l'usage sans relecture (audit du 22/11).
       const enRetard = !sources.fin || Date.now() - sources.fin * 1000 > 36 * 3600000;
       const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour, enRetard });
-      return { ...r, par_fiche: parFiche.length, base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null, base_en_retard: enRetard };
+      // Piste 4 (EW-46) : la relance d'onboarding abandonné et les gros utilisateurs à contacter, prêtes, jamais envoyées d'ici.
+      let contacts;
+      try { contacts = await preparerContacts({ db, dossierPour, maintenant: new Date() }); } catch (e) { contacts = { erreur: e.message }; }
+      if (contacts.erreurs) r.erreurs = (r.erreurs ?? 0) + contacts.erreurs;
+      return { ...r, contacts, par_fiche: parFiche.length, base_jusqu_a: sources.fin ? new Date(sources.fin * 1000).toISOString() : null, base_en_retard: enRetard };
     } finally { fermerSources(sources); }
   } finally {
     base.close();
@@ -151,7 +156,9 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const d = await lire(u);
         const choix = u ? (await db.lire('crm_fiches', cleUtilisateur(u.id)))?.langue ?? null : null;
         const l = langueDePersonne({ locale: u?.locale, pays: d?.pays, choix });
-        return json(res, 200, { resume: d ? resumer(d) : null, rc: d?.rc ?? null, langue: { ...l, texte: direSource(l), choix } });
+        // Les questions tirées de son usage, dans sa langue et en français, chacune avec l'événement qui la fonde (EW-46).
+        return json(res, 200, { resume: d ? resumer(d) : null, rc: d?.rc ?? null, langue: { ...l, texte: direSource(l), choix },
+          questions: d ? questionsDe(d, l.langue) : [], gros: estGros(d) });
       }
       if (route === 'POST /api/rebrouillon') {
         if (!db) return json(res, 503, { erreur: 'Base absente.' });

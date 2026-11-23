@@ -62,7 +62,7 @@ async function aujourdhui() {
 }
 
 // Le dossier d'une personne : ce qui ressort de son usage, sa réponse au questionnaire, une piste de question.
-function carteDossier(resume) {
+function carteDossier(resume, { question = true } = {}) {
   if (!resume) return '<div class="carte"><h2>Dossier</h2><p class="doux">Pas de dossier : pas d’identifiant RevenueCat, ou la base Mixpanel du Mac est absente.</p></div>';
   const max = Math.max(1, ...resume.semaines);
   const barres = resume.semaines.map((n) => `<span class="barre-semaine h${Math.round((n / max) * 4)}" title="${n} jour(s) actif(s)"></span>`).join('');
@@ -70,7 +70,17 @@ function carteDossier(resume) {
   return `<div class="carte"><h2>Dossier</h2><p class="${aJour.en_retard ? 'message erreur' : 'doux'}">${echapper(aJour.texte)}</p>
     <ul>${resume.faits.map((f) => `<li>${echapper(f)}</li>`).join('')}</ul>
     <p class="doux">Jours actifs par semaine, 12 dernières semaines :</p><div class="semaines">${barres}</div>
-    <p><strong>Question à lui poser :</strong> ${echapper(resume.question)}</p></div>`;
+    ${question ? `<p><strong>Question à lui poser :</strong> ${echapper(resume.question)}</p>` : ''}</div>`;
+}
+
+// Les questions tirées de l'usage (EW-46) : la question en français pour le fondateur, l'événement qui la fonde, et un
+// bouton qui la met dans l'e-mail (sur une action) ou la copie (sur la fiche), dans la langue de la personne.
+function carteQuestions(questions, { titre = 'Questions tirées de son usage', bouton = 'Copier' } = {}) {
+  if (!questions?.length) return '';
+  return `<div class="carte"><h2>${echapper(titre)}</h2><table><tbody>
+    ${questions.map((q, i) => `<tr><td>${echapper(q.texte_fr)}${q.texte !== q.texte_fr ? `<br><span class="doux">${echapper(q.texte)}</span>` : ''}</td>
+      <td class="doux">${echapper(q.appui?.evenement ?? '')} : ${echapper(q.appui?.n ?? '')}</td>
+      <td><button data-question="${i}">${echapper(bouton)}</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 async function uneAction(id) {
@@ -83,6 +93,7 @@ async function uneAction(id) {
     ${a.a_verifier ? `<div class="carte"><p class="message erreur">À vérifier avant l’envoi : ${echapper(a.a_verifier)}.</p>${ouverte ? '<div class="outils"><button id="verifie">C’est vérifié, le texte peut partir</button></div>' : ''}</div>` : ''}
     ${a.derniere_erreur ? `<div class="carte"><p class="message erreur">Le dernier envoi a échoué, rien n’est parti : ${echapper(a.derniere_erreur)}. Tu peux réessayer.</p></div>` : ''}
     <div id="dossier-action"></div>
+    ${ouverte ? carteQuestions(a.questions, { bouton: 'Copier dans l’e-mail' }) : ''}
     <div class="carte"><h2>Le texte</h2>
       <input type="text" id="sujet" value="${echapper(a.sujet)}" ${ouverte ? '' : 'disabled'}>
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
@@ -95,7 +106,8 @@ async function uneAction(id) {
       <textarea rows="16" readonly>${echapper(a.traduction_fr.corps)}</textarea>
       <p class="doux">Seul le texte du dessus part. Pour changer un e-mail dans une autre langue, demande-le en session : les deux textes sont corrigés ensemble.</p></div>` : ''}`;
   const zoneDossier = document.getElementById('dossier-action');
-  if (a.resume) zoneDossier.innerHTML = carteDossier(a.resume);
+  // La question de départ du dossier ne vaut pas pour qui reste : les questions d'un gros utilisateur sont à part.
+  if (a.resume) zoneDossier.innerHTML = carteDossier(a.resume, { question: !['gros', 'onboarding'].includes(a.type) });
   else api(`dossier?id=${encodeURIComponent(a.user_id)}`).then((r) => { zoneDossier.innerHTML = carteDossier(r.resume); }).catch(() => {});
   if (!ouverte) return;
   const msg = document.getElementById('msg-action');
@@ -107,6 +119,15 @@ async function uneAction(id) {
     catch (e) { dire(e.message, true); }
   });
   const dire = (texte, erreur = false) => { msg.className = erreur ? 'message erreur' : 'message'; msg.textContent = texte; };
+  // Une question ajoutée là où est le curseur dans le texte (à la fin sinon), en ligne de liste comme les autres.
+  vue.querySelectorAll('[data-question]').forEach((b) => b.addEventListener('click', () => {
+    const q = a.questions[Number(b.dataset.question)]; const zone = document.getElementById('corps');
+    const ici = zone.selectionStart ?? zone.value.length;
+    const avant = zone.value.slice(0, ici); const ligne = `${avant && !avant.endsWith('\n') ? '\n' : ''}- ${q.texte}\n`;
+    zone.value = `${avant}${ligne}${zone.value.slice(ici)}`;
+    zone.focus(); zone.selectionStart = zone.selectionEnd = ici + ligne.length;
+    dire('Question ajoutée au texte : il est enregistré à l’envoi.');
+  }));
   const STATUTS = { envoye: 'Envoyé.', a_blanc: 'À blanc : noté dans le journal, rien n’est parti.', bloquee: 'Bloqué', erreur: 'Erreur' };
   document.getElementById('enregistrer').addEventListener('click', async () => {
     try { await api('action', { id: a.id, op: 'texte', sujet: document.getElementById('sujet').value, corps: document.getElementById('corps').value }); dire('Texte enregistré.'); }
@@ -218,7 +239,10 @@ async function fiche(id) {
   remplirFil().catch(() => { document.getElementById('fil').textContent = 'Fil illisible.'; });
   const choixLangue = document.getElementById('langue-choix');
   const lireDossierFiche = () => api(`dossier?id=${encodeURIComponent(f.id)}`).then((r) => {
-    document.getElementById('dossier-fiche').innerHTML = carteDossier(r.resume);
+    const zone = document.getElementById('dossier-fiche');
+    zone.innerHTML = carteDossier(r.resume, { question: !r.gros }) + (r.questions?.length >= 3
+      ? carteQuestions(r.questions, { titre: r.gros ? 'Gros utilisateur : questions tirées de son usage' : 'Questions tirées de son usage', bouton: 'Copier' }) : '');
+    zone.querySelectorAll('[data-question]').forEach((b) => b.addEventListener('click', () => copier(r.questions[Number(b.dataset.question)].texte, b)));
     document.getElementById('langue-texte').textContent = r.langue?.texte ?? '';
     choixLangue.value = r.langue?.choix ?? '';
   }).catch(() => {});
