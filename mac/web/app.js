@@ -88,7 +88,7 @@ async function uneAction(id) {
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
       <p class="doux">À l’envoi, la ligne WhatsApp est ajoutée à la fin, dans sa langue, si ton numéro est réglé.</p>
       ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${['resiliation', 'essai_annule'].includes(a.type) ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
-        <button id="envoyer" class="choisi">Envoyer</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
+        <button id="envoyer" class="choisi">Envoyer à la personne</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
     ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>
       ${a.a_retraduire ? '<p class="message erreur">La traduction a été corrigée : refais le texte ci-dessus dans sa langue, puis « Enregistrer le texte ». L’envoi est bloqué d’ici là.</p>' : ''}
@@ -115,19 +115,41 @@ async function uneAction(id) {
     try { await api('action', { id: a.id, op: 'texte', sujet: document.getElementById('sujet').value, corps: document.getElementById('corps').value }); dire('Texte enregistré.'); }
     catch (e) { dire(e.message, true); }
   });
+  // Le texte affiché, enregistré avant un envoi s'il a changé : ce qu'on voit est ce qui part.
+  const garderTexte = async () => {
+    const sujet = document.getElementById('sujet').value; const corps = document.getElementById('corps').value;
+    if (sujet === a.sujet && corps === a.corps) return true;
+    if (!sujet.trim() || !corps.trim()) { dire('Le sujet et le texte ne peuvent pas être vides.', true); return false; }
+    await api('action', { id: a.id, op: 'texte', sujet, corps }); a.sujet = sujet; a.corps = corps;
+    return true;
+  };
   const envoyer = async (canal) => {
     try { const r = await api('envoyer', { actionId: a.id, canal }); dire(`${STATUTS[r.statut] ?? r.statut}${r.raison ? ` : ${r.raison}` : ''}`, ['bloquee', 'erreur'].includes(r.statut)); if (canal === 'email' && ['envoye', 'a_blanc'].includes(r.statut)) setTimeout(() => uneAction(a.id), 1200); }
     catch (e) { dire(e.message, true); }
   };
-  document.getElementById('essai').addEventListener('click', () => envoyer('test_moi'));
+  document.getElementById('essai').addEventListener('click', async () => { try { if (await garderTexte()) await envoyer('test_moi'); } catch (e) { dire(e.message, true); } });
   document.getElementById('enregistrer-fr')?.addEventListener('click', async () => {
     try { await api('action', { id: a.id, op: 'traduction', sujet: document.getElementById('sujet-fr').value, corps: document.getElementById('corps-fr').value }); await uneAction(a.id); }
     catch (e) { dire(e.message, true); }
   });
-  let confirme = false;
-  document.getElementById('envoyer').addEventListener('click', (e) => {
-    if (!confirme) { confirme = true; e.target.textContent = 'Oui, l’envoyer maintenant'; e.target.classList.add('danger'); dire('Rien n’est encore parti. Clique sur « Oui, l’envoyer maintenant » pour que l’e-mail parte à la personne.'); return; }
-    envoyer('email');
+  // Un clic : le texte affiché est enregistré s'il a changé, puis 5 secondes pour annuler avant que l'e-mail parte.
+  const bouton = document.getElementById('envoyer');
+  let compte = null;
+  const arreter = () => { clearInterval(compte); compte = null; bouton.textContent = 'Envoyer à la personne'; bouton.classList.remove('danger'); };
+  bouton.textContent = 'Envoyer à la personne';
+  bouton.addEventListener('click', async () => {
+    if (compte) { arreter(); dire('Annulé : rien n’est parti.'); return; }
+    try { if (!(await garderTexte())) return; } catch (e) { dire(e.message, true); return; }
+    let reste = 5;
+    bouton.classList.add('danger');
+    const montrer = () => { bouton.textContent = `Annuler (${reste})`; dire(`L’e-mail part dans ${reste} seconde${reste > 1 ? 's' : ''}. Clique sur « Annuler » pour l’arrêter.`); };
+    montrer();
+    compte = setInterval(() => {
+      reste -= 1;
+      if (reste > 0) return montrer();
+      arreter(); bouton.disabled = true; dire('Envoi en cours…');
+      envoyer('email').finally(() => { bouton.disabled = false; });
+    }, 1000);
   });
   document.getElementById('reporter').addEventListener('click', async () => { await api('action', { id: a.id, op: 'reporter' }); location.hash = 'aujourdhui'; });
   document.getElementById('ignorer').addEventListener('click', async () => { await api('action', { id: a.id, op: 'ignorer' }); location.hash = 'aujourdhui'; });
