@@ -126,7 +126,7 @@ async function uneAction(id) {
   });
   let confirme = false;
   document.getElementById('envoyer').addEventListener('click', (e) => {
-    if (!confirme) { confirme = true; e.target.textContent = 'Confirmer l’envoi'; return; }
+    if (!confirme) { confirme = true; e.target.textContent = 'Confirmer l’envoi'; e.target.classList.add('danger'); dire('Clique encore sur « Confirmer l’envoi » : l’e-mail part alors vraiment à la personne.'); return; }
     envoyer('email');
   });
   document.getElementById('reporter').addEventListener('click', async () => { await api('action', { id: a.id, op: 'reporter' }); location.hash = 'aujourdhui'; });
