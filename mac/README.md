@@ -57,6 +57,7 @@ Ce que le code tient aujourd'hui. Un agent qui code ici ne voit pas le cadrage d
 - Aucune clé dans le dépôt : Resend et RevenueCat se lisent dans le trousseau du Mac au moment de l'appel, jamais affichées (`envoi.mjs`, `cleTrousseau`) ; Firestore passe par la connexion Google du Mac (`firestore.mjs`).
 - Les bases Mixpanel du Mac s'ouvrent en lecture seule (`serveur.mjs`, `passeDuMac`) ; seul l'index des identifiants, sans e-mail, est écrit à côté d'elles, hors git, lisible du seul compte (`dossier.mjs`, `indexIds`).
 - Les notifications du téléphone et du Mac ne portent ni adresse ni nom : des nombres et des types d'action (`notif.mjs`, `texteActions` et `texteOrphelines` ; `serveur.mjs`, `texteNotification`).
+- L'alerte des gestes d'Easy Way (EW-36), écrite chaque nuit par hephaistos dans `_workshop/alertes/easyway-gestes.json`, ne sonne que par sa ligne courte : des gestes et des nombres, jamais les rangs des personnes ni les replays, qu'Iris ne lit pas ; une clé sonne une fois, un fichier absent ou illisible ne fait rien (`notif.mjs`, `lireAlerteGestes`, `veilleurGestes` et `ligneGestesDHier`).
 - Le journal note l'identifiant RevenueCat, pas l'adresse (`suivi.mjs`, `journaliser` ; `envoi.mjs`, `envoyerAction`).
 - Les tests tournent sur une base en mémoire et des données inventées, sans réseau (`suivi.mjs`, `baseEnMemoire`).
 

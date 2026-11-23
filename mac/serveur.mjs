@@ -14,7 +14,7 @@ import { versionsEnVente } from './versions.mjs';
 import { brouillonAvecTraduction, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
 import { brouillonEssaiAnnule } from './brouillons.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
-import { veilleur } from './notif.mjs';
+import { ligneGestesDHier, veilleur, veilleurGestes } from './notif.mjs';
 import { preparerAvis } from './avis.mjs';
 import { relireLivraisons, resendLecture } from './livraison.mjs';
 import { envoyerNtfy } from './notif.mjs';
@@ -270,10 +270,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const bg = bugs(db, { lireRetours: retoursSentry(), lireVersions, paysPour });
   // Après chaque passe, ce qui est nouveau sonne sur le téléphone par ntfy (INT-EW-72), sans donnée d'utilisateur.
   const veille = veilleur();
+  // L'alerte des gestes d'Easy Way (EW-36), écrite chaque nuit par hephaistos : une clé nouvelle sonne une fois, la ligne seule.
+  const veilleGestes = veilleurGestes();
   const prevenir = async (echec = null, orphelines = null) => {
     try {
       const { notif_telephone: actif = true } = (await db.lire('crm_reglages', 'general')) ?? {};
       await veille({ actions: await s.aujourdhui(), reponses: await s.reponses(), orphelines, echec, actif: actif !== false });
+      await veilleGestes({ actif: actif !== false }).catch((e) => console.error('ntfy gestes', e.message));
     } catch (e) { console.error('ntfy', e.message); }
   };
   // Chaque passe laisse son état dans crm_sante/passe : la page l'affiche en haut, la notification de 9 h le dit.
@@ -345,7 +348,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const sante = (await db.lire('crm_sante', 'passe')) ?? {};
       const vieille = !sante.le || Date.now() - new Date(sante.le).getTime() > 2 * 3600000;
       const alerte = vieille ? 'pas de passe depuis plus de 2 h' : sante.ok === false ? (sante.problemes ?? []).join(', ') : '';
-      notifier((await s.aujourdhui()).length, (await s.reponses()).length, alerte);
+      // L'alerte des gestes de la nuit (EW-36), si elle date d'hier : sa ligne, sans rang ni replay.
+      const gestes = ligneGestesDHier(undefined, maintenant);
+      notifier((await s.aujourdhui()).length, (await s.reponses()).length, [alerte, gestes].filter(Boolean).join(', '));
     } catch (e) { notifier(0, 0, `Iris CRM ne lit plus sa base : ${e.message}`); }
   }, 60 * 1000);
 }

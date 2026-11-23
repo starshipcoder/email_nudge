@@ -71,3 +71,43 @@ export function veilleur({ envoyer = envoyerNtfy } = {}) {
     return envoyes;
   };
 }
+
+// L'alerte des gestes d'Easy Way (EW-36) : hephaistos l'écrit chaque nuit (research/scripts/alertes_gestes.py, lancé par
+// outils/nuit.mjs), hors git. Iris n'en lit que la ligne courte (des gestes et des nombres) et les clés : jamais le détail,
+// où sont les rangs des personnes et les replays.
+export const FICHIER_ALERTE_GESTES = path.join(os.homedir(), 'workspace/starshipcoder/_workshop/alertes/easyway-gestes.json');
+export const TITRE_GESTES = 'Easy Way : un geste baisse';
+
+// { au, ligne, cles } ; null si le fichier manque ou se lit mal.
+export function lireAlerteGestes(fichier = FICHIER_ALERTE_GESTES) {
+  try {
+    if (!existsSync(fichier)) return null;
+    const j = JSON.parse(readFileSync(fichier, 'utf8'));
+    if (!j || typeof j.au !== 'string' || typeof j.ligne !== 'string' || !Array.isArray(j.alertes)) return null;
+    const cles = j.alertes.map((a) => a?.cle).filter((c) => typeof c === 'string' && c);
+    return { au: j.au.slice(0, 10), ligne: j.ligne.replace(/\s+/g, ' ').trim().slice(0, 240), cles };
+  } catch { return null; }
+}
+
+// Le jour d'avant, à Paris, au format du relevé (2026-11-22).
+const veilleParis = (maintenant) => new Date(maintenant.getTime() - 86400000).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+
+// À chaque passe : une clé jamais vue sonne une fois. Un relevé plus vieux que la veille ne sonne pas (une nuit en panne,
+// ou Iris qui redémarre sur un ancien fichier) ; ses clés sont gardées comme vues. Coupé, il se tait et garde les clés.
+export function veilleurGestes({ envoyer = envoyerNtfy, fichier = FICHIER_ALERTE_GESTES, maintenant = () => new Date() } = {}) {
+  const vues = new Set();
+  return async ({ actif = true } = {}) => {
+    const a = lireAlerteGestes(fichier);
+    if (!a) return [];
+    const nouvelles = a.cles.filter((c) => !vues.has(c));
+    for (const c of a.cles) vues.add(c);
+    if (!actif || !nouvelles.length || a.au < veilleParis(maintenant())) return [];
+    return [await envoyer({ titre: TITRE_GESTES, texte: a.ligne || 'Easy Way : un geste clé baisse, le détail est sur le Mac.', priorite: 'high', tags: 'chart_with_downwards_trend' })];
+  };
+}
+
+// Pour la notification de 9 h : la ligne si le relevé date d'hier et porte une alerte, sinon rien.
+export function ligneGestesDHier(fichier = FICHIER_ALERTE_GESTES, maintenant = new Date()) {
+  const a = lireAlerteGestes(fichier);
+  return a && a.cles.length && a.au === veilleParis(maintenant) ? a.ligne : '';
+}
