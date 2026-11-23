@@ -10,7 +10,7 @@ Un script Google Apps Script, dans le compte Google du fondateur. Toutes les 15 
 4. Choisir la fonction `installer`, Exécuter, accepter les droits (Gmail en lecture, Firestore, déclencheurs). Google affiche « application non validée » : c'est ton propre script, « Paramètres avancés », « Accéder à ».
 5. Journal d'exécution : « passe : N fil(s) lus, M message(s) écrits ».
 
-La première passe remonte 90 jours. Ensuite, chaque passe lit depuis la précédente.
+La première passe remonte 90 jours ; ces réponses arrivent déjà lues (pas de « Réponses à lire » ni de notification pour l'historique). Si elle dépasse 4 minutes, elle reprend au passage suivant, à la même page. Ensuite, chaque passe lit depuis la précédente, avec une heure de recouvrement. « A répondu le » ne recule jamais. Les appels à Firestore sont comptés sur le projet Firebase (en-tête `x-goog-user-project`) : le compte Google doit avoir accès au projet contact-on-map-flutter.
 
 ## Arrêter
 
