@@ -9,6 +9,8 @@ import { langueDePersonne } from './langues.mjs';
 const H = 3600 * 1000;
 const FENETRE_J2 = [24 * H, 60 * H]; // fin d'essai entre 24 h et 60 h d'ici
 const FENETRE_RESILIATION = 7 * 24 * H;
+// L'e-mail aux abonnés payés qui résilient se prépare 24 h après l'arrêt, pas avant (choix du fondateur, 23/11, Q-EW-63).
+export const DELAI_RESILIATION = 24 * H;
 
 // Les faits utiles, lus dans la base Mixpanel (lecture seule). `base` répond à all(sql, ...params).
 export function lireFaits(base, depuisMs) {
@@ -81,8 +83,9 @@ export function candidats(faits, inscrits, maintenant) {
     .filter((f) => !apres(f, ['rc_trial_cancelled_event', 'rc_trial_converted_event', 'rc_expiration_event']))
     .map((f) => ({ type: 'essai_j2', fait: f, user: inscritDe(f) })).filter((c) => c.user);
   // Seul un arrêt par la personne : pas un remboursement (CUSTOMER_SUPPORT), une décision du développeur ou un défaut de carte.
+  // Il se prépare 24 h après l'arrêt, et jusqu'à 7 jours.
   const resiliations = faits.filter((f) => f.nom === 'rc_cancellation_event' && f.type === 'NORMAL' && f.raison === 'UNSUBSCRIBE')
-    .filter((f) => t - f.temps <= FENETRE_RESILIATION)
+    .filter((f) => t - f.temps >= DELAI_RESILIATION && t - f.temps <= FENETRE_RESILIATION)
     .filter((f) => !apres(f, ['rc_uncancellation_event', 'rc_renewal_event']))
     .map((f) => ({ type: 'resiliation', fait: f, user: inscritDe(f) })).filter((c) => c.user);
   // L'annulation d'un essai (EW-52) : sauf si la personne a payé ou repris ensuite, quel que soit l'abonnement.
@@ -135,7 +138,7 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
   }
   const { d: sur, doute } = dossierSur(dossier);
   const { sujet, corps, traduction_fr } = sur ? brouillonAvecTraduction(sur, langue, signature) : rendreAvecTraduction('resiliation', langue, () => ({ signature }));
-  // Une résiliation par abonnement : une personne qui revient puis repart a de nouveau son e-mail.
+  // Une seule résiliation par personne (Q-EW-63) : preparer ne la crée pas si la personne en a déjà une.
   return { id: `resiliation__${cle}__${c.fait.transaction}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
     ...(traduction_fr ? { traduction_fr } : {}), ...(doute && dossier ? { a_verifier: INCONNU } : {}),
     ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
@@ -154,9 +157,10 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
   let creees = 0; let erreurs = 0;
   const existantes = new Map((await db.lister('crm_actions')).map((a) => [a.id, a]));
   for (const c of candidats(faits, inscrits, maintenant)) {
-    // L'ancien nom d'une résiliation (avant le 22/11, une par personne) : celle déjà écrite pour ce départ ne se double pas.
-    const ancienne = c.type === 'resiliation' ? existantes.get(`resiliation__${cleUtilisateur(c.user.id)}`) : null;
-    if (ancienne && new Date(ancienne.cree_le).getTime() >= c.fait.temps) continue;
+    // Une seule résiliation par personne, quel que soit le départ (Q-EW-63, 23/11) : une personne qui revient puis
+    // repart n'a pas de second e-mail. L'ancien nom (avant le 22/11, sans user_id) compte aussi.
+    if (c.type === 'resiliation' && (existantes.has(`resiliation__${cleUtilisateur(c.user.id)}`)
+      || [...existantes.values()].some((a) => a.type === 'resiliation' && a.user_id === c.user.id))) continue;
     // Un même départ vu par la fiche Firebase puis par la base Mixpanel (EW-55) : une action de ce type pour cette
     // personne dans les 7 jours suffit.
     if (['resiliation', 'essai_annule'].includes(c.type) && [...existantes.values()].some((a) => a.type === c.type && a.user_id === c.user.id

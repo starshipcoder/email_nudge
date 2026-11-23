@@ -193,3 +193,12 @@ test('e-mail d’essai annulé : pas à qui a repris son essai ou payé, relu ch
   assert.equal(gardeFouType('essai_annule', lireAbonne(PAYANT_ANNULE, MAINTENANT), MAINTENANT), null);
   assert.equal(gardeFouType('essai_annule', lireAbonne({ subscriber: { subscriptions: {} } }, MAINTENANT), MAINTENANT), null);
 });
+
+test('Q-EW-63 : une seule résiliation par personne ; une seconde, même plus tard, ne part pas', async () => {
+  const { db, porte, envoyes } = monter({ action: { id: 'resiliation__a__P1', type: 'resiliation' }, abonne: PAYANT_ANNULE });
+  await db.ecrire('crm_actions', 'resiliation__a__P1', { statut: 'envoyee' });
+  await db.ecrire('crm_actions', 'resiliation__a__P2', { type: 'resiliation', user_id: 'ana@exemple.fr', statut: 'prete', sujet: 's', corps: 'c', echeance: jours(3) });
+  assert.deepEqual(await porte.envoyerAction('resiliation__a__P2'), { statut: 'bloquee', raison: 'déjà écrit à son départ' });
+  assert.equal(db.donnees.crm_actions.get('resiliation__a__P2').statut, 'bloquee');
+  assert.equal(envoyes.length, 0);
+});

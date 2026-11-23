@@ -24,8 +24,9 @@ test('un essai qui finit dans 24 à 60 h et non annulé donne un rappel ; les au
   assert.deepEqual(candidats(faits, inscrits, T).filter((c) => c.type === 'essai_j2').map((c) => c.user.id), ['ana@exemple.fr']);
 });
 
-test('une résiliation de payant des 7 derniers jours donne un e-mail, pas un défaut de carte ni une reprise', () => {
+test('une résiliation de payant donne un e-mail 24 h après, jusqu’à 7 jours, pas un défaut de carte ni une reprise', () => {
   const faits = [
+    { nom: 'rc_cancellation_event', temps: h(-23), ids: ['rcB'], transaction: 'P0', type: 'NORMAL', raison: 'UNSUBSCRIBE' },
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcA'], transaction: 'P1', type: 'NORMAL', raison: 'UNSUBSCRIBE' },
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcB'], transaction: 'P2', type: 'NORMAL', raison: 'BILLING_ERROR' },
     { nom: 'rc_cancellation_event', temps: h(-48), ids: ['rcC'], transaction: 'P3', type: 'NORMAL', raison: 'UNSUBSCRIBE' },
@@ -104,7 +105,7 @@ test('l’annulation d’essai s’écrit depuis le dossier, une seule fois, et 
   assert.equal((b.corps.match(/\?/g) ?? []).length, 1);
 });
 
-test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne qui revient puis repart a son e-mail ; un usage inconnu se signale', async () => {
+test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne qui revient puis repart n’a pas de second e-mail ; un usage inconnu se signale', async () => {
   const faits = [
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcA'], transaction: 'P1', type: 'NORMAL', raison: 'CUSTOMER_SUPPORT' },
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcB'], transaction: 'P2', type: 'NORMAL', raison: 'DEVELOPER_INITIATED' },
@@ -112,14 +113,14 @@ test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne 
   ];
   assert.deepEqual(candidats(faits, inscrits, T).map((c) => c.user.id), ['cla@exemple.fr']);
 
-  // L'ancienne résiliation (une par personne, avant le 22/11) écrite pour ce départ ne se double pas ; un départ plus récent, si.
+  // Une seule résiliation par personne (Q-EW-63) : l'ancienne (avant le 22/11) compte, et un départ plus récent n'en refait pas.
   const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }],
     crm_actions: [{ id: `resiliation__${(await import('../envoi.mjs')).cleUtilisateur('cla@exemple.fr')}`, type: 'resiliation', statut: 'envoyee', cree_le: new Date(h(-20)) }] });
   await preparer({ db, faits, tournees: () => 0, maintenant: T });
   assert.equal((await db.lister('crm_actions')).length, 1);
-  const retour = [{ ...faits[2], temps: h(-2), transaction: 'P4' }];
+  const retour = [{ ...faits[2], temps: h(-30), transaction: 'P4' }];
   await preparer({ db, faits: retour, tournees: () => 0, maintenant: T });
-  assert.equal((await db.lister('crm_actions')).length, 2);
+  assert.equal((await db.lister('crm_actions')).length, 1);
 
   // Rappel de fin d'essai sans données Mixpanel : le texte « pas encore de tournée » attend une vérification.
   const db2 = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
@@ -157,7 +158,9 @@ test('une annulation sur la fiche Firebase devient un fait, d’après RevenueCa
     ['rc_trial_cancelled_event', 'rcA', 'TRIAL', 'UNSUBSCRIBE'],
     ['rc_cancellation_event', 'rcB', 'NORMAL', 'UNSUBSCRIBE'],
   ]);
-  const c = candidats(faits, inscrits, T);
+  // La résiliation attend 24 h ; l'essai annulé, non.
+  assert.deepEqual(candidats(faits, inscrits, T).map((x) => [x.type, x.user.id]), [['essai_annule', 'ana@exemple.fr']]);
+  const c = candidats(faits, inscrits, new Date(h(22)));
   assert.deepEqual(c.map((x) => [x.type, x.user.id]).sort(), [['essai_annule', 'ana@exemple.fr'], ['resiliation', 'bob@exemple.com']]);
   // RevenueCat qui ne répond pas : rien, sans casser.
   assert.deepEqual(await faitsDesFiches(users.slice(0, 1), async () => { throw new Error('RevenueCat 500'); }, T), []);
@@ -170,4 +173,24 @@ test('le même départ vu par la fiche puis par Mixpanel le lendemain ne fait qu
   const parMixpanel = [{ nom: 'rc_trial_cancelled_event', temps: h(-2.2), ids: ['rcA'], transaction: 'T-vrai', type: 'TRIAL' }];
   await preparer({ db, faits: parMixpanel, tournees: () => 0, maintenant: new Date(h(20)) });
   assert.equal((await db.lister('crm_actions')).filter((a) => a.type === 'essai_annule').length, 1);
+});
+
+test('Q-EW-63 : l’e-mail de départ, 24 h après, une fois par personne, seulement un arrêt volontaire', async () => {
+  const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
+  const arret = { nom: 'rc_cancellation_event', temps: h(-2), ids: ['rcA'], transaction: 'P1', type: 'NORMAL', raison: 'UNSUBSCRIBE' };
+  const carte = { nom: 'rc_cancellation_event', temps: h(-30), ids: ['rcB'], transaction: 'P2', type: 'NORMAL', raison: 'BILLING_ERROR' };
+  // 2 h après l'arrêt : rien encore ; la carte refusée, jamais.
+  await preparer({ db, faits: [arret, carte], tournees: () => 0, maintenant: T });
+  assert.equal((await db.lister('crm_actions')).length, 0);
+  // 24 h après : l'action est prête, son échéance reste à 7 jours de l'arrêt.
+  await preparer({ db, faits: [arret, carte], tournees: () => 0, maintenant: new Date(h(22)) });
+  const [a] = await db.lister('crm_actions');
+  assert.equal(a.type, 'resiliation');
+  assert.equal(a.user_id, 'ana@exemple.fr');
+  assert.equal(new Date(a.echeance).getTime(), h(-2) + 7 * 24 * 3600000);
+  // Elle revient, repart un mois plus tard : pas de second e-mail, même si le premier a expiré.
+  await db.ecrire('crm_actions', a.id, { statut: 'expiree' });
+  const second = { ...arret, temps: h(24 * 30), transaction: 'P3' };
+  await preparer({ db, faits: [second], tournees: () => 0, maintenant: new Date(h(24 * 31)) });
+  assert.equal((await db.lister('crm_actions')).filter((x) => x.type === 'resiliation').length, 1);
 });

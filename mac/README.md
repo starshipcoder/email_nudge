@@ -32,6 +32,7 @@ Ce que le code tient aujourd'hui. Un agent qui code ici ne voit pas le cadrage d
 - Une campagne dont le nom commence par TEST ne vise que les utilisateurs de test ; les autres ne les visent jamais (`campagnes.mjs`, `concernes`).
 
 **Une fois par personne, et pas trop souvent**
+- L'e-mail aux abonnés payés qui résilient : seulement un arrêt par la personne (pas une carte refusée ni un remboursement), préparé 24 h après l'arrêt, une seule fois par personne, même si elle revient puis repart (`preparer.mjs`, `candidats` et `preparer`) ; la porte refuse une seconde résiliation à qui en a déjà reçu une (`envoi.mjs`, `envoyerAction`, « déjà écrit à son départ »).
 - Le même identifiant d'action ne se crée jamais deux fois, et un même départ vu deux fois (fiche Firebase et base Mixpanel) ne fait qu'une action en 7 jours (`preparer.mjs`, `preparer`).
 - Le verrou `crm_envois/{action}` est créé avant l'appel à Resend : un second clic répond « déjà envoyé » ; Resend reçoit une clé d'idempotence (`envoi.mjs`, `envoyerAction` et `resendReel`).
 - 72 h au moins entre deux e-mails à la même personne, sauf « Ton bug est corrigé » (`envoi.mjs`, `envoyerAction`, `ECART_HEURES`).

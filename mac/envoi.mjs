@@ -120,6 +120,11 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         // Une réponse arrivée par Gmail ou notée à la main après l'envoi de la campagne vaut réponse.
         if (fiche.a_repondu_le && membre.envoye_le && new Date(fiche.a_repondu_le) > new Date(membre.envoye_le)) return bloquer(action, 'a répondu', true);
       }
+      // Une seule résiliation par personne (Q-EW-63) : si une autre est déjà partie, celle-ci ne part pas.
+      if (action.type === 'resiliation' && (await db.lister('crm_actions'))
+        .some((a) => a.id !== action.id && a.type === 'resiliation' && a.user_id === action.user_id && a.statut === 'envoyee')) {
+        return bloquer(action, 'déjà écrit à son départ', true);
+      }
       if (action.echeance && t > new Date(action.echeance)) {
         await db.ecrire('crm_actions', action.id, { statut: 'expiree', maj_le: t });
         return { statut: 'bloquee', raison: 'trop tard' };
