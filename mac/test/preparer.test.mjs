@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { baseEnMemoire } from '../suivi.mjs';
 import { bienvenues, candidats, preparer } from '../preparer.mjs';
-import { rendre } from '../modeles.mjs';
+import { apercuBienvenue, rendre } from '../modeles.mjs';
 
 const T = new Date('2026-12-02T10:00:00Z');
 const h = (n) => T.getTime() + n * 3600000;
@@ -231,4 +231,12 @@ test('la bienvenue : une par adresse donnée dans les 72 h, seulement si le rég
   assert.equal(de.langue, 'de');
   assert.equal(de.traduction_fr.sujet, 'Bienvenue sur Easy Way');
   assert.equal(new Date(de.echeance).getTime(), h(1));
+});
+
+test('la carte des Réglages montre le texte français de la bienvenue, avec la signature ou sa place', () => {
+  const avec = apercuBienvenue('Prénom, créateur d’Easy Way');
+  assert.equal(avec.sujet, 'Bienvenue sur Easy Way');
+  assert.match(avec.corps, /Une seule question/);
+  assert.match(avec.corps, /Prénom, créateur/);
+  assert.match(apercuBienvenue('').corps, /ta signature/);
 });

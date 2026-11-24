@@ -335,6 +335,11 @@ export function rendre(nom, langue, variables) {
   return { sujet: remplir(modele[0]), corps: remplir(modele[1]) };
 }
 
+// Le texte français de la bienvenue, montré sur la carte des Réglages : ouvrir le réglage vaut oui sur ce texte.
+export function apercuBienvenue(signature) {
+  return rendre('bienvenue', 'fr', { signature: signature || '(ta signature, à régler plus bas)' });
+}
+
 // Le même e-mail rendu en français, pour la relecture du fondateur (rien si l'e-mail est déjà en français).
 export function rendreAvecTraduction(nom, langue, variablesDe) {
   const texte = rendre(nom, langue, variablesDe(langue));

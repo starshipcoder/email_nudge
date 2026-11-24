@@ -21,6 +21,7 @@ import { relireLivraisons, resendLecture } from './livraison.mjs';
 import { envoyerNtfy } from './notif.mjs';
 import { personneDe } from './dossier.mjs';
 import { cleUtilisateur } from './envoi.mjs';
+import { apercuBienvenue } from './modeles.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -199,7 +200,10 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const { id, prenom } = await lireCorps(req);
         return json(res, 200, { prenom: await s.changerPrenom(id, prenom) });
       }
-      if (route === 'GET /api/reglages') return json(res, 200, await s.reglages());
+      if (route === 'GET /api/reglages') {
+        const r = await s.reglages();
+        return json(res, 200, { ...r, texte_bienvenue: apercuBienvenue(r.signature) });
+      }
       if (route === 'POST /api/reglages') {
         const { cle, valeur } = await lireCorps(req);
         return json(res, 200, await s.changerReglage(cle, valeur));

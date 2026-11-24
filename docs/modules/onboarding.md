@@ -16,15 +16,19 @@ Les premiers jours d'un nouvel utilisateur d'Easy Way, vus depuis Iris CRM, la p
 
 - 22/11 : pas de STOP dans les e-mails ; l'en-tête List-Unsubscribe a été retiré (commit 2b88463).
 - 24/11 (INT-EW-9) : le système d'e-mails automatiques de Firebase n'écrit plus aux utilisateurs. L'e-mail « démarrage rapide » (QuickStart) est coupé dans `functions/src/triggers/paywallTriggers.ts`, et la passe programmée `checkAndSendEmails` n'est plus exportée (retirée de Firebase le 21/11). Seuls les récapitulatifs au fondateur partent encore. L'e-mail de bienvenue d'Iris le remplace.
-- En attente (question au fondateur) : remettre ou non le bouton « Se désabonner » des messageries, invisible dans le texte.
+- En attente (question au fondateur, Q-EW-70) : remettre ou non le bouton « Se désabonner » des messageries, invisible dans le texte. La tâche de la bienvenue demandait un lien de désinscription en un clic ; la décision du 22/11 l'écarte. C'est au fondateur de trancher avant la fusion, pas au code : sans réponse, rien n'est ajouté.
+- 24/11 : la carte « E-mail de bienvenue » des Réglages montre le texte français et dit qu'il n'a pas de lien de désinscription ; l'ouvrir vaut oui sur ce texte.
+- L'arrêt du système de Firebase est vérifié dans le code (QuickStart commenté, `checkAndSendEmails` non exportée), pas dans les journaux d'envoi de Resend ni de Firebase, que la file ne peut pas lire (pas de réseau).
 
 ## La phrase de la politique de confidentialité
 
 À coller dans la politique d'Easy Way, partie sur les données utilisées :
 
-> **E-mails d'accompagnement.** Si vous donnez votre adresse e-mail dans l'app, nous pouvons vous écrire pour vous aider à utiliser Easy Way : un message de bienvenue, un rappel avant la fin de votre essai gratuit, ou une question si vous arrêtez votre abonnement. Ces e-mails sont envoyés un par un par le créateur de l'app, jamais plus d'un tous les trois jours, et nous ne les utilisons pas pour vous vendre d'autres produits. Pour ne plus en recevoir, répondez « STOP » à l'un d'eux ou écrivez-nous : nous arrêtons tout de suite.
+> **E-mails d'Easy Way.** Si vous donnez votre adresse e-mail dans l'app, nous pouvons vous écrire au sujet d'Easy Way, par exemple : un message de bienvenue, un rappel avant la fin de votre essai gratuit, une question si vous arrêtez votre abonnement, ou la nouvelle qu'un problème que vous avez signalé est corrigé. Chaque e-mail est relu et envoyé par le créateur de l'app ; nous ne vous écrivons pas plus d'une fois tous les trois jours, sauf pour vous dire qu'un problème signalé est corrigé, et nous ne parlons d'aucun autre produit que d'Easy Way. Pour ne plus en recevoir, répondez « STOP » à l'un d'eux : vous ne recevrez plus d'e-mail de notre part.
 
-> **Support emails.** If you give us your email address in the app, we may write to you to help you use Easy Way: a welcome message, a reminder before your free trial ends, or a question if you cancel your subscription. These emails are sent one by one by the app's creator, never more than one every three days, and we do not use them to sell you other products. To stop receiving them, reply "STOP" to any of them or write to us: we stop right away.
+> **Emails from Easy Way.** If you give us your email address in the app, we may write to you about Easy Way, for example: a welcome message, a reminder before your free trial ends, a question if you cancel your subscription, or news that a problem you reported has been fixed. Each email is reviewed and sent by the app's creator; we write no more than once every three days, except to tell you that a problem you reported is fixed, and we never promote any product other than Easy Way. To stop receiving them, reply "STOP" to any of them: you will not receive any more emails from us.
+
+Ce que la phrase promet et ce qui le tient : un e-mail relu et envoyé par le créateur (aucun envoi sans le clic, `mac/envoi.mjs`) ; trois jours entre deux e-mails sauf « Bug corrigé » (`ECART_HEURES`) ; un STOP désinscrit au passage suivant du relais Gmail (toutes les 15 minutes, `apps-script/Code.gs`), et un désinscrit ne reçoit plus rien (`envoyerAction`). Elle ne promet plus « tout de suite » ni « écrivez-nous », que rien dans le code ne tient. Si le fondateur dit oui au bouton « Se désabonner », la phrase s'enrichit de « ou cliquez sur Se désabonner dans votre messagerie ».
 
 ## Où est son code
 
