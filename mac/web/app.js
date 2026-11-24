@@ -37,8 +37,8 @@ async function bandeau() {
   }
 }
 
-const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', essai_annule: 'Essai annulé', onboarding: 'Onboarding abandonné', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', demande_avis: 'Demande d’avis', libre: 'Message' };
-const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'demande_avis', 'onboarding', 'gros', 'campagne_relance', 'libre'];
+const TYPES = { essai_j2: 'Fin d’essai', resiliation: 'Résiliation', essai_annule: 'Essai annulé', onboarding: 'Onboarding abandonné', bienvenue: 'Bienvenue', gros: 'Gros utilisateur', campagne_relance: 'Relance de campagne', bug_corrige: 'Bug corrigé', demande_avis: 'Demande d’avis', libre: 'Message' };
+const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'demande_avis', 'bienvenue', 'onboarding', 'gros', 'campagne_relance', 'libre'];
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
@@ -289,6 +289,8 @@ async function reglages() {
       <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>
     <div class="carte"><h2>Notifications sur le téléphone</h2><p>${r.notif_telephone === false ? 'Coupées.' : 'Ouvertes : une action à relire, une réponse ou une passe en échec sonnent par ntfy, sans aucune adresse ni nom.'}</p>
       <div class="outils"><button id="notif">${r.notif_telephone === false ? 'Rouvrir les notifications' : 'Couper les notifications'}</button></div></div>
+    <div class="carte"><h2>E-mail de bienvenue</h2><p>${r.bienvenue ? 'Ouvert : chaque nouvel inscrit qui a donné son adresse a un e-mail de bienvenue prêt dans Aujourd’hui, pendant 72 h. Rien ne part sans ton clic.' : 'Fermé : aucun e-mail de bienvenue n’est préparé.'}</p>
+      <div class="outils"><button id="bienvenue">${r.bienvenue ? 'Fermer l’e-mail de bienvenue' : 'Préparer l’e-mail de bienvenue'}</button></div></div>
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
@@ -309,6 +311,7 @@ async function reglages() {
     await api('reglages', { cle: 'envois_coupes', valeur: !r.envois_coupes }); await bandeau(); reglages();
   });
   document.getElementById('notif').addEventListener('click', async () => { await api('reglages', { cle: 'notif_telephone', valeur: r.notif_telephone === false }); reglages(); });
+  document.getElementById('bienvenue').addEventListener('click', async () => { await api('reglages', { cle: 'bienvenue', valeur: !r.bienvenue }); reglages(); });
   document.getElementById('blanc').addEventListener('click', async () => { await api('reglages', { cle: 'a_blanc', valeur: !r.a_blanc }); await bandeau(); reglages(); });
 }
 

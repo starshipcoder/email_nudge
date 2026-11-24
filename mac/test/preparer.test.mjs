@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { baseEnMemoire } from '../suivi.mjs';
-import { candidats, preparer } from '../preparer.mjs';
+import { bienvenues, candidats, preparer } from '../preparer.mjs';
 import { rendre } from '../modeles.mjs';
 
 const T = new Date('2026-12-02T10:00:00Z');
@@ -203,4 +203,32 @@ test('un compte de test (le fondateur) ne donne aucune action', () => {
     { nom: 'rc_trial_cancelled_event', temps: h(-5), ids: ['rcM'], transaction: 'M3' },
   ];
   assert.deepEqual(candidats(faits, avecTest, T), []);
+});
+
+test('la bienvenue : une par adresse donnée dans les 72 h, seulement si le réglage est ouvert (INT-EW-9)', async () => {
+  const nouveaux = [
+    { id: 'ana@exemple.fr', locale: 'fr', created_at: iso(-2) },
+    { id: 'bob@exemple.com', locale: 'de', created_at: iso(-71) },
+    { id: 'cla@exemple.fr', locale: 'fr', created_at: iso(-73) },
+    { id: '$RCAnonymousID:sansadresse', locale: 'fr', created_at: iso(-2) },
+  ];
+  assert.deepEqual(bienvenues(nouveaux, T).map((u) => u.id), ['ana@exemple.fr', 'bob@exemple.com']);
+  const signature = 'Prénom, créateur d’Easy Way';
+  const fermee = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature }] });
+  assert.equal((await preparer({ db: fermee, faits: [], tournees: () => 0, maintenant: T })).creees, 0);
+  const db = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature, bienvenue: true }] });
+  assert.equal((await preparer({ db, faits: [], tournees: () => 0, maintenant: T })).creees, 2);
+  assert.equal((await preparer({ db, faits: [], tournees: () => 0, maintenant: T })).creees, 0);
+  const actions = await db.lister('crm_actions');
+  const fr = actions.find((a) => a.user_id === 'ana@exemple.fr');
+  assert.equal(fr.type, 'bienvenue');
+  assert.equal(fr.statut, 'prete');
+  assert.equal(fr.sujet, 'Bienvenue sur Easy Way');
+  assert.match(fr.corps, /Une seule question/);
+  assert.match(fr.corps, /Prénom, créateur/);
+  assert.doesNotMatch(fr.corps, /STOP/);
+  const de = actions.find((a) => a.user_id === 'bob@exemple.com');
+  assert.equal(de.langue, 'de');
+  assert.equal(de.traduction_fr.sujet, 'Bienvenue sur Easy Way');
+  assert.equal(new Date(de.echeance).getTime(), h(1));
 });

@@ -202,3 +202,12 @@ test('Q-EW-63 : une seule résiliation par personne ; une seconde, même plus ta
   assert.equal(db.donnees.crm_actions.get('resiliation__a__P2').statut, 'bloquee');
   assert.equal(envoyes.length, 0);
 });
+
+test('la bienvenue part sans relire RevenueCat, mais jamais à un désinscrit (INT-EW-9)', async () => {
+  const action = { id: 'essai_j2__a', type: 'bienvenue', echeance: jours(2) };
+  const ok = monter({ action, abonne: null });
+  assert.deepEqual(await ok.porte.envoyerAction('essai_j2__a'), { statut: 'envoye' });
+  const non = monter({ action, fiche: { desinscrit: true } });
+  assert.deepEqual(await non.porte.envoyerAction('essai_j2__a'), { statut: 'bloquee', raison: 'désinscrit' });
+  assert.equal(non.envoyes.length, 0);
+});

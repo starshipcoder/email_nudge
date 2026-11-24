@@ -97,6 +97,24 @@ export function candidats(faits, inscrits, maintenant) {
   return [...essais, ...resiliations, ...essaisAnnules];
 }
 
+// L'e-mail de bienvenue (INT-EW-9) : chaque inscrit qui a donné une adresse, dans les 72 h après son inscription. La
+// fenêtre courte évite qu'ouvrir le réglage prépare un e-mail pour tous les anciens inscrits.
+export const FENETRE_BIENVENUE = 72 * H;
+const ADRESSE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export function bienvenues(inscrits, maintenant) {
+  const t = maintenant.getTime();
+  return inscrits.filter((u) => ADRESSE.test(String(u.id)) && u.created_at)
+    .filter((u) => { const age = t - new Date(u.created_at).getTime(); return age >= 0 && age <= FENETRE_BIENVENUE; });
+}
+
+export function actionBienvenue(u, { signature, maintenant, pays = null, choix = null }) {
+  const l = langueDePersonne({ locale: u.locale, pays, choix });
+  const { sujet, corps, traduction_fr } = rendreAvecTraduction('bienvenue', l.langue, () => ({ signature }));
+  return { id: `bienvenue__${cleUtilisateur(u.id)}`, type: 'bienvenue', user_id: u.id, statut: 'prete', sujet, corps, langue: l.langue,
+    langue_source: l.source, ...(l.pays ? { pays: l.pays } : {}), ...(traduction_fr ? { traduction_fr } : {}),
+    echeance: new Date(new Date(u.created_at).getTime() + FENETRE_BIENVENUE), cree_le: maintenant };
+}
+
 // Sans données sûres (personne non reliée à Mixpanel, ou base de plus d'un jour et demi), le brouillon n'affirme rien
 // sur l'usage, et l'action porte un point à vérifier.
 const USAGE_VIDE = { tournees: 0, zones: [], signaux: [], premier_jour: null, dernier_jour: null };
@@ -152,7 +170,7 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
   const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
   if (!reglages.signature) return { creees: 0, expirees: 0, raison: 'signature à régler' };
   // Les champs du questionnaire : la réponse envoyée par l'app passe avant Mixpanel dans le dossier (INT-EW-79).
-  const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user', 'churn_survey_reason', 'churn_survey_text', 'churn_survey_answered_at']);
+  const inscrits = await db.lister('users', ['revenuecat_id', 'locale', 'is_test_user', 'created_at', 'churn_survey_reason', 'churn_survey_text', 'churn_survey_answered_at']);
   const fiches = new Map((await db.lister('crm_fiches')).map((f) => [f.id, f]));
   const choixLangue = (cle) => fiches.get(cle)?.langue ?? null;
   let creees = 0; let erreurs = 0;
@@ -169,6 +187,17 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
     const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour, choixLangue, enRetard });
     try { await db.creer('crm_actions', id, champs); existantes.set(id, { id, ...champs }); creees += 1; } catch (erreur) {
       if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
+    }
+  }
+  // La bienvenue ne se prépare que si le fondateur a ouvert le réglage, après son oui sur le texte. Une par personne.
+  if (reglages.bienvenue === true) {
+    for (const u of bienvenues(inscrits, maintenant)) {
+      if (existantes.has(`bienvenue__${cleUtilisateur(u.id)}`)) continue;
+      const pays = u.revenuecat_id ? (dossierPour?.(u.revenuecat_id, u)?.pays ?? null) : null;
+      const { id, ...champs } = actionBienvenue(u, { signature: reglages.signature, maintenant, pays, choix: choixLangue(cleUtilisateur(u.id)) });
+      try { await db.creer('crm_actions', id, champs); existantes.set(id, { id, ...champs }); creees += 1; } catch (erreur) {
+        if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
+      }
     }
   }
   let expirees = 0;

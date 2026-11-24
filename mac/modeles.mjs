@@ -198,6 +198,52 @@ Não lhe voltarei a escrever sobre isto.
 
 {{signature}}`],
   },
+  // L'e-mail de bienvenue (INT-EW-9) : court, signé, une question à laquelle on répond en une ligne. Il n'est préparé
+  // qu'une fois le réglage « E-mail de bienvenue » ouvert par le fondateur, après son oui sur ce texte.
+  bienvenue: {
+    fr: ['Bienvenue sur Easy Way', `Bonjour,
+
+Merci d'avoir installé Easy Way. J'ai créé l'app et je lis moi-même chaque réponse.
+
+Une seule question : qu'est-ce qui vous a fait installer Easy Way ? Une ligne en réponse à cet e-mail suffit.
+
+{{signature}}`],
+    en: ['Welcome to Easy Way', `Hello,
+
+Thank you for installing Easy Way. I built the app and I read every reply myself.
+
+One question: what made you install Easy Way? One line in reply to this email is enough.
+
+{{signature}}`],
+    de: ['Willkommen bei Easy Way', `Hallo,
+
+vielen Dank, dass Sie Easy Way installiert haben. Ich habe die App entwickelt und lese jede Antwort selbst.
+
+Nur eine Frage: Was hat Sie dazu gebracht, Easy Way zu installieren? Eine Zeile als Antwort auf diese E-Mail genügt.
+
+{{signature}}`],
+    es: ['Le doy la bienvenida a Easy Way', `Hola:
+
+Gracias por instalar Easy Way. Yo he creado la app y leo personalmente cada respuesta.
+
+Una sola pregunta: ¿qué le llevó a instalar Easy Way? Basta con una línea en respuesta a este correo.
+
+{{signature}}`],
+    it: ['Le do il benvenuto su Easy Way', `Buongiorno,
+
+Grazie per aver installato Easy Way. Ho creato io l'app e leggo di persona ogni risposta.
+
+Una sola domanda: cosa l'ha spinta a installare Easy Way? Basta una riga in risposta a questa e-mail.
+
+{{signature}}`],
+    pt: ['Boas-vindas ao Easy Way', `Olá,
+
+Obrigado por instalar o Easy Way. Fui eu que criei a app e leio pessoalmente cada resposta.
+
+Uma só pergunta: o que o levou a instalar o Easy Way? Basta uma linha em resposta a este e-mail.
+
+{{signature}}`],
+  },
   bug_corrige: {
     fr: ['Le problème que vous avez signalé est corrigé', `Bonjour,
 
