@@ -74,7 +74,8 @@ export function annulationsSansInscrit(faits, inscrits, maintenant) {
 
 export function candidats(faits, inscrits, maintenant) {
   const parRc = new Map();
-  for (const u of inscrits) if (u.revenuecat_id) parRc.set(u.revenuecat_id, u);
+  // Un compte de test (celui du fondateur, 24/11 : « c'est moi ») ne donne aucune action.
+  for (const u of inscrits) if (u.revenuecat_id && !u.is_test_user) parRc.set(u.revenuecat_id, u);
   const inscritDe = (f) => f.ids.map((i) => parRc.get(i)).find(Boolean);
   const apres = (f, noms) => faits.some((g) => g.transaction === f.transaction && g.temps > f.temps && noms.includes(g.nom));
   const t = maintenant.getTime();

@@ -194,3 +194,13 @@ test('Q-EW-63 : l’e-mail de départ, 24 h après, une fois par personne, seule
   await preparer({ db, faits: [second], tournees: () => 0, maintenant: new Date(h(24 * 31)) });
   assert.equal((await db.lister('crm_actions')).filter((x) => x.type === 'resiliation').length, 1);
 });
+
+test('un compte de test (le fondateur) ne donne aucune action', () => {
+  const avecTest = [...inscrits, { id: 'moi@exemple.fr', revenuecat_id: 'rcM', locale: 'fr', is_test_user: true }];
+  const faits = [
+    essai('rcM', 40, 'M1'),
+    { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcM'], transaction: 'M2', type: 'NORMAL', raison: 'UNSUBSCRIBE' },
+    { nom: 'rc_trial_cancelled_event', temps: h(-5), ids: ['rcM'], transaction: 'M3' },
+  ];
+  assert.deepEqual(candidats(faits, avecTest, T), []);
+});
