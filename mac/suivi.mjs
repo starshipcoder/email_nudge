@@ -5,8 +5,8 @@ export const CHAMPS_USERS = ['first_name', 'phone_number', 'locale', 'role', 'ne
   'plan', 'churned_at', 'routes_created', 'contacts_total', 'visits_logged', 'is_test_user', 'last_action_at'];
 
 // notif_telephone : les notifications ntfy (INT-EW-72), ouvertes par défaut.
-// bienvenue : l'e-mail de bienvenue préparé pour chaque nouvelle adresse (INT-EW-9), fermé tant que le fondateur
-// n'a pas dit oui à son texte.
+// en_essai : les sortes d'e-mail automatiques qui ne partent pas aux utilisateurs (INT-EW-94, sortes.mjs) ; la
+// bienvenue l'est par défaut, tant que le fondateur n'a pas dit oui à son texte.
 export const REGLAGES_PAR_DEFAUT = { envois_coupes: true, a_blanc: true, notif_telephone: true, en_essai: EN_ESSAI_PAR_DEFAUT };
 
 export function etat(u) {

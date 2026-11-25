@@ -198,8 +198,8 @@ Não lhe voltarei a escrever sobre isto.
 
 {{signature}}`],
   },
-  // L'e-mail de bienvenue (INT-EW-9) : court, signé, une question à laquelle on répond en une ligne. Il n'est préparé
-  // qu'une fois la bienvenue sortie de l'essai par le fondateur (INT-EW-94), après son oui sur ce texte.
+  // L'e-mail de bienvenue (INT-EW-9) : court, signé, une question à laquelle on répond en une ligne. Il se prépare
+  // toujours, mais ne part qu'une fois la bienvenue sortie de l'essai par le fondateur (INT-EW-94), après son oui sur ce texte.
   bienvenue: {
     fr: ['Bienvenue sur Easy Way', `Bonjour,
 

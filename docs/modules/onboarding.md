@@ -35,7 +35,7 @@ Ce que la phrase promet et ce qui le tient : un e-mail relu et envoyé par le cr
 
 - `mac/preparer.mjs` : `bienvenues` (qui la reçoit), `actionBienvenue` (l'action), et sa place dans `preparer`.
 - `mac/modeles.mjs` : le modèle `bienvenue`, dans les six langues.
-- `mac/suivi.mjs` : le réglage `bienvenue` dans `REGLAGES_PAR_DEFAUT`.
+- `mac/suivi.mjs` : le réglage `en_essai` dans `REGLAGES_PAR_DEFAUT` (la bienvenue en essai par défaut).
 - `mac/web/app.js` : la carte « Les e-mails automatiques » des Réglages (un interrupteur par sorte, le texte de la bienvenue) ; `mac/sortes.mjs` : les sortes et l'état « en essai ».
 - `mac/parcours.mjs` : ce que la personne a dit à l'onboarding, montré dans son dossier.
 - Tests : `mac/test/preparer.test.mjs`, `mac/test/envoi.test.mjs`, `mac/test/suivi.test.mjs`.

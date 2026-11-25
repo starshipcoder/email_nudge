@@ -319,7 +319,8 @@ async function reglages() {
     await api('reglages', { cle: 'envois_coupes', valeur: !r.envois_coupes }); await bandeau(); reglages();
   });
   document.getElementById('notif').addEventListener('click', async () => { await api('reglages', { cle: 'notif_telephone', valeur: r.notif_telephone === false }); reglages(); });
-  vue.querySelectorAll('[data-sorte]').forEach((b) => b.addEventListener('click', async () => { await api('reglages', { cle: 'en_essai', valeur: { type: b.dataset.sorte, essai: b.dataset.essai === '1' } }); reglages(); }));
+  // Un clic à la fois : les boutons se grisent pendant l'appel, deux changements ne s'écrasent pas.
+  vue.querySelectorAll('[data-sorte]').forEach((b) => b.addEventListener('click', async () => { vue.querySelectorAll('[data-sorte]').forEach((x) => { x.disabled = true; }); await api('reglages', { cle: 'en_essai', valeur: { type: b.dataset.sorte, essai: b.dataset.essai === '1' } }); reglages(); }));
   document.getElementById('blanc').addEventListener('click', async () => { await api('reglages', { cle: 'a_blanc', valeur: !r.a_blanc }); await bandeau(); reglages(); });
 }
 

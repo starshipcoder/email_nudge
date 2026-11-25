@@ -63,3 +63,16 @@ test('une annulation d’une personne absente d’email_nudge sonne une fois, sa
   assert.match(ghost[0].texte, /^1 annulation .*\(1 essai, 0 abonnement\)/);
   assert.doesNotMatch(ghost[0].texte, /rcX|@/);
 });
+
+test('INT-EW-94 : une action d’une sorte en essai ne sonne pas, les autres oui', async () => {
+  const { actionsQuiSonnent } = await import('../sortes.mjs');
+  const actions = [{ id: 'b', type: 'bienvenue' }, { id: 'e', type: 'essai_j2' }];
+  assert.deepEqual(actionsQuiSonnent(actions, {}).map((a) => a.id), ['e']);
+  assert.deepEqual(actionsQuiSonnent(actions, { en_essai: ['essai_j2'] }).map((a) => a.id), ['b']);
+  const envoyes = [];
+  const veille = veilleur({ envoyer: async (m) => { envoyes.push(m); return m; } });
+  await veille({ actions: [] });
+  await veille({ actions: actionsQuiSonnent(actions, {}) });
+  assert.equal(envoyes.length, 1);
+  assert.doesNotMatch(envoyes[0].texte, /bienvenue/);
+});
