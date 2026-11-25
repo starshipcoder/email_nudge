@@ -42,14 +42,15 @@ const ORDRE = ['essai_j2', 'resiliation', 'essai_annule', 'bug_corrige', 'demand
 const resteAvant = (d) => { if (!d) return ''; const h = Math.round((new Date(d) - Date.now()) / 3600000); return h < 0 ? 'échéance passée' : h < 48 ? `il reste ${h} h` : `il reste ${Math.round(h / 24)} j`; };
 
 async function aujourdhui() {
-  const { actions, reponses = [] } = await api('aujourdhui');
+  const [{ actions, reponses = [] }, reglagesActuels] = await Promise.all([api('aujourdhui'), api('reglages').catch(() => ({}))]);
+  const enEssai = new Set(reglagesActuels.en_essai ?? []);
   const groupes = ORDRE.map((type) => [type, actions.filter((a) => a.type === type)]).filter(([, l]) => l.length);
   vue.innerHTML = `<div class="outils"><h1><span class="grand">${actions.length}</span> action${actions.length > 1 ? 's' : ''} ${actions.length > 1 ? 'restent' : 'reste'}</h1>
       <button id="preparer">Préparer maintenant</button><span class="message" id="msg-preparer"></span></div>
     ${reponses.length ? `<div class="carte"><h2>Réponses à lire (${reponses.length})</h2><table><tbody>
       ${reponses.map((m) => `<tr><td><a href="#fiche-${encodeURIComponent(m.user_id ?? '')}">${echapper(m.user_id ?? '')}</a></td><td>${echapper(m.extrait)}</td><td>${dateHeure(m.le)}</td>
         <td><button data-lu="${echapper(m.id)}">Lu</button></td></tr>`).join('')}</tbody></table></div>` : ''}
-    ${groupes.length ? groupes.map(([type, liste]) => `<div class="carte"><h2>${TYPES[type] ?? type} (${liste.length})</h2><table><tbody>
+    ${groupes.length ? groupes.map(([type, liste]) => `<div class="carte"><h2>${TYPES[type] ?? type} (${liste.length})${enEssai.has(type) ? ' <span class="puce">En essai : ne part pas</span>' : ''}</h2><table><tbody>
       ${liste.map((a) => `<tr data-action="${echapper(a.id)}"><td>${echapper(a.sujet)}</td><td>${echapper(a.langue ?? '')}${a.variante ? ` · ${echapper(a.variante)}` : ''}</td><td>${resteAvant(a.echeance)}</td></tr>`).join('')}
       </tbody></table></div>`).join('') : '<div class="carte"><p class="doux">Rien à faire pour l’instant. Les rappels de fin d’essai et les e-mails aux résiliés arrivent ici à chaque passe, toutes les heures.</p></div>'}`;
   vue.querySelectorAll('[data-action]').forEach((tr) => tr.addEventListener('click', () => { location.hash = `action-${encodeURIComponent(tr.dataset.action)}`; }));
@@ -84,10 +85,12 @@ function carteQuestions(questions, { titre = 'Questions tirées de son usage', b
 }
 
 async function uneAction(id) {
-  const a = await api(`action?id=${encodeURIComponent(id)}`);
+  const [a, reglagesActuels] = await Promise.all([api(`action?id=${encodeURIComponent(id)}`), api('reglages').catch(() => ({}))]);
   const ouverte = ['prete', 'reportee'].includes(a.statut);
+  const essai = (reglagesActuels.en_essai ?? []).includes(a.type);
   vue.innerHTML = `<a href="#aujourdhui" class="doux">← Aujourd'hui</a>
-    <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span></h1>
+    <h1>${TYPES[a.type] ?? a.type} <span class="puce">${echapper(a.statut)}</span>${essai ? ' <span class="puce">En essai</span>' : ''}</h1>
+    ${essai ? '<div class="carte"><p class="message">En essai : cet e-mail ne part pas à la personne. « M’envoyer un essai » marche. Pour l’envoyer, rends cette sorte aux utilisateurs dans les Réglages.</p></div>' : ''}
     <div class="carte"><dl class="grille"><dt>Pour</dt><dd><a href="#fiche-${encodeURIComponent(a.user_id)}">${echapper(a.user_id)}</a></dd>
       <dt>Échéance</dt><dd>${dateHeure(a.echeance)} (${resteAvant(a.echeance)})</dd><dt>Langue</dt><dd>${echapper(NOMS_LANGUES[a.langue] ?? a.langue ?? '')}${a.langue_source ? ` (${echapper(SOURCES_LANGUE[a.langue_source] ?? a.langue_source)}${a.pays ? ` : ${echapper(a.pays)}` : ''})` : ''}${a.variante ? ` · ${echapper(a.variante)}` : ''}</dd></dl></div>
     ${a.a_verifier ? `<div class="carte"><p class="message erreur">À vérifier avant l’envoi : ${echapper(a.a_verifier)}.</p>${ouverte ? '<div class="outils"><button id="verifie">C’est vérifié, le texte peut partir</button></div>' : ''}</div>` : ''}
@@ -99,7 +102,7 @@ async function uneAction(id) {
       <textarea id="corps" rows="16" ${ouverte ? '' : 'disabled'}>${echapper(a.corps)}</textarea>
       <p class="doux">À l’envoi, la ligne WhatsApp est ajoutée à la fin, dans sa langue, si ton numéro est réglé.</p>
       ${ouverte ? `<div class="outils"><button id="enregistrer">Enregistrer le texte</button>${['resiliation', 'essai_annule'].includes(a.type) ? '<button id="rebrouillon">Refaire le brouillon depuis le dossier</button>' : ''}<button id="essai">M’envoyer un essai</button>
-        <button id="envoyer" class="choisi">Envoyer à la personne</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
+        <button id="envoyer" class="choisi"${essai ? ' disabled title="En essai : ne part pas aux utilisateurs"' : ''}>Envoyer à la personne</button><button id="reporter">Plus tard</button><button id="ignorer">Ignorer</button></div>` : ''}
       <p class="message" id="msg-action"></p></div>
     ${a.traduction_fr ? `<div class="carte"><h2>Traduction en français, pour relire</h2>
       <input type="text" value="${echapper(a.traduction_fr.sujet)}" readonly>
@@ -289,10 +292,13 @@ async function reglages() {
       <div class="outils"><button id="blanc">${r.a_blanc ? 'Passer en envois réels' : 'Repasser à blanc'}</button></div></div>
     <div class="carte"><h2>Notifications sur le téléphone</h2><p>${r.notif_telephone === false ? 'Coupées.' : 'Ouvertes : une action à relire, une réponse ou une passe en échec sonnent par ntfy, sans aucune adresse ni nom.'}</p>
       <div class="outils"><button id="notif">${r.notif_telephone === false ? 'Rouvrir les notifications' : 'Couper les notifications'}</button></div></div>
-    <div class="carte"><h2>E-mail de bienvenue</h2><p>${r.bienvenue ? 'Ouvert : chaque nouvel inscrit qui a donné son adresse a un e-mail de bienvenue prêt dans Aujourd’hui, pendant 72 h. Rien ne part sans ton clic.' : 'Fermé : aucun e-mail de bienvenue n’est préparé. L’ouvrir vaut ton oui sur ce texte (en français ; les autres langues disent la même chose) :'}</p>
-      ${r.texte_bienvenue ? `<p><strong>${echapper(r.texte_bienvenue.sujet)}</strong></p><pre class="texte">${echapper(r.texte_bienvenue.corps)}</pre>` : ''}
-      <p class="doux">Pas de lien de désinscription dans l’e-mail (ta décision du 22/11) : la personne se retire en répondant STOP. Pas de bouton « Se désabonner » non plus (ta réponse du 24/11).</p>
-      <div class="outils"><button id="bienvenue">${r.bienvenue ? 'Fermer l’e-mail de bienvenue' : 'Préparer l’e-mail de bienvenue'}</button></div></div>
+    <div class="carte"><h2>Les e-mails automatiques</h2>
+      <p class="doux">En essai : l’e-mail se prépare dans Aujourd’hui sur de vraies personnes et « M’envoyer un essai » marche, mais il ne part pas aux utilisateurs et ne sonne pas sur le téléphone. Rends-le aux utilisateurs quand le texte te va.</p>
+      <table><tbody>${(r.sortes_auto ?? []).map((type) => { const essai = (r.en_essai ?? []).includes(type); return `<tr><td>${TYPES[type] ?? type}</td>
+        <td>${essai ? '<span class="puce">En essai</span>' : 'Part aux utilisateurs'}</td>
+        <td><button data-sorte="${type}" data-essai="${essai ? '0' : '1'}">${essai ? 'Rendre aux utilisateurs' : 'Mettre en essai'}</button></td></tr>`; }).join('')}</tbody></table>
+      ${r.texte_bienvenue ? `<h3>Le texte de la bienvenue (en français ; les autres langues disent la même chose)</h3><p><strong>${echapper(r.texte_bienvenue.sujet)}</strong></p><pre class="texte">${echapper(r.texte_bienvenue.corps)}</pre>` : ''}
+      <p class="doux">Pas de lien de désinscription dans l’e-mail (ta décision du 22/11) : la personne se retire en répondant STOP. Pas de bouton « Se désabonner » non plus (ta réponse du 24/11).</p></div>
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]
         .map(([cle, nom, aide]) => `<dt>${nom}</dt><dd><input type="text" data-reglage="${cle}" value="${echapper(r[cle] ?? '')}" placeholder="${aide}"> <span class="message" data-msg="${cle}"></span></dd>`).join('')}
@@ -313,7 +319,7 @@ async function reglages() {
     await api('reglages', { cle: 'envois_coupes', valeur: !r.envois_coupes }); await bandeau(); reglages();
   });
   document.getElementById('notif').addEventListener('click', async () => { await api('reglages', { cle: 'notif_telephone', valeur: r.notif_telephone === false }); reglages(); });
-  document.getElementById('bienvenue').addEventListener('click', async () => { await api('reglages', { cle: 'bienvenue', valeur: !r.bienvenue }); reglages(); });
+  vue.querySelectorAll('[data-sorte]').forEach((b) => b.addEventListener('click', async () => { await api('reglages', { cle: 'en_essai', valeur: { type: b.dataset.sorte, essai: b.dataset.essai === '1' } }); reglages(); }));
   document.getElementById('blanc').addEventListener('click', async () => { await api('reglages', { cle: 'a_blanc', valeur: !r.a_blanc }); await bandeau(); reglages(); });
 }
 

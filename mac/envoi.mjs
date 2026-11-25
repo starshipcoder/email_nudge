@@ -1,6 +1,7 @@
 // La seule porte d'envoi d'e-mails aux utilisateurs (spec : hephaistos, notes/spec-crm-2026-11-21.md, § 3.0 et § 4).
 // Tout envoi passe par envoyerAction : coupe-circuit, mode à blanc, anti-doublon, désinscription,
 // abonnement relu chez RevenueCat, écart de 72 h, plafond du jour, adresse de test.
+import { enEssai } from './sortes.mjs';
 import { createHash } from 'node:crypto';
 import { WHATSAPP, langueDe } from './langues.mjs';
 import { execFile } from 'node:child_process';
@@ -98,6 +99,8 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         return { statut: 'envoye', raison: 'adresse de test' };
       }
 
+      // Une sorte en essai ne part qu'à l'adresse de test (INT-EW-94) : l'action reste prête, rien n'est noté sur la personne.
+      if (enEssai(reglages, action.type)) return { statut: 'bloquee', raison: 'en essai : ne part pas aux utilisateurs' };
       if (action.statut !== 'prete') return bloquer(action, 'déjà traitée', false);
       // La traduction française a été corrigée : le texte dans la langue de la personne doit être refait d'abord.
       if (action.a_retraduire) return { statut: 'bloquee', raison: 'traduction à refaire' };

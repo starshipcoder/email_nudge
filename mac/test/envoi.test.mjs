@@ -205,9 +205,27 @@ test('Q-EW-63 : une seule résiliation par personne ; une seconde, même plus ta
 
 test('la bienvenue part sans relire RevenueCat, mais jamais à un désinscrit (INT-EW-9)', async () => {
   const action = { id: 'essai_j2__a', type: 'bienvenue', echeance: jours(2) };
-  const ok = monter({ action, abonne: null });
+  // Sortie de l'essai (INT-EW-94), elle part.
+  const ok = monter({ action, abonne: null, reglages: { ...REGLAGES, en_essai: [] } });
   assert.deepEqual(await ok.porte.envoyerAction('essai_j2__a'), { statut: 'envoye' });
-  const non = monter({ action, fiche: { desinscrit: true } });
+  const non = monter({ action, fiche: { desinscrit: true }, reglages: { ...REGLAGES, en_essai: [] } });
   assert.deepEqual(await non.porte.envoyerAction('essai_j2__a'), { statut: 'bloquee', raison: 'désinscrit' });
   assert.equal(non.envoyes.length, 0);
+});
+
+test('INT-EW-94 : une sorte en essai ne part pas à la personne, mais « m’envoyer un essai » marche', async () => {
+  const { db, porte, envoyes } = monter({ reglages: { ...REGLAGES, en_essai: ['essai_j2'] } });
+  assert.deepEqual(await porte.envoyerAction('essai_j2__a'), { statut: 'bloquee', raison: 'en essai : ne part pas aux utilisateurs' });
+  assert.equal(envoyes.length, 0);
+  assert.equal(db.donnees.crm_actions.get('essai_j2__a').statut, 'prete');
+  assert.equal((await porte.envoyerAction('essai_j2__a', { canal: 'test_moi' })).statut, 'envoye');
+  assert.equal(envoyes[0].message.to, 'test@exemple.fr');
+});
+
+test('INT-EW-94 : sans réglage enregistré, la bienvenue est en essai, la fin d’essai part', async () => {
+  const { porte, envoyes } = monter({ action: { id: 'essai_j2__a' } });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+  const b = monter({ action: { type: 'bienvenue' } });
+  assert.equal((await b.porte.envoyerAction('essai_j2__a')).raison, 'en essai : ne part pas aux utilisateurs');
+  assert.equal(envoyes.length, 1);
 });

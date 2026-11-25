@@ -1,5 +1,6 @@
 // La page de suivi des utilisateurs, servie sur le Mac seulement (127.0.0.1).
 // Usage : node mac/serveur.mjs [--port 4810]
+import { enEssai, SORTES_AUTO } from './sortes.mjs';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -202,7 +203,7 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
       }
       if (route === 'GET /api/reglages') {
         const r = await s.reglages();
-        return json(res, 200, { ...r, texte_bienvenue: apercuBienvenue(r.signature) });
+        return json(res, 200, { ...r, sortes_auto: SORTES_AUTO, texte_bienvenue: apercuBienvenue(r.signature) });
       }
       if (route === 'POST /api/reglages') {
         const { cle, valeur } = await lireCorps(req);
@@ -285,8 +286,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const veilleGestes = veilleurGestes();
   const prevenir = async (echec = null, orphelines = null) => {
     try {
-      const { notif_telephone: actif = true } = (await db.lire('crm_reglages', 'general')) ?? {};
-      await veille({ actions: await s.aujourdhui(), reponses: await s.reponses(), orphelines, echec, actif: actif !== false });
+      const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
+      const actif = reglages.notif_telephone ?? true;
+      // Une sorte en essai (INT-EW-94) ne sonne pas : elle ne peut pas partir.
+      await veille({ actions: (await s.aujourdhui()).filter((a) => !enEssai(reglages, a.type)), reponses: await s.reponses(), orphelines, echec, actif: actif !== false });
       await veilleGestes({ actif: actif !== false }).catch((e) => console.error('ntfy gestes', e.message));
     } catch (e) { console.error('ntfy', e.message); }
   };

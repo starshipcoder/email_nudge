@@ -221,7 +221,7 @@ test('la bienvenue : ni compte de test, ni désinscrit, ni adresse en rebond ; u
   assert.deepEqual((await db.lister('crm_actions')).map((a) => a.user_id), ['ana@exemple.fr']);
 });
 
-test('la bienvenue : une par adresse donnée dans les 72 h, seulement si le réglage est ouvert (INT-EW-9)', async () => {
+test('la bienvenue : une par adresse donnée dans les 72 h, préparée même en essai (INT-EW-9, INT-EW-94)', async () => {
   const nouveaux = [
     { id: 'ana@exemple.fr', locale: 'fr', created_at: iso(-2) },
     { id: 'bob@exemple.com', locale: 'de', created_at: iso(-71) },
@@ -230,8 +230,8 @@ test('la bienvenue : une par adresse donnée dans les 72 h, seulement si le rég
   ];
   assert.deepEqual(bienvenues(nouveaux, T).map((u) => u.id), ['ana@exemple.fr', 'bob@exemple.com']);
   const signature = 'Prénom, créateur d’Easy Way';
-  const fermee = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature }] });
-  assert.equal((await preparer({ db: fermee, faits: [], tournees: () => 0, maintenant: T })).creees, 0);
+  const enEssai = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature, en_essai: ['bienvenue'] }] });
+  assert.equal((await preparer({ db: enEssai, faits: [], tournees: () => 0, maintenant: T })).creees, 2);
   const db = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature, bienvenue: true }] });
   assert.equal((await preparer({ db, faits: [], tournees: () => 0, maintenant: T })).creees, 2);
   assert.equal((await preparer({ db, faits: [], tournees: () => 0, maintenant: T })).creees, 0);

@@ -39,12 +39,13 @@ test('corriger un prénom écrit le seul champ first_name et le journal, sans e-
   assert.throws(() => nettoyerPrenom('x'.repeat(61)), /60/);
 });
 
-test('au premier lancement, les envois sont coupés et à blanc, et la bienvenue fermée', async () => {
+test('au premier lancement, les envois sont coupés et à blanc, et la bienvenue en essai (INT-EW-94)', async () => {
   const db = baseEnMemoire();
   const s = suivi(db);
-  assert.deepEqual(await s.reglages(), { envois_coupes: true, a_blanc: true, notif_telephone: true, bienvenue: false });
-  assert.equal((await s.changerReglage('bienvenue', true)).bienvenue, true);
-  assert.equal((await s.changerReglage('bienvenue', false)).bienvenue, false);
+  assert.deepEqual(await s.reglages(), { envois_coupes: true, a_blanc: true, notif_telephone: true, en_essai: ['bienvenue'] });
+  assert.deepEqual((await s.changerReglage('en_essai', { type: 'resiliation', essai: true })).en_essai, ['bienvenue', 'resiliation']);
+  assert.deepEqual((await s.changerReglage('en_essai', { type: 'bienvenue', essai: false })).en_essai, ['resiliation']);
+  await assert.rejects(() => s.changerReglage('en_essai', { type: 'campagne', essai: true }), /inconnue/);
   assert.equal(db.donnees.crm_reglages.get('general').envois_coupes, true);
   assert.equal((await s.changerReglage('a_blanc', false)).a_blanc, false);
   await assert.rejects(() => s.changerReglage('autre', true), /inconnu/);

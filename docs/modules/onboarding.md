@@ -7,7 +7,7 @@ Les premiers jours d'un nouvel utilisateur d'Easy Way, vus depuis Iris CRM, la p
 ## Ses règles
 
 - Rien ne part sans le clic du fondateur : la passe de chaque heure prépare l'e-mail de bienvenue dans « Aujourd'hui », la porte d'envoi (`mac/envoi.mjs`) applique ensuite tous les garde-fous d'Iris (coupe-circuit, mode à blanc, désinscrit, rebond, 72 h entre deux e-mails, plafond du jour).
-- L'e-mail de bienvenue n'est préparé que si le réglage « E-mail de bienvenue » est ouvert. Il est fermé au premier lancement : l'ouvrir vaut oui du fondateur sur le texte.
+- L'e-mail de bienvenue se prépare pour chaque nouvelle adresse, mais il est « en essai » par défaut (INT-EW-94, 25/11) : il ne part qu'à l'adresse de test du fondateur. Le rendre aux utilisateurs, dans la carte « Les e-mails automatiques » des Réglages, vaut oui du fondateur sur le texte.
 - Une seule bienvenue par personne, seulement pour une adresse donnée dans les 72 h après l'inscription (ouvrir le réglage ne vise pas les anciens inscrits). Passé ces 72 h, l'action expire.
 - Le texte : court, vouvoiement, signé du fondateur, une question à laquelle on répond en une ligne, dans la langue de la personne parmi fr, en, de, es, it, pt (traduction française pour relire).
 - Aucun pied « répondez STOP » ni en-tête « Se désabonner » dans les e-mails (fondateur, 22/11). La désinscription passe par la fiche, ou par une réponse « STOP » que le relais Gmail lit.
@@ -17,7 +17,8 @@ Les premiers jours d'un nouvel utilisateur d'Easy Way, vus depuis Iris CRM, la p
 - 22/11 : pas de STOP dans les e-mails ; l'en-tête List-Unsubscribe a été retiré (commit 2b88463).
 - 24/11 (INT-EW-9) : le système d'e-mails automatiques de Firebase n'écrit plus aux utilisateurs. L'e-mail « démarrage rapide » (QuickStart) est coupé dans `functions/src/triggers/paywallTriggers.ts`, et la passe programmée `checkAndSendEmails` n'est plus exportée (retirée de Firebase le 21/11). Seuls les récapitulatifs au fondateur partent encore. L'e-mail de bienvenue d'Iris le remplace.
 - 24/11 (Q-EW-70, réponse du fondateur : non) : pas de bouton « Se désabonner » des messageries. La décision du 22/11 tient : la désinscription passe par la fiche, ou par une réponse « STOP » que le relais Gmail lit.
-- 24/11 : la carte « E-mail de bienvenue » des Réglages montre le texte français et dit qu'il n'a pas de lien de désinscription ; l'ouvrir vaut oui sur ce texte.
+- 24/11 : la carte des Réglages montre le texte français et dit qu'il n'a pas de lien de désinscription.
+- 25/11 (INT-EW-94) : chaque sorte d'e-mail automatique se met en essai ; la bienvenue l'est par défaut, à la place de l'ancien réglage « E-mail de bienvenue ».
 - 25/11 : l'arrêt du système de Firebase est vérifié aussi en production. Les fonctions déployées (`firebase functions:list`) sont `getStatus`, `getUser`, `onPaywallStateChanged`, `onRevenueCatWebhook`, `syncUser` et les deux récapitulatifs du fondateur : aucune passe qui écrit aux utilisateurs. Les journaux d'`onPaywallStateChanged` du 17 au 25/11 disent 12 fois « passed paywall - NO EMAIL (désactivé) » et ne montrent aucun envoi. Les journaux de Resend n'ont pas été lus (la clé reste au service d'Iris).
 
 ## La phrase de la politique de confidentialité
@@ -35,6 +36,6 @@ Ce que la phrase promet et ce qui le tient : un e-mail relu et envoyé par le cr
 - `mac/preparer.mjs` : `bienvenues` (qui la reçoit), `actionBienvenue` (l'action), et sa place dans `preparer`.
 - `mac/modeles.mjs` : le modèle `bienvenue`, dans les six langues.
 - `mac/suivi.mjs` : le réglage `bienvenue` dans `REGLAGES_PAR_DEFAUT`.
-- `mac/web/app.js` : la carte « E-mail de bienvenue » des Réglages.
+- `mac/web/app.js` : la carte « Les e-mails automatiques » des Réglages (un interrupteur par sorte, le texte de la bienvenue) ; `mac/sortes.mjs` : les sortes et l'état « en essai ».
 - `mac/parcours.mjs` : ce que la personne a dit à l'onboarding, montré dans son dossier.
 - Tests : `mac/test/preparer.test.mjs`, `mac/test/envoi.test.mjs`, `mac/test/suivi.test.mjs`.

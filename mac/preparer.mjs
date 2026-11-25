@@ -190,8 +190,9 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
       if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
     }
   }
-  // La bienvenue ne se prépare que si le fondateur a ouvert le réglage, après son oui sur le texte. Une par personne.
-  if (reglages.bienvenue === true) {
+  // La bienvenue se prépare toujours, une par personne ; tant qu'elle est en essai (INT-EW-94, par défaut), elle ne part
+  // qu'à l'adresse de test du fondateur.
+  {
     for (const u of bienvenues(inscrits, maintenant)) {
       const fiche = fiches.get(cleUtilisateur(u.id)) ?? {};
       // Un désinscrit ou une adresse en rebond : pas d'action (la porte l'aurait bloquée, mais elle s'affichait et sonnait).

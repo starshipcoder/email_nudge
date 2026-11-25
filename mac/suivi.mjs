@@ -1,4 +1,5 @@
 // Ce que la page de suivi sait faire, au-dessus d'un client Firestore (vrai ou en mémoire pour les tests).
+import { EN_ESSAI_PAR_DEFAUT, SORTES_AUTO } from './sortes.mjs';
 export const CHAMPS_USERS = ['first_name', 'phone_number', 'locale', 'role', 'needs', 'revenuecat_id', 'created_at',
   'onboarding_complete', 'paywall_passed', 'trial_active', 'trial_start_date', 'trial_end_date', 'subscription_active',
   'plan', 'churned_at', 'routes_created', 'contacts_total', 'visits_logged', 'is_test_user', 'last_action_at'];
@@ -6,7 +7,7 @@ export const CHAMPS_USERS = ['first_name', 'phone_number', 'locale', 'role', 'ne
 // notif_telephone : les notifications ntfy (INT-EW-72), ouvertes par défaut.
 // bienvenue : l'e-mail de bienvenue préparé pour chaque nouvelle adresse (INT-EW-9), fermé tant que le fondateur
 // n'a pas dit oui à son texte.
-export const REGLAGES_PAR_DEFAUT = { envois_coupes: true, a_blanc: true, notif_telephone: true, bienvenue: false };
+export const REGLAGES_PAR_DEFAUT = { envois_coupes: true, a_blanc: true, notif_telephone: true, en_essai: EN_ESSAI_PAR_DEFAUT };
 
 export function etat(u) {
   if (u.subscription_active && u.plan && u.plan !== 'trial') return 'payant';
@@ -118,6 +119,16 @@ export function suivi(db, { maintenant = () => new Date(), dureeCache = 5 * 60 *
       if (cle === 'plafond_jour') {
         if (!Number.isInteger(valeur) || valeur < 1 || valeur > 90) throw new Error('Le plafond va de 1 à 90 par jour (Resend gratuit : 100).');
         await db.ecrire('crm_reglages', 'general', { plafond_jour: valeur, maj_le: maintenant() });
+        return this.reglages();
+      }
+      // Une sorte d'e-mail mise en essai ou rendue aux utilisateurs (INT-EW-94).
+      if (cle === 'en_essai') {
+        const type = String(valeur?.type ?? '');
+        if (!SORTES_AUTO.includes(type) || typeof valeur?.essai !== 'boolean') throw new Error('Sorte d’e-mail inconnue.');
+        const avant = (await this.reglages()).en_essai;
+        const en_essai = valeur.essai ? [...new Set([...avant, type])] : avant.filter((t) => t !== type);
+        await db.ecrire('crm_reglages', 'general', { en_essai, maj_le: maintenant() });
+        await journaliser(`${type} : ${valeur.essai ? 'en essai' : 'part aux utilisateurs'}`, null);
         return this.reglages();
       }
       if (!(cle in REGLAGES_PAR_DEFAUT) || typeof valeur !== 'boolean') throw new Error('Réglage inconnu.');
