@@ -23,6 +23,7 @@ import { envoyerNtfy } from './notif.mjs';
 import { personneDe } from './dossier.mjs';
 import { cleUtilisateur } from './envoi.mjs';
 import { apercuBienvenue } from './modeles.mjs';
+import { carte as carteDesEmails } from './carte.mjs';
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import os from 'node:os';
@@ -111,6 +112,10 @@ async function lireCorps(req) {
   return texte ? JSON.parse(texte) : {};
 }
 
+// La carte des e-mails (carte.mjs) : une simulation calculée en mémoire, une fois, sans la base réelle ni la porte d'envoi.
+let carteCalculee = null;
+const carteEnMemoire = () => (carteCalculee ??= carteDesEmails().catch((e) => { carteCalculee = null; throw e; }));
+
 // Le dossier d'un inscrit, lu sur les sources du Mac ; null sans identifiant RevenueCat ou sans base.
 export async function lireDossier(user) {
   if (!user?.revenuecat_id) return null;
@@ -143,6 +148,7 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         const f = await s.fiche(url.searchParams.get('id') ?? '');
         return f ? json(res, 200, f) : json(res, 404, { erreur: 'Inscrit introuvable.' });
       }
+      if (route === 'GET /api/carte') return json(res, 200, await carteEnMemoire());
       if (route === 'GET /api/fil') return json(res, 200, { lignes: await s.fil(url.searchParams.get('id') ?? '') });
       if (route === 'POST /api/message') {
         const { id, sens, source, extrait } = await lireCorps(req);

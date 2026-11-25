@@ -56,3 +56,8 @@ label { margin-right: 12px; }
 .barre-semaine.h3 { height: 30px; } .barre-semaine.h4 { height: 40px; }
 select { font: inherit; padding: 5px 8px; border: 1px solid var(--trait); border-radius: 6px; background: var(--carte); color: var(--texte); }
 #sujet-fr { width: 100%; box-sizing: border-box; }
+.simulation { background: var(--ocre-fond); border-color: var(--ocre); }
+.simulation > strong { color: var(--ocre); }
+.simulation ul { margin: 0; padding-left: 20px; }
+tbody tr.fixe { cursor: default; }
+a.bouton.choisi { background: var(--accent); border-color: var(--accent); color: #fff; }

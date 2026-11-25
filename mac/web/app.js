@@ -451,15 +451,77 @@ async function listeBugs() {
   }));
 }
 
+// La carte des e-mails (carte.mjs) : une simulation en mémoire, en lecture seule. Aucun bouton d'envoi, aucune écriture.
+let carteChargee = null;
+const chargerCarte = async () => (carteChargee ??= await api('carte'));
+const avecCode = (t) => echapper(t).replace(/`([^`]+)`/g, '<code>$1</code>');
+const lienScenario = (id) => `#carte-s-${encodeURIComponent(id)}`;
+const lienEmail = (sid, aid, lg = '') => `#carte-e-${encodeURIComponent(sid)}~${encodeURIComponent(aid)}${lg ? `~${lg}` : ''}`;
+
+function bandeCarte(c, { complete = true } = {}) {
+  return `<div class="carte simulation"><strong>Simulation : rien ne part d’ici.</strong>
+    ${complete ? `<ul>${c.limites.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>
+    <p><strong>Hors carte</strong></p><ul>${c.hors_carte.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>` : ''}</div>`;
+}
+
+async function carteDesEmails(cle) {
+  const c = await chargerCarte();
+  if (cle.startsWith('carte-s-')) return scenarioDeLaCarte(c, decodeURIComponent(cle.slice(8)));
+  if (cle.startsWith('carte-e-')) {
+    const [sid, aid, lg] = cle.slice(8).split('~').map(decodeURIComponent);
+    return emailDeLaCarte(c, sid, aid, lg);
+  }
+  vue.innerHTML = `<h1>Carte des e-mails</h1>${bandeCarte(c)}
+    <p class="doux">${c.scenarios.length} scénarios, ${c.cas_couverts.length} cas du bilan du 25/11 sur 48 (non couverts : ${c.cas_non_couverts.join(', ')}). Un clic sur une ligne ouvre l’e-mail ; un clic sur une situation ouvre sa chronologie.</p>
+    <div class="carte defile"><table><thead><tr><th>Situation</th><th>Condition</th><th>E-mail ou aucun</th><th>Pourquoi</th></tr></thead><tbody>
+    ${c.tableau.map((r) => `<tr data-lien="${r.action_id ? lienEmail(r.scenario, r.action_id) : lienScenario(r.scenario)}">
+      <td><a href="${lienScenario(r.scenario)}">${echapper(r.situation)}</a></td><td>${echapper(r.condition)}</td>
+      <td>${r.email === 'aucun' ? '<span class="puce parti">aucun</span>' : `<span class="puce payant">${echapper(r.email)}</span>`}</td><td>${echapper(r.pourquoi)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+  vue.querySelectorAll('[data-lien]').forEach((tr) => tr.addEventListener('click', (e) => { if (!e.target.closest('a')) location.hash = tr.dataset.lien; }));
+}
+
+function scenarioDeLaCarte(c, id) {
+  const s = c.scenarios.find((x) => x.id === id);
+  if (!s) throw new Error('Scénario introuvable.');
+  vue.innerHTML = `<a href="#carte" class="doux">← Carte des e-mails</a><h1>${echapper(s.titre)}</h1>${bandeCarte(c, { complete: false })}
+    <div class="carte"><dl class="grille"><dt>Cas du bilan</dt><dd>${s.cas.join(', ')}</dd><dt>Condition</dt><dd>${echapper(s.condition)}</dd>
+      <dt>J0</dt><dd>${new Date(s.debut).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+      <dt>Envoi simulé</dt><dd>chaque action part dès qu’elle est prête, à la passe qui la prépare</dd>
+      <dt>Résultat</dt><dd>${Object.entries(s.resultats).map(([t, v]) => `${echapper(TYPES[t] ?? t)} : ${echapper(v)}`).join('<br>')}</dd></dl>
+      ${s.remarque ? `<p class="message erreur">À relire : ${avecCode(s.remarque)}</p>` : ''}</div>
+    <div class="carte"><h2>Chronologie</h2><table><tbody>
+      ${s.chronologie.map((x) => `<tr${x.action_id ? ` data-lien="${lienEmail(s.id, x.action_id)}"` : ' class="fixe"'}><td>${echapper(x.quand)}</td><td>${echapper(x.texte)}</td></tr>`).join('')}
+    </tbody></table></div>
+    ${s.emails.length ? `<div class="carte"><h2>Les e-mails</h2><table><tbody>${s.emails.map((m) => `<tr data-lien="${lienEmail(s.id, m.id)}"><td>${echapper(m.nom)}</td><td>${echapper(m.resultat)}</td><td>${echapper(m.langue)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+  vue.querySelectorAll('[data-lien]').forEach((tr) => tr.addEventListener('click', () => { location.hash = tr.dataset.lien; }));
+}
+
+function emailDeLaCarte(c, sid, aid, lg) {
+  const s = c.scenarios.find((x) => x.id === sid);
+  const m = s?.emails.find((x) => x.id === aid);
+  if (!m) throw new Error('E-mail introuvable.');
+  const langue = c.langues.includes(lg) ? lg : m.langue;
+  const texte = m.langues[langue];
+  vue.innerHTML = `<p class="doux"><a href="#carte" class="doux">← Carte des e-mails</a> · <a href="${lienScenario(s.id)}" class="doux">${echapper(s.titre)}</a></p>
+    <h1>${echapper(m.nom)} <span class="puce">${echapper(m.resultat)}</span></h1>${bandeCarte(c, { complete: false })}
+    <div class="carte"><dl class="grille"><dt>Situation</dt><dd>${echapper(s.condition)}</dd><dt>Déroulé</dt><dd>${echapper(m.deroule.join(', '))}</dd>
+      <dt>Langue de la personne</dt><dd>${echapper(m.langue_source)}</dd>${m.a_verifier ? `<dt>À vérifier</dt><dd>${echapper(m.a_verifier)}</dd>` : ''}</dl></div>
+    <div class="carte"><div class="outils">${c.langues.map((x) => `<a class="bouton${x === langue ? ' choisi' : ''}" href="${lienEmail(s.id, m.id, x)}">${echapper(NOMS_LANGUES[x] ?? x)}</a>`).join('')}</div>
+      ${texte ? `<p><strong>Objet :</strong> ${echapper(texte.sujet)}</p><pre class="texte">${echapper(texte.corps)}</pre>` : '<p class="doux">Pas rendu dans cette langue.</p>'}
+      ${langue !== m.langue ? `<p class="doux">La personne le reçoit en ${echapper(NOMS_LANGUES[m.langue] ?? m.langue)} ; ici, le même modèle rendu en ${echapper(NOMS_LANGUES[langue] ?? langue)}.</p>` : ''}</div>`;
+}
+
 async function afficher() {
   const cle = location.hash.slice(1) || 'aujourdhui';
-  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle.startsWith('campagne-') ? 'campagnes' : cle;
+  const nom = cle.startsWith('fiche-') ? 'utilisateurs' : cle.startsWith('action-') ? 'aujourdhui' : cle.startsWith('campagne-') ? 'campagnes' : cle.startsWith('carte') ? 'carte' : cle;
   document.querySelectorAll('[data-vue]').forEach((a) => a.classList.toggle('actif', a.dataset.vue === nom));
   vue.innerHTML = '<p class="doux">Chargement…</p>';
   try {
     if (cle.startsWith('fiche-')) await fiche(decodeURIComponent(cle.slice(6)));
     else if (cle.startsWith('action-')) await uneAction(decodeURIComponent(cle.slice(7)));
     else if (cle.startsWith('campagne-')) await uneCampagne(decodeURIComponent(cle.slice(9)));
+    else if (cle === 'carte' || cle.startsWith('carte-')) await carteDesEmails(cle);
     else await ({ aujourdhui, utilisateurs, campagnes: listeCampagnes, bugs: listeBugs, journal, reglages }[cle] ?? aujourdhui)();
   } catch (e) {
     vue.innerHTML = `<div class="carte"><p class="message erreur">${echapper(e.message)}</p><p class="doux">Si la base ne répond pas, la connexion Google du Mac a peut-être expiré : <code>gcloud auth application-default login</code>.</p></div>`;
