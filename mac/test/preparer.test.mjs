@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { baseEnMemoire } from '../suivi.mjs';
 import { bienvenues, candidats, preparer } from '../preparer.mjs';
 import { apercuBienvenue, rendre } from '../modeles.mjs';
+import { cleUtilisateur } from '../envoi.mjs';
 
 const T = new Date('2026-12-02T10:00:00Z');
 const h = (n) => T.getTime() + n * 3600000;
@@ -203,6 +204,21 @@ test('un compte de test (le fondateur) ne donne aucune action', () => {
     { nom: 'rc_trial_cancelled_event', temps: h(-5), ids: ['rcM'], transaction: 'M3' },
   ];
   assert.deepEqual(candidats(faits, avecTest, T), []);
+});
+
+test('la bienvenue : ni compte de test, ni désinscrit, ni adresse en rebond ; un dossier illisible ne casse pas la passe (INT-EW-9)', async () => {
+  const nouveaux = [
+    { id: 'ana@exemple.fr', locale: 'fr', created_at: iso(-2), revenuecat_id: 'rcA' },
+    { id: 'moi@exemple.fr', locale: 'fr', created_at: iso(-2), is_test_user: true },
+    { id: 'parti@exemple.fr', locale: 'fr', created_at: iso(-2) },
+    { id: 'rebond@exemple.fr', locale: 'fr', created_at: iso(-2) },
+  ];
+  assert.deepEqual(bienvenues(nouveaux, T).map((u) => u.id), ['ana@exemple.fr', 'parti@exemple.fr', 'rebond@exemple.fr']);
+  const db = baseEnMemoire({ users: nouveaux, crm_reglages: [{ id: 'general', signature: 'Prénom', bienvenue: true }],
+    crm_fiches: [{ id: cleUtilisateur('parti@exemple.fr'), desinscrit: true }, { id: cleUtilisateur('rebond@exemple.fr'), adresse_invalide: true }] });
+  const r = await preparer({ db, faits: [], tournees: () => 0, maintenant: T, dossierPour: () => { throw new Error('dossier illisible'); } });
+  assert.equal(r.creees, 1);
+  assert.deepEqual((await db.lister('crm_actions')).map((a) => a.user_id), ['ana@exemple.fr']);
 });
 
 test('la bienvenue : une par adresse donnée dans les 72 h, seulement si le réglage est ouvert (INT-EW-9)', async () => {

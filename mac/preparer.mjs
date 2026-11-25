@@ -103,7 +103,8 @@ export const FENETRE_BIENVENUE = 72 * H;
 const ADRESSE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export function bienvenues(inscrits, maintenant) {
   const t = maintenant.getTime();
-  return inscrits.filter((u) => ADRESSE.test(String(u.id)) && u.created_at)
+  // Un compte de test (le fondateur) ne donne aucune action, comme dans `candidats`.
+  return inscrits.filter((u) => ADRESSE.test(String(u.id)) && u.created_at && !u.is_test_user)
     .filter((u) => { const age = t - new Date(u.created_at).getTime(); return age >= 0 && age <= FENETRE_BIENVENUE; });
 }
 
@@ -192,8 +193,12 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
   // La bienvenue ne se prépare que si le fondateur a ouvert le réglage, après son oui sur le texte. Une par personne.
   if (reglages.bienvenue === true) {
     for (const u of bienvenues(inscrits, maintenant)) {
-      if (existantes.has(`bienvenue__${cleUtilisateur(u.id)}`)) continue;
-      const pays = u.revenuecat_id ? (dossierPour?.(u.revenuecat_id, u)?.pays ?? null) : null;
+      const fiche = fiches.get(cleUtilisateur(u.id)) ?? {};
+      // Un désinscrit ou une adresse en rebond : pas d'action (la porte l'aurait bloquée, mais elle s'affichait et sonnait).
+      if (existantes.has(`bienvenue__${cleUtilisateur(u.id)}`) || fiche.desinscrit || fiche.adresse_invalide) continue;
+      // Un dossier illisible ne casse pas la passe (expiration comprise), comme `dossierSur` dans contacter.mjs.
+      let pays = null;
+      if (u.revenuecat_id) { try { pays = dossierPour?.(u.revenuecat_id, u)?.pays ?? null; } catch { pays = null; } }
       const { id, ...champs } = actionBienvenue(u, { signature: reglages.signature, maintenant, pays, choix: choixLangue(cleUtilisateur(u.id)) });
       try { await db.creer('crm_actions', id, champs); existantes.set(id, { id, ...champs }); creees += 1; } catch (erreur) {
         if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
