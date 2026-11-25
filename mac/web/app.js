@@ -452,64 +452,65 @@ async function listeBugs() {
 }
 
 // La carte des e-mails (carte.mjs) : une simulation en mémoire, en lecture seule. Aucun bouton d'envoi, aucune écriture.
+// En haut l'arbre de décision, en français ; un clic sur une feuille e-mail ouvre son texte à côté. Le reste (limites,
+// hors carte, scénarios) est replié dans « Détail (vérification) ».
 let carteChargee = null;
 const chargerCarte = async () => (carteChargee ??= await api('carte'));
 const avecCode = (t) => echapper(t).replace(/`([^`]+)`/g, '<code>$1</code>');
-const lienScenario = (id) => `#carte-s-${encodeURIComponent(id)}`;
-const lienEmail = (sid, aid, lg = '') => `#carte-e-${encodeURIComponent(sid)}~${encodeURIComponent(aid)}${lg ? `~${lg}` : ''}`;
 
-function bandeCarte(c, { complete = true } = {}) {
-  return `<div class="carte simulation"><strong>Simulation : rien ne part d’ici.</strong>
-    ${complete ? `<ul>${c.limites.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>
-    <p><strong>Hors carte</strong></p><ul>${c.hors_carte.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>` : ''}</div>`;
-}
-
-async function carteDesEmails(cle) {
-  const c = await chargerCarte();
-  if (cle.startsWith('carte-s-')) return scenarioDeLaCarte(c, decodeURIComponent(cle.slice(8)));
-  if (cle.startsWith('carte-e-')) {
-    const [sid, aid, lg] = cle.slice(8).split('~').map(decodeURIComponent);
-    return emailDeLaCarte(c, sid, aid, lg);
+function brancheDeLaCarte(n, feuillesEmail) {
+  let resultat = '';
+  if ('donne' in n) {
+    if (n.donne && n.email) {
+      feuillesEmail.push(n);
+      resultat = `<button class="feuille" data-feuille="${feuillesEmail.length - 1}">${echapper(n.donne)}</button>`;
+    } else resultat = `<span class="aucun">${n.donne ? echapper(n.donne) : 'aucun'}</span>`;
   }
-  vue.innerHTML = `<h1>Carte des e-mails</h1>${bandeCarte(c)}
-    <p class="doux">${c.scenarios.length} scénarios, ${c.cas_couverts.length} cas du bilan du 25/11 sur 48 (non couverts : ${c.cas_non_couverts.join(', ')}). Un clic sur une ligne ouvre l’e-mail ; un clic sur une situation ouvre sa chronologie.</p>
-    <div class="carte defile"><table><thead><tr><th>Situation</th><th>Condition</th><th>E-mail ou aucun</th><th>Pourquoi</th></tr></thead><tbody>
-    ${c.tableau.map((r) => `<tr data-lien="${r.action_id ? lienEmail(r.scenario, r.action_id) : lienScenario(r.scenario)}">
-      <td><a href="${lienScenario(r.scenario)}">${echapper(r.situation)}</a></td><td>${echapper(r.condition)}</td>
-      <td>${r.email === 'aucun' ? '<span class="puce parti">aucun</span>' : `<span class="puce payant">${echapper(r.email)}</span>`}</td><td>${echapper(r.pourquoi)}</td></tr>`).join('')}
-    </tbody></table></div>`;
-  vue.querySelectorAll('[data-lien]').forEach((tr) => tr.addEventListener('click', (e) => { if (!e.target.closest('a')) location.hash = tr.dataset.lien; }));
+  const ecart = n.ecart ? `<span class="ecart" title="${echapper(n.ecart)}">écart : voulu aucun</span>` : '';
+  const ligne = `<div class="ligne"><span class="si">${echapper(n.si)}</span>${ecart}${resultat ? `<span class="points"></span>${resultat}` : ''}</div>`;
+  return `<li>${ligne}${n.enfants ? `<ul>${n.enfants.map((e) => brancheDeLaCarte(e, feuillesEmail)).join('')}</ul>` : ''}</li>`;
 }
 
-function scenarioDeLaCarte(c, id) {
-  const s = c.scenarios.find((x) => x.id === id);
-  if (!s) throw new Error('Scénario introuvable.');
-  vue.innerHTML = `<a href="#carte" class="doux">← Carte des e-mails</a><h1>${echapper(s.titre)}</h1>${bandeCarte(c, { complete: false })}
-    <div class="carte"><dl class="grille"><dt>Cas du bilan</dt><dd>${s.cas.join(', ')}</dd><dt>Condition</dt><dd>${echapper(s.condition)}</dd>
-      <dt>J0</dt><dd>${new Date(s.debut).toLocaleDateString('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</dd>
-      <dt>Envoi simulé</dt><dd>chaque action part dès qu’elle est prête, à la passe qui la prépare</dd>
-      <dt>Résultat</dt><dd>${Object.entries(s.resultats).map(([t, v]) => `${echapper(TYPES[t] ?? t)} : ${echapper(v)}`).join('<br>')}</dd></dl>
-      ${s.remarque ? `<p class="message erreur">À relire : ${avecCode(s.remarque)}</p>` : ''}</div>
-    <div class="carte"><h2>Chronologie</h2><table><tbody>
-      ${s.chronologie.map((x) => `<tr${x.action_id ? ` data-lien="${lienEmail(s.id, x.action_id)}"` : ' class="fixe"'}><td>${echapper(x.quand)}</td><td>${echapper(x.texte)}</td></tr>`).join('')}
-    </tbody></table></div>
-    ${s.emails.length ? `<div class="carte"><h2>Les e-mails</h2><table><tbody>${s.emails.map((m) => `<tr data-lien="${lienEmail(s.id, m.id)}"><td>${echapper(m.nom)}</td><td>${echapper(m.resultat)}</td><td>${echapper(m.langue)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
-  vue.querySelectorAll('[data-lien]').forEach((tr) => tr.addEventListener('click', () => { location.hash = tr.dataset.lien; }));
+function detailDeLaCarte(c) {
+  const scenario = (s) => `<details class="scenario"><summary>${echapper(s.titre)}</summary>
+    <p>${echapper(s.condition)} <span class="doux">Cas du bilan : ${s.cas.join(', ')}.</span></p>
+    ${s.remarque ? `<p class="message erreur">À relire : ${avecCode(s.remarque)}</p>` : ''}
+    <p><strong>Résultat :</strong> ${Object.entries(s.resultats).map(([t, v]) => `${echapper(TYPES[t] ?? t)} : ${echapper(v)}`).join(' ; ')}</p>
+    <table><tbody>${s.chronologie.map((x) => `<tr class="fixe"><td>${echapper(x.quand)}</td><td>${echapper(x.texte)}</td></tr>`).join('')}</tbody></table>
+    ${s.emails.map((m) => `<p><strong>${echapper(m.nom)}</strong> <span class="doux">${echapper(m.resultat)}</span></p>
+      <p><strong>Objet :</strong> ${echapper(m.texte_fr.sujet)}</p><pre class="texte">${echapper(m.texte_fr.corps)}</pre>`).join('')}</details>`;
+  return `<details class="carte detail"><summary>Détail (vérification)</summary>
+    <p><strong>Limites</strong></p><ul>${c.limites.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>
+    <p><strong>Hors carte</strong></p><ul>${c.hors_carte.map((l) => `<li>${avecCode(l)}</li>`).join('')}</ul>
+    <p class="doux">${c.scenarios.length} scénarios, ${c.cas_couverts.length} cas du bilan du 25/11 sur 48 (non couverts : ${c.cas_non_couverts.join(', ')}).
+      Chacun passe par le vrai code ; l’envoi est simulé.</p>
+    ${c.scenarios.map(scenario).join('')}</details>`;
 }
 
-function emailDeLaCarte(c, sid, aid, lg) {
-  const s = c.scenarios.find((x) => x.id === sid);
-  const m = s?.emails.find((x) => x.id === aid);
-  if (!m) throw new Error('E-mail introuvable.');
-  const langue = c.langues.includes(lg) ? lg : m.langue;
-  const texte = m.langues[langue];
-  vue.innerHTML = `<p class="doux"><a href="#carte" class="doux">← Carte des e-mails</a> · <a href="${lienScenario(s.id)}" class="doux">${echapper(s.titre)}</a></p>
-    <h1>${echapper(m.nom)} <span class="puce">${echapper(m.resultat)}</span></h1>${bandeCarte(c, { complete: false })}
-    <div class="carte"><dl class="grille"><dt>Situation</dt><dd>${echapper(s.condition)}</dd><dt>Déroulé</dt><dd>${echapper(m.deroule.join(', '))}</dd>
-      <dt>Langue de la personne</dt><dd>${echapper(m.langue_source)}</dd>${m.a_verifier ? `<dt>À vérifier</dt><dd>${echapper(m.a_verifier)}</dd>` : ''}</dl></div>
-    <div class="carte"><div class="outils">${c.langues.map((x) => `<a class="bouton${x === langue ? ' choisi' : ''}" href="${lienEmail(s.id, m.id, x)}">${echapper(NOMS_LANGUES[x] ?? x)}</a>`).join('')}</div>
-      ${texte ? `<p><strong>Objet :</strong> ${echapper(texte.sujet)}</p><pre class="texte">${echapper(texte.corps)}</pre>` : '<p class="doux">Pas rendu dans cette langue.</p>'}
-      ${langue !== m.langue ? `<p class="doux">La personne le reçoit en ${echapper(NOMS_LANGUES[m.langue] ?? m.langue)} ; ici, le même modèle rendu en ${echapper(NOMS_LANGUES[langue] ?? langue)}.</p>` : ''}</div>`;
+async function carteDesEmails() {
+  const c = await chargerCarte();
+  const feuillesEmail = [];
+  const arbre = c.arbre.map((n) => brancheDeLaCarte(n, feuillesEmail)).join('');
+  const pt = c.pour_tous;
+  vue.innerHTML = `<h1>Carte des e-mails</h1>
+    <p class="simulation-ligne">Simulation : rien ne part d’ici.</p>
+    <div class="carte-arbre">
+      <div class="carte"><ul class="arbre">${arbre}</ul>
+        <p class="pour-tous"><strong>Pour tous :</strong> ${pt.aucun.map((x) => echapper(x.si)).join(', ')} → <span class="aucun">aucun</span><br>
+          ${echapper(pt.ecart_72h)}</p></div>
+      <div class="carte panneau" id="panneau"><p class="doux">Clique sur un e-mail de l’arbre pour lire son texte.</p></div>
+    </div>
+    ${detailDeLaCarte(c)}`;
+  const panneau = document.getElementById('panneau');
+  vue.querySelectorAll('[data-feuille]').forEach((b) => b.addEventListener('click', () => {
+    const f = feuillesEmail[Number(b.dataset.feuille)];
+    vue.querySelectorAll('[data-feuille]').forEach((x) => x.classList.toggle('choisie', x === b));
+    const s = c.scenarios.find((x) => x.id === f.email.scenario);
+    panneau.innerHTML = `<h2>${echapper(f.donne)}</h2>
+      ${f.ecart ? `<p class="message erreur">Écart avec l’arbre validé : ${echapper(f.ecart)}</p>` : ''}
+      <p><strong>Objet :</strong> ${echapper(f.email.sujet)}</p><pre class="texte">${echapper(f.email.corps)}</pre>
+      <p class="doux">Exemple tiré du scénario « ${echapper(s?.titre ?? f.email.scenario)} ».</p>`;
+  }));
 }
 
 async function afficher() {
@@ -521,7 +522,7 @@ async function afficher() {
     if (cle.startsWith('fiche-')) await fiche(decodeURIComponent(cle.slice(6)));
     else if (cle.startsWith('action-')) await uneAction(decodeURIComponent(cle.slice(7)));
     else if (cle.startsWith('campagne-')) await uneCampagne(decodeURIComponent(cle.slice(9)));
-    else if (cle === 'carte' || cle.startsWith('carte-')) await carteDesEmails(cle);
+    else if (cle === 'carte' || cle.startsWith('carte-')) await carteDesEmails();
     else await ({ aujourdhui, utilisateurs, campagnes: listeCampagnes, bugs: listeBugs, journal, reglages }[cle] ?? aujourdhui)();
   } catch (e) {
     vue.innerHTML = `<div class="carte"><p class="message erreur">${echapper(e.message)}</p><p class="doux">Si la base ne répond pas, la connexion Google du Mac a peut-être expiré : <code>gcloud auth application-default login</code>.</p></div>`;

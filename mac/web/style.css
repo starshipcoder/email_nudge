@@ -56,8 +56,28 @@ label { margin-right: 12px; }
 .barre-semaine.h3 { height: 30px; } .barre-semaine.h4 { height: 40px; }
 select { font: inherit; padding: 5px 8px; border: 1px solid var(--trait); border-radius: 6px; background: var(--carte); color: var(--texte); }
 #sujet-fr { width: 100%; box-sizing: border-box; }
-.simulation { background: var(--ocre-fond); border-color: var(--ocre); }
-.simulation > strong { color: var(--ocre); }
-.simulation ul { margin: 0; padding-left: 20px; }
 tbody tr.fixe { cursor: default; }
-a.bouton.choisi { background: var(--accent); border-color: var(--accent); color: #fff; }
+.simulation-ligne { margin: 0; color: var(--ocre); font-weight: 600; }
+.carte-arbre { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.carte-arbre .panneau { position: sticky; top: 64px; max-height: calc(100vh - 90px); overflow-y: auto; }
+@media (max-width: 900px) { .carte-arbre { grid-template-columns: 1fr; } .carte-arbre .panneau { position: static; max-height: none; } }
+ul.arbre, ul.arbre ul { list-style: none; margin: 0; padding: 0; }
+ul.arbre > li { margin-bottom: 6px; }
+ul.arbre > li > .ligne .si { font-weight: 600; }
+ul.arbre ul { margin-left: 7px; }
+ul.arbre ul > li { position: relative; padding-left: 18px; border-left: 1px solid var(--doux); }
+ul.arbre ul > li:last-child { border-left-color: transparent; }
+ul.arbre ul > li::before { content: ''; position: absolute; left: 0; top: 0; width: 13px; height: 12px; border-bottom: 1px solid var(--doux); }
+ul.arbre ul > li:last-child::before { border-left: 1px solid var(--doux); left: -1px; }
+.arbre .ligne { display: flex; align-items: baseline; gap: 6px; min-height: 24px; }
+.arbre .points { flex: 1; border-bottom: 1px dotted var(--trait); min-width: 16px; transform: translateY(-4px); }
+.arbre .aucun { white-space: nowrap; }
+.arbre .aucun, .pour-tous .aucun { color: var(--doux); opacity: .75; }
+button.feuille { white-space: nowrap; padding: 1px 10px; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+button.feuille.choisie { background: var(--accent); color: #fff; }
+.ecart { font-size: 12px; padding: 0 6px; border-radius: 999px; background: var(--ocre-fond); color: var(--ocre); font-weight: 600; cursor: help; }
+.pour-tous { margin: 6px 0 0; padding-top: 8px; border-top: 1px solid var(--trait); line-height: 1.6; }
+details.detail > summary { cursor: pointer; font-weight: 600; }
+details.scenario { border-top: 1px solid var(--trait); padding: 6px 0; }
+details.scenario > summary { cursor: pointer; }
+details ul { margin: 0; padding-left: 20px; }

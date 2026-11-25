@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { SCENARIOS, carte, dossierFictif, etatA, etapesDatees, fauxResend, markdown } from '../carte.mjs';
+import { ARBRE, POUR_TOUS, SCENARIOS, arbreTexte, carte, dossierFictif, etatA, etapesDatees, fauxResend, feuilles, markdown } from '../carte.mjs';
 import { MODELES, rendre } from '../modeles.mjs';
 import { ESSAI, ESSAI_COURT, T, brouillonAvecTraduction, brouillonEssaiAnnule } from '../brouillons.mjs';
 import { dossierDe, resumer } from '../dossier.mjs';
@@ -32,6 +32,65 @@ test('chaque modèle et chaque brouillon apparaît dans au moins un scénario', 
   for (const nom of ['T', 'ESSAI', 'ESSAI_COURT']) assert.ok(vu[nom], `le brouillon ${nom} n'apparaît dans aucun scénario`);
   // Les six langues sont rendues pour chaque e-mail, sans variable restée vide.
   for (const m of emails) for (const [lg, x] of Object.entries(m.langues)) assert.ok(x && !/\{\{/.test(x.corps), `${m.id} en ${lg}`);
+});
+
+// Le modèle ou brouillon au bout d'un e-mail, lu dans son texte français.
+const MODELE_FR = (nom) => rendre(nom, 'fr', { signature: 'Harold' }).corps;
+const utilise = {
+  bienvenue: (m) => m.type === 'bienvenue' && m.texte_fr.corps === MODELE_FR('bienvenue'),
+  essai_j2: (m) => m.type === 'essai_j2' && m.texte_fr.corps.startsWith(MODELES.essai_j2.fr[1].split('{{')[0]),
+  resiliation: (m) => m.type === 'resiliation' && m.texte_fr.corps === MODELE_FR('resiliation'),
+  bug_corrige: (m) => m.type === 'bug_corrige' && m.texte_fr.corps.startsWith(MODELES.bug_corrige.fr[1].split('{{')[0]),
+  T: (m) => m.type === 'resiliation' && m.texte_fr.corps.includes(T.fr.pris) && m.texte_fr.corps !== MODELE_FR('resiliation'),
+  ESSAI: (m) => m.type === 'essai_annule' && m.texte_fr.corps.includes(ESSAI.fr.pris),
+  ESSAI_COURT: (m) => m.type === 'essai_annule' && m.texte_fr.corps.includes(ESSAI_COURT.fr.corps),
+  demande_avis: (m) => m.type === 'demande_avis',
+  onboarding: (m) => m.type === 'onboarding',
+  gros: (m) => m.type === 'gros',
+};
+
+test('chaque feuille de l’arbre : le scénario relié donne ce résultat par le vrai code', () => {
+  const toutes = feuilles();
+  assert.ok(toutes.length >= 20);
+  for (const f of toutes) {
+    assert.ok(f.scenarios?.length, `« ${f.si} » : au moins un scénario`);
+    for (const x of f.scenarios) {
+      const id = typeof x === 'string' ? x : x.id;
+      const s = c.scenarios.find((y) => y.id === id);
+      assert.ok(s, `« ${f.si} » : le scénario ${id} existe`);
+      const partis = s.emails.filter((m) => m.type === f.sorte && m.resultat.startsWith('envoyé') && !m.resultat.includes('adresse de test'));
+      if (x.un_seul) { assert.equal(partis.length, 1, `« ${f.si} » (${id}) : un seul e-mail de départ`); continue; }
+      if (f.donne === null) {
+        // Aucun : rien n'est préparé, ou c'est bloqué, expiré ou retenu ; rien ne part à la personne.
+        assert.equal(partis.length, 0, `« ${f.si} » (${id}) : aucun e-mail ${f.sorte} ne doit partir`);
+        continue;
+      }
+      const bon = partis.filter((m) => (!f.variante || m.variante === f.variante) && utilise[f.modele](m));
+      assert.ok(bon.length, `« ${f.si} » (${id}) : ${f.donne} doit partir (vu : ${s.emails.map((m) => `${m.nom} ${m.resultat}`).join(' ; ') || 'rien'})`);
+    }
+  }
+  // L'écart de 72 h retient bien un e-mail dans le scénario relié.
+  const r = POUR_TOUS.ecart_72h;
+  const s = c.scenarios.find((y) => y.id === r.scenarios[0]);
+  assert.ok(s.emails.some((m) => m.type === r.sorte && m.deroule.some((d) => d.includes('trop tôt'))), '72 h : un e-mail retenu « trop tôt »');
+});
+
+test('chaque modèle et chaque brouillon est au bout d’au moins une feuille', () => {
+  const aubout = new Set(feuilles().filter((f) => f.donne && !f.ecart).map((f) => f.modele));
+  for (const nom of [...Object.keys(MODELES), 'T', 'ESSAI', 'ESSAI_COURT']) assert.ok(aubout.has(nom), `${nom} n’est au bout d’aucune feuille`);
+  for (const f of feuilles()) if (f.donne) assert.ok(utilise[f.modele], `« ${f.si} » : modèle ${f.modele} inconnu`);
+});
+
+test('la sortie commence par l’arbre, puis les e-mails en français, puis les scénarios', () => {
+  const md = markdown(c);
+  const a = md.indexOf(arbreTexte(ARBRE, POUR_TOUS));
+  const e = md.indexOf('## Les e-mails, en français');
+  const s = md.indexOf('## Les scénarios');
+  assert.ok(a > 0 && a < e && e < s, 'ordre : arbre, e-mails, scénarios');
+  assert.doesNotMatch(md, /six langues|^En (anglais|allemand|espagnol|italien|portugais) :/m);
+  // La page reçoit l'arbre avec, pour chaque feuille e-mail, son texte en français.
+  const vides = feuilles(c.arbre, c.pour_tous).filter((f) => f.donne && !f.email?.corps);
+  assert.deepEqual(vides.map((f) => f.si), []);
 });
 
 test('chaque scénario donne le résultat annoncé par son étiquette', () => {

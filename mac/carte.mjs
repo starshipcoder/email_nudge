@@ -149,6 +149,11 @@ export const SCENARIOS = [
     condition: 'Payant mensuel dont la carte est refusée au renouvellement (raison BILLING_ERROR).',
     etapes: [{ j: -60, fait: 'inscription' }, { j: -20, fait: 'achat' }, { j: 10, fait: 'resilie', raison: 'BILLING_ERROR' }],
     attendu: { resiliation: 'rien de préparé' }, rien: { resiliation: 'carte refusée : pas un arrêt par la personne (aucun e-mail prévu, trou R2)' } },
+  { id: 'payant-arrete-par-le-developpeur', titre: 'Payant arrêté par le développeur', cas: [22],
+    condition: 'Payant mensuel dont l’abonnement est arrêté par une décision du développeur (raison DEVELOPER_INITIATED).',
+    etapes: [{ j: -60, fait: 'inscription' }, { j: -20, fait: 'achat' }, { j: 0, h: '10:00', fait: 'resilie', raison: 'DEVELOPER_INITIATED' }],
+    attendu: { resiliation: 'envoyé' },
+    remarque: 'Écart avec l’arbre validé (arrêté par nous : aucun), comme pour l’essai arrêté par le développeur : la fiche Firebase ne dit pas qui a arrêté, `faitsDesFiches` en fait un arrêt par la personne. Suppose que RevenueCat pose `unsubscribe_detected_at` pour une décision du développeur, à vérifier.' },
   { id: 'desinscrit', titre: 'Désinscrit pendant son essai', cas: [39],
     condition: 'S’inscrit et démarre un essai, se désinscrit le lendemain, annule son essai le 6e jour.',
     etapes: [{ j: 0, h: '08:00', fait: 'inscription' }, { j: 0, fait: 'essai' }, { j: 1, h: '10:00', fait: 'desinscrit' }, { j: 6, h: '10:00', fait: 'annule' }],
@@ -240,6 +245,78 @@ export const SCENARIOS = [
     etapes: [{ j: 0, h: '08:00', fait: 'inscription' }],
     attendu: { bienvenue: 'expiré (retenu avant : en essai : ne part pas aux utilisateurs)' } },
 ];
+
+// ---------- L'arbre de décision : ce que lit le fondateur ----------
+
+// Chaque branche a son libellé (`si`) ; chaque feuille, son résultat (`donne` : le nom de l'e-mail, ou null pour
+// « aucun »), la sorte d'e-mail en jeu, le modèle ou brouillon au bout (`modele`) et les scénarios qui l'illustrent.
+// Le test (test/carte.test.mjs) passe chaque scénario relié par le vrai code et vérifie le résultat de la feuille.
+// `ecart` : la feuille dit ce que fait le code, différent de l'arbre validé par le fondateur le 25/11.
+// Un scénario `{ id, un_seul: true }` : un seul e-mail de cette sorte part, malgré plusieurs départs.
+export const ARBRE = [
+  { si: 'Inscription avec une adresse', enfants: [
+    { si: 'dans les 72 h', donne: 'Bienvenue', sorte: 'bienvenue', modele: 'bienvenue', scenarios: ['essai-ios-utilise'] }] },
+  { si: 'Essai qui finit dans 2 jours', enfants: [
+    { si: 'a déjà payé ou annulé', donne: null, sorte: 'essai_j2', scenarios: ['annule-avant-la-passe'] },
+    { si: 'sinon', donne: 'Rappel de fin d’essai', sorte: 'essai_j2', modele: 'essai_j2', scenarios: ['essai-ios-utilise'] }] },
+  { si: 'Essai arrêté', enfants: [
+    { si: 'carte refusée ou remboursé', donne: null, sorte: 'essai_annule', scenarios: ['carte-refusee', 'essai-rembourse'] },
+    { si: 'arrêté par nous', donne: 'Essai annulé (court)', sorte: 'essai_annule', variante: 'court', modele: 'ESSAI_COURT',
+      scenarios: ['essai-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
+    { si: 'a repris ou payé avant l’envoi', donne: null, sorte: 'essai_annule', scenarios: ['annule-dans-l-heure-puis-repris'] },
+    { si: 'a répondu au questionnaire de l’app', donne: 'Essai annulé (part de sa réponse)', sorte: 'essai_annule', variante: 'avec sa réponse', modele: 'ESSAI',
+      scenarios: ['essai-annule-avec-reponse'] },
+    { si: 'sinon', donne: 'Essai annulé (court)', sorte: 'essai_annule', variante: 'court', modele: 'ESSAI_COURT', scenarios: ['essai-annule-sans-reponse'] }] },
+  { si: 'Abonnement payant arrêté', enfants: [
+    { si: 'remboursé ou carte refusée', donne: null, sorte: 'resiliation', scenarios: ['payant-rembourse', 'carte-refusee-renouvellement'] },
+    { si: 'arrêté par nous', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',
+      scenarios: ['payant-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
+    { si: 'a repris, ou a déjà reçu un e-mail de départ', donne: null, sorte: 'resiliation', scenarios: ['changement-offre', { id: 'revient-puis-repart', un_seul: true }] },
+    { si: 'on lit son dossier (réponse, problème ou usage)', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',
+      scenarios: ['resiliation-avec-reponse', 'resiliation-probleme-vu'] },
+    { si: 'sinon', donne: 'Résiliation (simple)', sorte: 'resiliation', variante: 'modèle', modele: 'resiliation', scenarios: ['resiliation-sans-dossier'] }] },
+  { si: 'Bug signalé, puis corrigé dans une version', donne: 'Bug corrigé', sorte: 'bug_corrige', modele: 'bug_corrige', scenarios: ['bug-corrige-puis-avis'], enfants: [
+    { si: 'revenu dans l’app ensuite', donne: 'Demande d’avis', sorte: 'demande_avis', modele: 'demande_avis', scenarios: ['bug-corrige-puis-avis'] }] },
+  { si: 'Contacts (onboarding, gros utilisateurs)', enfants: [
+    { si: 'onboarding pas fini, ni essai ni abonnement', donne: 'Onboarding abandonné', sorte: 'onboarding', modele: 'onboarding', scenarios: ['onboarding-abandonne'] },
+    { si: '12 jours actifs en 4 semaines, 10 tournées', donne: 'Gros utilisateur', sorte: 'gros', modele: 'gros', scenarios: ['gros-utilisateur'] }] },
+];
+// La ligne « Pour tous » : ce qui ne donne aucun e-mail, quelle que soit la branche, puis l'écart de 72 h.
+export const POUR_TOUS = {
+  aucun: [
+    { si: 'désinscrit', donne: null, sorte: 'essai_annule', scenarios: ['desinscrit'] },
+    { si: 'adresse en erreur', donne: null, sorte: 'essai_j2', scenarios: ['rebond'] },
+    { si: 'sans adresse', donne: null, sorte: 'essai_annule', scenarios: ['sans-adresse'] },
+    { si: 'compte de test', donne: null, sorte: 'essai_annule', scenarios: ['compte-de-test'] },
+  ],
+  ecart_72h: { texte: '72 h entre deux e-mails (sauf le rappel et le bug corrigé)', sorte: 'essai_annule', scenarios: ['annule-dans-l-heure'] },
+};
+export const NOTE_TEST = 'Un compte de test ne reçoit rien ; l’onboarding et le bug corrigé partent alors à l’adresse de test du fondateur.';
+
+// Toutes les feuilles, la ligne « Pour tous » comprise.
+export function feuilles(arbre = ARBRE, pourTous = POUR_TOUS) {
+  const l = [];
+  const voir = (n) => { if ('donne' in n) l.push(n); for (const e of n.enfants ?? []) voir(e); };
+  arbre.forEach(voir);
+  return [...l, ...pourTous.aucun];
+}
+const idDe = (x) => (typeof x === 'string' ? x : x.id);
+
+// L'arbre en texte, les résultats alignés sur une colonne.
+export function arbreTexte(arbre = ARBRE, pourTous = POUR_TOUS) {
+  const lignes = [];
+  const resultat = (n) => (n.donne ?? 'aucun') + (n.ecart ? ', écart : voulu aucun' : '');
+  const poser = (n, avant, signe) => {
+    lignes.push({ gauche: `${avant}${signe}${n.si}`, droite: 'donne' in n ? resultat(n) : null });
+    const suite = avant + (signe === '├─ ' ? '│  ' : signe === '└─ ' ? '   ' : '');
+    (n.enfants ?? []).forEach((e, i, t) => poser(e, suite, i === t.length - 1 ? '└─ ' : '├─ '));
+  };
+  arbre.forEach((n) => poser(n, '', ''));
+  const largeur = Math.max(...lignes.filter((x) => x.droite).map((x) => x.gauche.length)) + 4;
+  const sortie = lignes.map((x) => (x.droite ? `${x.gauche} ${'.'.repeat(largeur - x.gauche.length - 1)} ${x.droite}` : x.gauche));
+  sortie.push(`Pour tous : ${pourTous.aucun.map((x) => x.si).join(', ')} → aucun`, `            ${pourTous.ecart_72h.texte}`);
+  return sortie.join('\n');
+}
 
 // ---------- Le constructeur : un état cohérent à chaque instant, tiré des étapes ----------
 
@@ -530,7 +607,7 @@ export async function carte() {
     const parLangue = {};
     for (const lg of LANGUES) parLangue[lg] = new Map((await derouler(sc, { langue: lg })).actions.map((a) => [a.id, a]));
     const emails = base.actions.map((a) => ({
-      id: a.id, type: a.type, nom: nomAction(a), resultat: resultatDe(a, base.suivi.get(a.id)), deroule: base.suivi.get(a.id)?.evenements ?? [],
+      id: a.id, type: a.type, nom: nomAction(a), variante: variante(a), resultat: resultatDe(a, base.suivi.get(a.id)), deroule: base.suivi.get(a.id)?.evenements ?? [],
       langue: a.langue, langue_source: direSource({ langue: a.langue, source: a.langue_source, pays: a.pays }),
       ...(a.a_verifier ? { a_verifier: a.a_verifier } : {}),
       texte: { sujet: a.sujet, corps: a.corps }, texte_fr: a.traduction_fr ? { sujet: a.traduction_fr.sujet, corps: a.traduction_fr.corps } : { sujet: a.sujet, corps: a.corps },
@@ -560,7 +637,19 @@ export async function carte() {
     }
   }
   const cas = [...new Set(SCENARIOS.flatMap((s) => s.cas))].sort((a, b) => a - b);
-  return { limites: LIMITES, hors_carte: HORS_CARTE, langues: LANGUES, noms_langues: NOMS_LANGUES, cas_couverts: cas,
+  // L'arbre pour la page : chaque feuille e-mail porte le texte en français du premier scénario qui l'illustre.
+  const emailDe = (f) => {
+    for (const x of f.scenarios) {
+      const m = scenarios.find((s) => s.id === idDe(x))?.emails.find((e) => e.type === f.sorte && e.resultat.startsWith('envoyé')
+        && (!f.variante || e.variante === f.variante));
+      if (m) return { scenario: idDe(x), sujet: m.texte_fr.sujet, corps: m.texte_fr.corps };
+    }
+    return null;
+  };
+  const habiller = (n) => ({ si: n.si, ...('donne' in n ? { donne: n.donne, scenarios: n.scenarios.map(idDe), ...(n.ecart ? { ecart: n.ecart } : {}),
+    ...(n.donne ? { email: emailDe(n) } : {}) } : {}), ...(n.enfants ? { enfants: n.enfants.map(habiller) } : {}) });
+  return { arbre: ARBRE.map(habiller), pour_tous: { aucun: POUR_TOUS.aucun.map(habiller), ecart_72h: POUR_TOUS.ecart_72h.texte, note_test: NOTE_TEST },
+    arbre_texte: arbreTexte(), limites: LIMITES, hors_carte: HORS_CARTE, langues: LANGUES, noms_langues: NOMS_LANGUES, cas_couverts: cas,
     cas_non_couverts: Array.from({ length: 48 }, (_, k) => k + 1).filter((k) => !cas.includes(k)), tableau, scenarios };
 }
 
@@ -574,13 +663,24 @@ export function markdown(c) {
   const l = [];
   l.push('# La carte des e-mails d’Iris', '');
   l.push('Simulation : rien ne part d’ici. Fichier produit par `node mac/carte.mjs` ; ne pas l’écrire à la main.', '');
-  l.push('## Limites', '', ...c.limites.map((x) => `- ${x}`), '');
-  l.push('## Hors carte', '', ...c.hors_carte.map((x) => `- ${x}`), '');
+  l.push('## L’arbre', '', '```', c.arbre_texte, '```', '');
+  const ecarts = c.arbre.flatMap((n) => (n.enfants ?? []).filter((f) => f.ecart).map((f) => `« ${n.si} », « ${f.si} » : ${f.ecart}`));
+  l.push(...ecarts.map((x) => `- Écart avec l’arbre validé, ${x}`), `- ${c.pour_tous.note_test}`, '');
+  l.push('## Les e-mails, en français', '');
+  const vus = new Set();
+  for (const f of feuilles(c.arbre, c.pour_tous)) {
+    if (!f.email || f.ecart || vus.has(f.donne)) continue;
+    vus.add(f.donne);
+    l.push(`### ${f.donne}`, '', `Exemple : scénario « ${c.scenarios.find((s) => s.id === f.email.scenario).titre} ».`, '');
+    l.push(cite(`**Objet :** ${f.email.sujet}\n\n${f.email.corps}`), '');
+  }
+  l.push('## Les scénarios (vérification)', '');
+  l.push('### Limites', '', ...c.limites.map((x) => `- ${x}`), '');
+  l.push('### Hors carte', '', ...c.hors_carte.map((x) => `- ${x}`), '');
   l.push(`${c.scenarios.length} scénarios. Cas du bilan du 25/11 couverts : ${c.cas_couverts.length} sur 48 (${c.cas_couverts.join(', ')}). Non couverts : ${c.cas_non_couverts.join(', ')}.`, '');
-  l.push('## Le tableau', '', '| Situation | Condition | E-mail ou aucun | Pourquoi |', '|---|---|---|---|');
+  l.push('### Le tableau', '', '| Situation | Condition | E-mail ou aucun | Pourquoi |', '|---|---|---|---|');
   for (const r of c.tableau) l.push(`| ${cellule(r.situation)} | ${cellule(r.condition)} | ${cellule(r.email)} | ${cellule(r.pourquoi)} |`);
   l.push('');
-  l.push('## Les scénarios', '');
   for (const s of c.scenarios) {
     l.push(`### ${s.titre}`, '');
     l.push(`Cas du bilan : ${s.cas.join(', ')}. ${s.condition} J0 : ${dateLongue(s.debut)}. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.`, '');
@@ -589,23 +689,8 @@ export function markdown(c) {
     l.push(...s.chronologie.map((x) => `- ${x.quand} : ${x.texte}`), '');
     for (const m of s.emails) {
       l.push(`#### ${m.nom} : ${m.resultat}`, '');
-      l.push(`Langue : ${m.langue_source}.${m.a_verifier ? ` À vérifier : ${m.a_verifier}.` : ''}`, '');
-      if (m.langue !== 'fr') l.push(`En ${NOMS_LANGUES[m.langue]} :`, '', cite(`**Objet :** ${m.texte.sujet}\n\n${m.texte.corps}`), '', 'En français :', '');
+      l.push(`Langue de la personne : ${m.langue_source}.${m.a_verifier ? ` À vérifier : ${m.a_verifier}.` : ''}`, '');
       l.push(cite(`**Objet :** ${m.texte_fr.sujet}\n\n${m.texte_fr.corps}`), '');
-    }
-  }
-  // Un exemple de chaque modèle dans les six langues : ce que montre le sélecteur de la page.
-  l.push('## Chaque e-mail dans les six langues', '');
-  const vus = new Set();
-  for (const s of c.scenarios) {
-    for (const m of s.emails) {
-      if (vus.has(m.nom)) continue;
-      vus.add(m.nom);
-      l.push(`### ${m.nom} (scénario « ${s.titre} »)`, '');
-      for (const lg of c.langues) {
-        const x = m.langues[lg];
-        l.push(`En ${NOMS_LANGUES[lg]} :`, '', x ? cite(`**Objet :** ${x.sujet}\n\n${x.corps}`) : '> (pas rendu dans cette langue)', '');
-      }
     }
   }
   return `${l.join('\n').replace(/\n+$/, '')}\n`;
