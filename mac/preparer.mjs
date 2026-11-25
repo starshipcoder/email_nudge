@@ -7,7 +7,10 @@ import { brouillonEssaiAnnule, reponseRecente } from './brouillons.mjs';
 import { langueDePersonne } from './langues.mjs';
 
 const H = 3600 * 1000;
-const FENETRE_J2 = [24 * H, 60 * H]; // fin d'essai entre 24 h et 60 h d'ici
+// Fin d'essai entre 26 h et 60 h d'ici : Apple peut prélever dans les 24 h avant la fin (bilan du 25/11), le rappel doit
+// donc partir avant ; 34 h de fenêtre couvrent une passe par jour.
+const FENETRE_J2 = [26 * H, 60 * H];
+export const AVANT_PRELEVEMENT = 24 * H;
 const FENETRE_RESILIATION = 7 * 24 * H;
 // L'e-mail aux abonnés payés qui résilient se prépare 24 h après l'arrêt, pas avant (choix du fondateur, 23/11, Q-EW-63).
 export const DELAI_RESILIATION = 24 * H;
@@ -92,7 +95,9 @@ export function candidats(faits, inscrits, maintenant) {
   // L'annulation d'un essai (EW-52) : sauf si la personne a payé ou repris ensuite, quel que soit l'abonnement.
   const paieEnsuite = (f) => faits.some((g) => g.temps > f.temps && g.ids.some((i) => f.ids.includes(i))
     && ['rc_initial_purchase_event', 'rc_trial_converted_event', 'rc_uncancellation_event', 'rc_renewal_event'].includes(g.nom));
-  const essaisAnnules = faits.filter((f) => f.nom === 'rc_trial_cancelled_event' && t - f.temps <= FENETRE_RESILIATION && !paieEnsuite(f))
+  // Pas une carte refusée, un remboursement ou une décision du développeur : « vous avez annulé » y serait faux (bilan du 25/11).
+  const subi = (f) => ['BILLING_ERROR', 'CUSTOMER_SUPPORT', 'DEVELOPER_INITIATED'].includes(f.raison);
+  const essaisAnnules = faits.filter((f) => f.nom === 'rc_trial_cancelled_event' && !subi(f) && t - f.temps <= FENETRE_RESILIATION && !paieEnsuite(f))
     .map((f) => ({ type: 'essai_annule', fait: f, user: inscritDe(f) })).filter((c) => c.user);
   return [...essais, ...resiliations, ...essaisAnnules];
 }
@@ -136,10 +141,10 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
   if (c.type === 'essai_j2') {
     // Le texte est le même pour tous ; la variante garde seulement l'usage, pour lire la mesure (§ 5 de la spec).
     const n = tournees(c.user.revenuecat_id) ?? 0;
-    const { sujet, corps, traduction_fr } = rendreAvecTraduction('essai_j2', langue, (lg) => ({ jour_fin: jourFin(c.fait.fin, lg), signature }));
+    const { sujet, corps, traduction_fr } = rendreAvecTraduction('essai_j2', langue, (lg) => ({ jour_fin: jourFin(c.fait.fin, lg, dossier?.pays), signature }));
     return { id: `essai_j2__${cle}__${c.fait.transaction}`, type: 'essai_j2', variante: n > 0 ? 'usage' : 'peu_usage', user_id: c.user.id,
       statut: 'prete', sujet, corps, langue, ...source, ...(traduction_fr ? { traduction_fr } : {}),
-      echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
+      echeance: new Date(new Date(c.fait.fin).getTime() - AVANT_PRELEVEMENT), cree_le: maintenant };
   }
   if (c.type === 'essai_annule') {
     // Sans dossier, un dossier vide : l'ouverture, la question ouverte et la fin, sans fait inventé.

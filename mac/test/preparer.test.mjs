@@ -262,3 +262,17 @@ test('la carte des Réglages montre le texte français de la bienvenue, avec la 
   assert.match(avec.corps, /Prénom, créateur/);
   assert.match(apercuBienvenue('').corps, /ta signature/);
 });
+
+test('bilan du 25/11 : un essai arrêté par une carte refusée, un remboursement ou le développeur ne reçoit pas « vous avez annulé »', () => {
+  const faits = ['BILLING_ERROR', 'CUSTOMER_SUPPORT', 'DEVELOPER_INITIATED', 'UNSUBSCRIBE'].map((raison, i) =>
+    ({ nom: 'rc_trial_cancelled_event', temps: h(-24), ids: [['rcA', 'rcB', 'rcA', 'rcC'][i]], transaction: `E${i}`, type: 'TRIAL', raison }));
+  assert.deepEqual(candidats(faits, inscrits, T).map((c) => [c.type, c.user.id]), [['essai_annule', 'cla@exemple.fr']]);
+});
+
+test('bilan du 25/11 : le rappel se prépare au moins 26 h avant la fin et expire 24 h avant', async () => {
+  const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
+  assert.equal((await preparer({ db, faits: [essai('rcA', 25, 'T1')], tournees: () => 0, maintenant: T })).creees, 0);
+  await preparer({ db, faits: [essai('rcA', 40, 'T2')], tournees: () => 0, maintenant: T });
+  const [a] = await db.lister('crm_actions');
+  assert.equal(new Date(a.echeance).getTime(), h(40) - 24 * 3600000);
+});

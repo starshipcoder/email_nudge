@@ -119,3 +119,15 @@ test('le jour de fin se dit en toutes lettres, avec la préposition de chaque la
   assert.equal(jourFin('2026-12-05T10:00:00Z', 'pt'), 'no sábado');
   assert.equal(jourFin('2026-12-04T23:30:00Z', 'fr'), 'samedi', 'minuit passé à Paris');
 });
+
+test('bilan du 25/11 : le jour de fin se dit à l’heure du pays de la personne, Paris sinon', async () => {
+  const { jourFin } = await import('../modeles.mjs');
+  const fin = '2026-12-04T23:30:00Z'; // samedi 0 h 30 à Paris, encore vendredi aux Amériques
+  assert.equal(jourFin(fin, 'fr'), 'samedi');
+  assert.equal(jourFin(fin, 'fr', 'FR'), 'samedi');
+  assert.equal(jourFin(fin, 'es', 'MX'), 'el viernes');
+  assert.equal(jourFin(fin, 'pt', 'BR'), 'na sexta-feira');
+  assert.equal(jourFin(fin, 'en', 'US'), 'on Friday');
+  assert.equal(jourFin(fin, 'fr', 'GP'), 'vendredi');
+  assert.equal(jourFin(fin, 'en', 'ZZ'), 'on Saturday', 'pays inconnu : Paris');
+});

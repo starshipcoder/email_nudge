@@ -224,11 +224,22 @@ Obrigado por nos avisar.
   },
 };
 
-// Le jour de fin en toutes lettres, à l'heure de Paris, avec la préposition de la langue (« vendredi », « on Friday »…).
+// Le jour de fin en toutes lettres, avec la préposition de la langue (« vendredi », « on Friday »…), à l'heure du pays de
+// la personne s'il est connu, de Paris sinon (bilan du 25/11 : une fin à 23 h 30 UTC est samedi à Paris, vendredi au Mexique).
 // Le rappel part deux jours avant : le jour de la semaine suffit et reste vrai si l'envoi glisse d'un jour.
 const DEVANT_LE_JOUR = { fr: '', en: 'on ', de: 'am ', es: 'el ', it: '' };
-export function jourFin(iso, langue) {
-  const jour = new Intl.DateTimeFormat(LOCALE_DATE[langue] ?? 'en-GB', { timeZone: 'Europe/Paris', weekday: 'long' }).format(new Date(iso));
+const FUSEAU_DU_PAYS = {
+  GB: 'Europe/London', IE: 'Europe/Dublin', PT: 'Europe/Lisbon', MA: 'Africa/Casablanca', DZ: 'Africa/Algiers', TN: 'Africa/Tunis',
+  SN: 'Africa/Dakar', CI: 'Africa/Abidjan', RE: 'Indian/Reunion', YT: 'Indian/Mayotte', GP: 'America/Guadeloupe', MQ: 'America/Martinique',
+  GF: 'America/Cayenne', NC: 'Pacific/Noumea', PF: 'Pacific/Tahiti', US: 'America/Chicago', CA: 'America/Toronto', MX: 'America/Mexico_City',
+  BR: 'America/Sao_Paulo', AR: 'America/Argentina/Buenos_Aires', CO: 'America/Bogota', CL: 'America/Santiago', PE: 'America/Lima',
+  VE: 'America/Caracas', EC: 'America/Guayaquil', UY: 'America/Montevideo', PY: 'America/Asuncion', BO: 'America/La_Paz',
+  CR: 'America/Costa_Rica', DO: 'America/Santo_Domingo', GT: 'America/Guatemala', PA: 'America/Panama', AO: 'Africa/Luanda',
+  MZ: 'Africa/Maputo', ZA: 'Africa/Johannesburg', AU: 'Australia/Sydney', NZ: 'Pacific/Auckland',
+};
+export function jourFin(iso, langue, pays = null) {
+  const timeZone = FUSEAU_DU_PAYS[String(pays ?? '').toUpperCase()] ?? 'Europe/Paris';
+  const jour = new Intl.DateTimeFormat(LOCALE_DATE[langue] ?? 'en-GB', { timeZone, weekday: 'long' }).format(new Date(iso));
   if (langue === 'pt') return `${/^(sábado|domingo)/.test(jour) ? 'no' : 'na'} ${jour}`;
   return `${DEVANT_LE_JOUR[langue] ?? 'on '}${jour}`;
 }

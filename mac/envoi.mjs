@@ -37,7 +37,9 @@ export function lireAbonne(abonne, maintenant) {
   const subs = Object.values(abonne?.subscriber?.subscriptions ?? {});
   const actifs = subs.filter((s) => s.expires_date && new Date(s.expires_date) > maintenant && !s.refunded_at);
   const essai = actifs.find((s) => s.period_type === 'trial');
-  const payant = actifs.find((s) => s.period_type !== 'trial');
+  // Après un changement d'offre, deux abonnements payés coexistent : un seul qui court suffit à le dire payant (bilan du 25/11).
+  const payants = actifs.filter((s) => s.period_type !== 'trial');
+  const payant = payants.find((s) => !s.unsubscribe_detected_at) ?? payants[0];
   return {
     aucun: subs.length === 0,
     // Un abonnement payé arrêté par la personne et déjà échu : toujours un résilié (l'e-mail garde ses 7 jours).
@@ -53,7 +55,8 @@ export function lireAbonne(abonne, maintenant) {
 export function gardeFouType(type, ab, maintenant, filtre = null) {
   if (type === 'essai_j2') {
     if (!ab.essai_en_cours || ab.payant_actif) return 'déjà payé ou annulé';
-    if (new Date(ab.essai_fin).getTime() - maintenant.getTime() < 12 * 3600 * 1000) return 'trop tard';
+    // Apple peut prélever dans les 24 h avant la fin : après, le rappel ne sert plus (bilan du 25/11).
+    if (new Date(ab.essai_fin).getTime() - maintenant.getTime() < 24 * 3600 * 1000) return 'trop tard';
   }
   if (type === 'resiliation' && !ab.payant_annule && !ab.payant_parti) return 'plus résilié';
   if (type === 'essai_annule' && (ab.essai_en_cours || ab.payant_actif)) return 'a repris son essai ou payé';
@@ -138,8 +141,9 @@ export function porteEnvoi({ db, envoyerResend, lireRevenueCat, maintenant = () 
         const raison = gardeFouType(action.type, lireAbonne(await lireRevenueCat(user.revenuecat_id), t), t, action.filtre ?? null);
         if (raison) return bloquer(action, raison, true);
       }
-      // « Ton bug est corrigé » répond à sa demande : l'écart de 72 h ne le retient pas.
-      if (action.type !== 'bug_corrige' && fiche.dernier_envoi_le && t.getTime() - new Date(fiche.dernier_envoi_le).getTime() < ECART_HEURES * 3600 * 1000) {
+      // « Ton bug est corrigé » répond à sa demande, et le rappel de fin d'essai a un moment qui ne se repousse pas
+      // (bilan du 25/11) : l'écart de 72 h ne les retient pas.
+      if (!['bug_corrige', 'essai_j2'].includes(action.type) && fiche.dernier_envoi_le && t.getTime() - new Date(fiche.dernier_envoi_le).getTime() < ECART_HEURES * 3600 * 1000) {
         return { statut: 'bloquee', raison: 'trop tôt' };
       }
       const depuis = debutJourParis(t);

@@ -92,8 +92,10 @@ test('e-mail de résiliation : seulement si l’abonné est toujours résilié',
 });
 
 test('pas plus d’un e-mail en 72 h à la même personne', async () => {
-  const { porte, envoyes } = monter({ fiche: { dernier_envoi_le: jours(-1) } });
-  assert.deepEqual(await porte.envoyerAction('essai_j2__a'), { statut: 'bloquee', raison: 'trop tôt' });
+  // Le rappel de fin d'essai n'est plus retenu (bilan du 25/11) : la règle se vérifie sur une résiliation.
+  const { db, porte, envoyes } = monter({ fiche: { dernier_envoi_le: jours(-1) }, abonne: PAYANT_ANNULE });
+  await db.ecrire('crm_actions', 'resiliation__a', { type: 'resiliation', user_id: 'ana@exemple.fr', statut: 'prete', sujet: 's', corps: 'c', echeance: jours(3) });
+  assert.deepEqual(await porte.envoyerAction('resiliation__a'), { statut: 'bloquee', raison: 'trop tôt' });
   assert.equal(envoyes.length, 0);
 });
 
@@ -228,4 +230,27 @@ test('INT-EW-94 : sans réglage enregistré, la bienvenue est en essai, la fin d
   const b = monter({ action: { type: 'bienvenue' } });
   assert.equal((await b.porte.envoyerAction('essai_j2__a')).raison, 'en essai : ne part pas aux utilisateurs');
   assert.equal(envoyes.length, 1);
+});
+
+// Bilan des cas du 25/11 (hephaistos, notes/bilan-cas-emails-iris-2026-11-25.md).
+test('bilan du 25/11 : le rappel ne part plus dans les 24 h où Apple peut déjà prélever', async () => {
+  const a20h = { subscriber: { subscriptions: { p: { period_type: 'trial', expires_date: new Date(MAINTENANT.getTime() + 20 * 3600000).toISOString() } } } };
+  assert.equal((await monter({ abonne: a20h }).porte.envoyerAction('essai_j2__a')).raison, 'trop tard');
+  const a30h = { subscriber: { subscriptions: { p: { period_type: 'trial', expires_date: new Date(MAINTENANT.getTime() + 30 * 3600000).toISOString() } } } };
+  assert.equal((await monter({ abonne: a30h }).porte.envoyerAction('essai_j2__a')).statut, 'envoye');
+});
+
+test('bilan du 25/11 : pas de résiliation à qui paie encore après un changement d’offre, quel que soit l’ordre', () => {
+  const ancien = { period_type: 'normal', expires_date: jours(10), unsubscribe_detected_at: jours(-1) };
+  const nouveau = { period_type: 'normal', expires_date: jours(30), unsubscribe_detected_at: null };
+  for (const subscriptions of [{ a: ancien, b: nouveau }, { b: nouveau, a: ancien }]) {
+    const ab = lireAbonne({ subscriber: { subscriptions } }, MAINTENANT);
+    assert.equal(ab.payant_actif, true);
+    assert.equal(gardeFouType('resiliation', ab, MAINTENANT), 'plus résilié');
+  }
+});
+
+test('bilan du 25/11 : le rappel de fin d’essai passe l’écart de 72 h (son moment ne se repousse pas)', async () => {
+  const { porte } = monter({ fiche: { dernier_envoi_le: new Date(MAINTENANT.getTime() - 3600000).toISOString() } });
+  assert.equal((await porte.envoyerAction('essai_j2__a')).statut, 'envoye');
 });
