@@ -1,144 +1,54 @@
 // Les modèles d'e-mail (spec : hephaistos, notes/spec-crm-2026-11-21.md, § 3.7), dans les six langues de l'app (EW-51).
 // Texte brut, vouvoiement, sans prénom. Les noms de boutons sont ceux de l'app (module_core/lib/l10n, button_OptimizeRoute
 // et button_StartRoute).
-import { ARRETER, LOCALE_DATE } from './langues.mjs';
+import { LOCALE_DATE } from './langues.mjs';
 
 export { langueDe } from './langues.mjs';
 
 export const MODELES = {
-  essai_j2_usage: {
-    fr: ['Votre essai Easy Way se termine le {{date_fin}}', `Bonjour,
+  // Le rappel de fin d'essai (fondateur, 25/11, sa version mot pour mot) : le même pour tous, sans l'usage, sans mode
+  // d'emploi ni chemin pour arrêter. La brique « emails-utilisateurs » (hephaistos) en garde les règles.
+  essai_j2: {
+    fr: ['Votre essai Easy Way se termine {{jour_fin}}', `Bonjour,
 
-Votre essai gratuit d'Easy Way se termine le {{date_fin}}. Ce jour-là, l'abonnement démarre et le premier paiement est prélevé par votre store.
+J'espère qu'Easy Way vous plaît. Votre essai se termine {{jour_fin}}, et l'abonnement démarre ce jour-là.
 
-Vous avez déjà lancé {{n_tournees}} tournée(s) avec l'app. Si elle vous fait gagner du temps, vous n'avez rien à faire.
-
-Si vous préférez arrêter avant le paiement : {{arreter}}.
-
-Et si quelque chose vous gêne, répondez à cet e-mail. Je lis chaque réponse et je réponds moi-même.
+Si quelque chose ne va pas, un court message suffit.
 
 {{signature}}`],
-    en: ['Your Easy Way trial ends on {{date_fin}}', `Hello,
+    en: ['Your Easy Way trial ends {{jour_fin}}', `Hello,
 
-Your free Easy Way trial ends on {{date_fin}}. On that day the subscription starts and your store takes the first payment.
+I hope you are enjoying Easy Way. Your trial ends {{jour_fin}}, and the subscription starts that day.
 
-You have already started {{n_tournees}} route(s) with the app. If it saves you time, there is nothing to do.
-
-If you would rather stop before the payment: {{arreter}}.
-
-If something bothers you, just reply to this email. I read every reply and answer myself.
+If anything is not right, a short message is enough.
 
 {{signature}}`],
-    de: ['Ihre Easy Way Testphase endet am {{date_fin}}', `Hallo,
+    de: ['Ihre Easy Way Testphase endet {{jour_fin}}', `Hallo,
 
-Ihre kostenlose Testphase von Easy Way endet am {{date_fin}}. An diesem Tag beginnt das Abo, und Ihr Store bucht die erste Zahlung ab.
+ich hoffe, Easy Way gefällt Ihnen. Ihre Testphase endet {{jour_fin}}, und an diesem Tag beginnt das Abo.
 
-Sie haben mit der App bereits {{n_tournees}} Route(n) gestartet. Wenn sie Ihnen Zeit spart, müssen Sie nichts tun.
-
-Wenn Sie lieber vor der Zahlung kündigen möchten: {{arreter}}.
-
-Und wenn Sie etwas stört, antworten Sie einfach auf diese E-Mail. Ich lese jede Antwort und antworte selbst.
+Wenn etwas nicht passt, genügt eine kurze Nachricht.
 
 {{signature}}`],
-    es: ['Su prueba de Easy Way termina el {{date_fin}}', `Hola:
+    es: ['Su prueba de Easy Way termina {{jour_fin}}', `Hola:
 
-Su prueba gratuita de Easy Way termina el {{date_fin}}. Ese día empieza la suscripción y su tienda cobra el primer pago.
+Espero que Easy Way le esté gustando. Su prueba termina {{jour_fin}} y ese día empieza la suscripción.
 
-Ya ha iniciado {{n_tournees}} ruta(s) con la app. Si le ahorra tiempo, no tiene que hacer nada.
-
-Si prefiere cancelar antes del pago: {{arreter}}.
-
-Y si algo le molesta, responda a este correo. Leo cada respuesta y contesto yo mismo.
+Si algo no va bien, basta con un mensaje corto.
 
 {{signature}}`],
-    it: ['La sua prova di Easy Way termina il {{date_fin}}', `Buongiorno,
+    it: ['La sua prova di Easy Way termina {{jour_fin}}', `Buongiorno,
 
-La sua prova gratuita di Easy Way termina il {{date_fin}}. Quel giorno inizia l'abbonamento e il suo store addebita il primo pagamento.
+spero che Easy Way le piaccia. La sua prova termina {{jour_fin}} e quel giorno inizia l'abbonamento.
 
-Ha già avviato {{n_tournees}} percorso/i con l'app. Se le fa risparmiare tempo, non deve fare nulla.
-
-Se preferisce disdire prima del pagamento: {{arreter}}.
-
-E se qualcosa non la convince, risponda a questa e-mail. Leggo ogni risposta e rispondo di persona.
+Se qualcosa non va, basta un breve messaggio.
 
 {{signature}}`],
-    pt: ['O seu teste do Easy Way termina a {{date_fin}}', `Olá,
+    pt: ['O seu teste do Easy Way termina {{jour_fin}}', `Olá,
 
-O seu teste gratuito do Easy Way termina a {{date_fin}}. Nesse dia começa a assinatura e a sua loja cobra o primeiro pagamento.
+Espero que esteja a gostar do Easy Way. O seu teste termina {{jour_fin}} e nesse dia começa a assinatura.
 
-Já iniciou {{n_tournees}} rota(s) com a app. Se ela lhe poupa tempo, não precisa de fazer nada.
-
-Se preferir cancelar antes do pagamento: {{arreter}}.
-
-E se algo o incomodar, responda a este e-mail. Leio cada resposta e respondo pessoalmente.
-
-{{signature}}`],
-  },
-  essai_j2_peu_usage: {
-    fr: ['Votre essai Easy Way se termine le {{date_fin}}', `Bonjour,
-
-Votre essai gratuit d'Easy Way se termine le {{date_fin}}. Ce jour-là, l'abonnement démarre et le premier paiement est prélevé par votre store.
-
-Vous n'avez pas encore lancé de tournée. Si vous voulez essayer avant la fin : ajoutez les clients du jour, appuyez sur « Optimiser la tournée », puis « Démarrer la tournée ». Cela prend deux minutes.
-
-Si l'app ne vous convient pas, vous pouvez arrêter avant le paiement : {{arreter}}.
-
-Si quelque chose vous a bloqué, répondez à cet e-mail, un mot suffit.
-
-{{signature}}`],
-    en: ['Your Easy Way trial ends on {{date_fin}}', `Hello,
-
-Your free Easy Way trial ends on {{date_fin}}. On that day the subscription starts and your store takes the first payment.
-
-You have not started a route yet. To try before the end: add today's customers, tap "Optimize route", then "Start the route". It takes two minutes.
-
-If the app is not for you, you can stop before the payment: {{arreter}}.
-
-If something got in your way, reply to this email. One word is enough.
-
-{{signature}}`],
-    de: ['Ihre Easy Way Testphase endet am {{date_fin}}', `Hallo,
-
-Ihre kostenlose Testphase von Easy Way endet am {{date_fin}}. An diesem Tag beginnt das Abo, und Ihr Store bucht die erste Zahlung ab.
-
-Sie haben noch keine Route gestartet. Wenn Sie es vor dem Ende ausprobieren möchten: Fügen Sie die Kunden des Tages hinzu, tippen Sie auf „Route optimieren“ und dann auf „Route starten“. Das dauert zwei Minuten.
-
-Wenn die App nicht zu Ihnen passt, können Sie vor der Zahlung kündigen: {{arreter}}.
-
-Wenn Sie etwas aufgehalten hat, antworten Sie auf diese E-Mail. Ein Wort genügt.
-
-{{signature}}`],
-    es: ['Su prueba de Easy Way termina el {{date_fin}}', `Hola:
-
-Su prueba gratuita de Easy Way termina el {{date_fin}}. Ese día empieza la suscripción y su tienda cobra el primer pago.
-
-Todavía no ha iniciado ninguna ruta. Si quiere probarla antes del final: añada los clientes del día, pulse «Optimizar ruta» y luego «Iniciar la ruta». Son dos minutos.
-
-Si la app no le convence, puede cancelar antes del pago: {{arreter}}.
-
-Si algo le ha frenado, responda a este correo. Basta una palabra.
-
-{{signature}}`],
-    it: ['La sua prova di Easy Way termina il {{date_fin}}', `Buongiorno,
-
-La sua prova gratuita di Easy Way termina il {{date_fin}}. Quel giorno inizia l'abbonamento e il suo store addebita il primo pagamento.
-
-Non ha ancora avviato un percorso. Se vuole provare prima della fine: aggiunga i clienti del giorno, tocchi «Ottimizza percorso» e poi «Avvia il percorso». Ci vogliono due minuti.
-
-Se l'app non fa per lei, può disdire prima del pagamento: {{arreter}}.
-
-Se qualcosa l'ha bloccata, risponda a questa e-mail. Basta una parola.
-
-{{signature}}`],
-    pt: ['O seu teste do Easy Way termina a {{date_fin}}', `Olá,
-
-O seu teste gratuito do Easy Way termina a {{date_fin}}. Nesse dia começa a assinatura e a sua loja cobra o primeiro pagamento.
-
-Ainda não iniciou nenhuma rota. Se quiser experimentar antes do fim: adicione os clientes do dia, toque em «Otimizar rota» e depois em «Iniciar a rota». Leva dois minutos.
-
-Se a app não for para si, pode cancelar antes do pagamento: {{arreter}}.
-
-Se alguma coisa o travou, responda a este e-mail. Basta uma palavra.
+Se algo não estiver bem, basta uma mensagem curta.
 
 {{signature}}`],
   },
@@ -314,13 +224,13 @@ Obrigado por nos avisar.
   },
 };
 
-export function arreter(store, langue) {
-  const m = ARRETER[store];
-  return m ? m[langue] : `${ARRETER.APP_STORE[langue]} ; ${ARRETER.PLAY_STORE[langue]}`;
-}
-
-export function dateFin(iso, langue) {
-  return new Intl.DateTimeFormat(LOCALE_DATE[langue] ?? 'en-GB', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit' }).format(new Date(iso));
+// Le jour de fin en toutes lettres, à l'heure de Paris, avec la préposition de la langue (« vendredi », « on Friday »…).
+// Le rappel part deux jours avant : le jour de la semaine suffit et reste vrai si l'envoi glisse d'un jour.
+const DEVANT_LE_JOUR = { fr: '', en: 'on ', de: 'am ', es: 'el ', it: '' };
+export function jourFin(iso, langue) {
+  const jour = new Intl.DateTimeFormat(LOCALE_DATE[langue] ?? 'en-GB', { timeZone: 'Europe/Paris', weekday: 'long' }).format(new Date(iso));
+  if (langue === 'pt') return `${/^(sábado|domingo)/.test(jour) ? 'no' : 'na'} ${jour}`;
+  return `${DEVANT_LE_JOUR[langue] ?? 'on '}${jour}`;
 }
 
 // Échoue si une variable reste vide ou non remplacée : un e-mail à trous ne part jamais.

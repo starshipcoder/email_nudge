@@ -47,11 +47,16 @@ test('la préparation crée chaque action une seule fois, dans la langue et la v
   const ana = actions.find((a) => a.user_id === 'ana@exemple.fr');
   const bob = actions.find((a) => a.user_id === 'bob@exemple.com');
   assert.equal(ana.variante, 'usage');
-  assert.match(ana.corps, /déjà lancé 3 tournée/);
-  assert.match(ana.corps, /Réglages de l’iPhone/);
+  assert.equal(ana.sujet, 'Votre essai Easy Way se termine vendredi');
+  assert.match(ana.corps, /^Bonjour,\n\nJ'espère qu'Easy Way vous plaît\. Votre essai se termine vendredi, et l'abonnement démarre ce jour-là\./);
+  assert.match(ana.corps, /un court message suffit\.\n\nPrénom, créateur d’Easy Way$/);
   assert.equal(bob.variante, 'peu_usage');
-  assert.match(bob.sujet, /^Your Easy Way trial ends on/);
-  assert.match(bob.corps, /Google Play/);
+  assert.equal(bob.sujet, 'Your Easy Way trial ends on Friday');
+  // Le rappel ne dit rien de l'usage ni du chemin pour arrêter (fondateur, 25/11) : rien à vérifier sur ses tournées.
+  for (const a of [ana, bob]) {
+    assert.doesNotMatch(a.corps, /tournée|route|Réglages|Settings|Google Play/);
+    assert.equal(a.a_verifier, undefined);
+  }
   assert.ok(!actions.some((a) => /\{\{/.test(a.corps)));
 });
 
@@ -106,7 +111,7 @@ test('l’annulation d’essai s’écrit depuis le dossier, une seule fois, et 
   assert.equal((b.corps.match(/\?/g) ?? []).length, 1);
 });
 
-test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne qui revient puis repart n’a pas de second e-mail ; un usage inconnu se signale', async () => {
+test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne qui revient puis repart n’a pas de second e-mail ; un usage inconnu ne bloque plus le rappel', async () => {
   const faits = [
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcA'], transaction: 'P1', type: 'NORMAL', raison: 'CUSTOMER_SUPPORT' },
     { nom: 'rc_cancellation_event', temps: h(-24), ids: ['rcB'], transaction: 'P2', type: 'NORMAL', raison: 'DEVELOPER_INITIATED' },
@@ -123,11 +128,12 @@ test('audit du 22/11 : pas de résiliation pour un remboursement ; une personne 
   await preparer({ db, faits: retour, tournees: () => 0, maintenant: T });
   assert.equal((await db.lister('crm_actions')).length, 1);
 
-  // Rappel de fin d'essai sans données Mixpanel : le texte « pas encore de tournée » attend une vérification.
+  // Rappel de fin d'essai sans données Mixpanel : depuis le 25/11 le texte ne dit rien de l'usage, il part sans vérification.
   const db2 = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'S' }] });
   await preparer({ db: db2, faits: [essai('rcA', 40, 'T1')], tournees: () => null, maintenant: T });
   const [a] = await db2.lister('crm_actions');
-  assert.match(a.a_verifier, /données Mixpanel/);
+  assert.equal(a.a_verifier, undefined);
+  assert.equal(a.variante, 'peu_usage');
 });
 
 test('une création ratée pour une autre raison qu’un doublon est comptée, pas tue', async () => {

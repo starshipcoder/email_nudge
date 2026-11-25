@@ -45,18 +45,6 @@ export function direSource(l) {
 const ETRANGER = (_, international) => `WhatsApp: ${international} 🇫🇷`;
 export const WHATSAPP = { fr: (national) => `WhatsApp : ${national}`, en: ETRANGER, de: ETRANGER, es: ETRANGER, it: ETRANGER, pt: ETRANGER };
 
-export const ARRETER = {
-  APP_STORE: {
-    fr: 'Réglages de l’iPhone > votre nom > Abonnements > Easy Way', en: 'iPhone Settings > your name > Subscriptions > Easy Way',
-    de: 'iPhone-Einstellungen > Ihr Name > Abonnements > Easy Way', es: 'Ajustes del iPhone > su nombre > Suscripciones > Easy Way',
-    it: 'Impostazioni dell’iPhone > il suo nome > Abbonamenti > Easy Way', pt: 'Ajustes do iPhone > seu nome > Assinaturas > Easy Way',
-  },
-  PLAY_STORE: {
-    fr: 'Google Play > Paiements et abonnements > Abonnements > Easy Way', en: 'Google Play > Payments & subscriptions > Subscriptions > Easy Way',
-    de: 'Google Play > Zahlungen und Abos > Abos > Easy Way', es: 'Google Play > Pagos y suscripciones > Suscripciones > Easy Way',
-    it: 'Google Play > Pagamenti e abbonamenti > Abbonamenti > Easy Way', pt: 'Google Play > Pagamentos e assinaturas > Assinaturas > Easy Way',
-  },
-};
 export const STORES = {
   // Avec la préposition de chaque langue, sauf en français et en anglais (« sur », « on » sont dans le modèle).
   ios: { fr: 'l’App Store', en: 'the App Store', de: 'im App Store', es: 'en el App Store', it: 'nell’App Store', pt: 'na App Store' },

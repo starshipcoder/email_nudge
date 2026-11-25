@@ -1,7 +1,7 @@
 // Prépare les actions du jour à partir de la base Mixpanel du Mac (événements que RevenueCat y envoie)
 // et des inscrits d'email_nudge. Rien ne part d'ici : la porte d'envoi relit RevenueCat avant chaque e-mail.
 import { cleUtilisateur } from './envoi.mjs';
-import { arreter, dateFin, rendre, rendreAvecTraduction } from './modeles.mjs';
+import { jourFin, rendre, rendreAvecTraduction } from './modeles.mjs';
 import { brouillonAvecTraduction, resumer } from './dossier.mjs';
 import { brouillonEssaiAnnule, reponseRecente } from './brouillons.mjs';
 import { langueDePersonne } from './langues.mjs';
@@ -126,7 +126,7 @@ function dossierSur(dossier) {
   return { d: dossier, doute: false };
 }
 
-export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null, enRetard = false }) {
+export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null }) {
   const cle = cleUtilisateur(c.user.id);
   // Le dossier de la personne, s'il se lit : son pays (pour la langue), son usage et sa réponse au questionnaire.
   const dossier = dossierPour?.(c.user.revenuecat_id, c.user) ?? null;
@@ -134,14 +134,11 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
   const langue = l.langue;
   const source = { langue_source: l.source, ...(l.pays ? { pays: l.pays } : {}) };
   if (c.type === 'essai_j2') {
-    const lu = tournees(c.user.revenuecat_id);
-    const n = lu ?? 0;
-    const doute = lu === null || enRetard;
-    const { sujet, corps, traduction_fr } = rendreAvecTraduction(n > 0 ? 'essai_j2_usage' : 'essai_j2_peu_usage', langue,
-      (lg) => ({ date_fin: dateFin(c.fait.fin, lg), n_tournees: n, arreter: arreter(c.fait.store, lg), signature }));
+    // Le texte est le même pour tous ; la variante garde seulement l'usage, pour lire la mesure (§ 5 de la spec).
+    const n = tournees(c.user.revenuecat_id) ?? 0;
+    const { sujet, corps, traduction_fr } = rendreAvecTraduction('essai_j2', langue, (lg) => ({ jour_fin: jourFin(c.fait.fin, lg), signature }));
     return { id: `essai_j2__${cle}__${c.fait.transaction}`, type: 'essai_j2', variante: n > 0 ? 'usage' : 'peu_usage', user_id: c.user.id,
       statut: 'prete', sujet, corps, langue, ...source, ...(traduction_fr ? { traduction_fr } : {}),
-      ...(doute && n === 0 ? { a_verifier: "le texte dit qu'elle n'a pas lancé de tournée, mais ses données Mixpanel manquent ou sont en retard" } : {}),
       echeance: new Date(new Date(c.fait.fin).getTime() - 12 * H), cree_le: maintenant };
   }
   if (c.type === 'essai_annule') {
@@ -167,7 +164,7 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
 
 // Une passe : crée les actions qui n'existent pas encore (le même identifiant ne se crée jamais deux fois),
 // et passe en « expirée » celles dont l'échéance est passée.
-export async function preparer({ db, faits, tournees, maintenant = new Date(), dossierPour = null, enRetard = false }) {
+export async function preparer({ db, faits, tournees, maintenant = new Date(), dossierPour = null }) {
   const reglages = (await db.lire('crm_reglages', 'general')) ?? {};
   if (!reglages.signature) return { creees: 0, expirees: 0, raison: 'signature à régler' };
   // Les champs du questionnaire : la réponse envoyée par l'app passe avant Mixpanel dans le dossier (INT-EW-79).
@@ -185,7 +182,7 @@ export async function preparer({ db, faits, tournees, maintenant = new Date(), d
     // personne dans les 7 jours suffit.
     if (['resiliation', 'essai_annule'].includes(c.type) && [...existantes.values()].some((a) => a.type === c.type && a.user_id === c.user.id
       && Math.abs(new Date(a.cree_le).getTime() - c.fait.temps) <= FENETRE_RESILIATION)) continue;
-    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour, choixLangue, enRetard });
+    const { id, ...champs } = actionDe(c, { tournees, signature: reglages.signature, maintenant, dossierPour, choixLangue });
     try { await db.creer('crm_actions', id, champs); existantes.set(id, { id, ...champs }); creees += 1; } catch (erreur) {
       if (!/existe déjà/.test(String(erreur?.message))) erreurs += 1;
     }

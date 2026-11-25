@@ -33,9 +33,8 @@ test('un inscrit sans langue vu en France reçoit son rappel en français ; vu e
   assert.equal(a.langue_source, 'pays');
   assert.equal(a.traduction_fr, undefined);
   assert.equal(b.langue, 'de');
-  assert.match(b.corps, /„Route optimieren“/);
-  assert.match(b.corps, /iPhone-Einstellungen/);
-  assert.match(b.traduction_fr.corps, /« Optimiser la tournée »/);
+  assert.match(b.corps, /^Hallo,\n\nich hoffe, Easy Way gefällt Ihnen\./);
+  assert.match(b.traduction_fr.corps, /^Bonjour,\n\nJ'espère qu'Easy Way vous plaît\./);
 });
 
 test('le choix sur la fiche passe avant le pays', async () => {
@@ -68,7 +67,7 @@ test('une traduction corrigée bloque l’envoi jusqu’à ce que le texte soit 
 });
 
 test('chaque modèle et chaque brouillon existe dans les six langues, sans trou', () => {
-  const vars = { date_fin: '24/11', n_tournees: 3, arreter: 'x', signature: 'S', titre: 't', version: '7.6.9', store: 'y' };
+  const vars = { jour_fin: 'vendredi', signature: 'S', titre: 't', version: '7.6.9', store: 'y' };
   for (const nom of Object.keys(MODELES)) {
     for (const l of LANGUES) {
       const r = rendre(nom, l, vars);
@@ -96,16 +95,27 @@ test('le texte court de l’essai annulé existe dans les six langues, une seule
 });
 
 // Fondateur, 23/11 (Q-EW-68) : le rappel de fin d'essai ne porte pas de lien de désinscription. C'est un e-mail sur le
-// paiement ; on se désinscrit depuis la fiche dans Iris (décidé le 22/11). Seul le chemin du store pour arrêter y figure.
+// paiement ; on se désinscrit depuis la fiche dans Iris (décidé le 22/11). Depuis le 25/11, il ne donne plus non plus le
+// chemin du store pour arrêter, ni le mode d'emploi de l'app (fondateur : « on sait pas s'il va vraiment se désabonner »).
 test('le rappel de fin d’essai n’a ni lien, ni désinscription, ni STOP, dans les six langues', () => {
-  for (const nom of ['essai_j2_usage', 'essai_j2_peu_usage']) {
+  for (const nom of ['essai_j2']) {
     for (const l of LANGUES) {
-      const vars = { date_fin: '04/12', n_tournees: 3, arreter: 'Réglages > Abonnements', signature: 'Signature inventée' };
+      const vars = { jour_fin: 'vendredi', signature: 'Signature inventée' };
       const { sujet, corps } = rendre(nom, l, vars);
       const texte = `${sujet}\n${corps}`;
       assert.doesNotMatch(texte, /https?:\/\/|www\./, `${nom} ${l} : un lien`);
       assert.doesNotMatch(texte, /\bSTOP\b/, `${nom} ${l} : un STOP`);
       assert.doesNotMatch(texte, /d[ée]sinscri|unsubscri|abmeld|darse de baja|disiscri|descadastr/i, `${nom} ${l} : une désinscription`);
+      assert.doesNotMatch(texte, / > |Google Play|iPhone/, `${nom} ${l} : le chemin pour arrêter`);
     }
   }
+});
+
+test('le jour de fin se dit en toutes lettres, avec la préposition de chaque langue, à l’heure de Paris', async () => {
+  const { jourFin } = await import('../modeles.mjs');
+  const vendredi = '2026-12-04T02:00:00Z'; // 3 h à Paris
+  assert.deepEqual(Object.fromEntries(LANGUES.map((l) => [l, jourFin(vendredi, l)])),
+    { fr: 'vendredi', en: 'on Friday', de: 'am Freitag', es: 'el viernes', it: 'venerdì', pt: 'na sexta-feira' });
+  assert.equal(jourFin('2026-12-05T10:00:00Z', 'pt'), 'no sábado');
+  assert.equal(jourFin('2026-12-04T23:30:00Z', 'fr'), 'samedi', 'minuit passé à Paris');
 });

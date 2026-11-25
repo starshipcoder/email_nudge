@@ -56,7 +56,7 @@ export async function passeDuMac(db) {
       const dossierPour = (rc, user = null) => (rc ? dossierDe({ rc, sources, maintenant: new Date(), user }) : null);
       // Une base de plus d'un jour et demi : les textes n'affirment rien sur l'usage sans relecture (audit du 22/11).
       const enRetard = !sources.fin || Date.now() - sources.fin * 1000 > 36 * 3600000;
-      const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour, enRetard });
+      const r = await preparer({ db, faits, tournees: tourneesPar(lecteur, carte), maintenant: new Date(), dossierPour });
       // Piste 4 (EW-46) : la relance d'onboarding abandonné et les gros utilisateurs à contacter, prêtes, jamais envoyées d'ici.
       let contacts;
       try { contacts = await preparerContacts({ db, dossierPour, maintenant: new Date() }); } catch (e) { contacts = { erreur: e.message }; }
