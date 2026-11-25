@@ -33,7 +33,7 @@ Simulation : rien ne part d’ici. Fichier produit par `node mac/carte.mjs` ; ne
 | Essai annulé dans l’heure | S’inscrit, démarre un essai et l’annule 30 minutes après. | Essai annulé, court (fr) | préparé J0, retenu J0 (trop tôt), envoyé J3 |
 | Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | Bienvenue (fr) | préparé J0, envoyé J0 |
 | Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | aucun | Essai annulé, court : préparé J0, retenu J0 (trop tôt), bloqué J0 : a repris son essai ou payé |
-| Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | aucun | Rappel de fin d’essai : rien de préparé (la passe voit une annulation après le début de l’essai et ne lit pas la reprise) |
+| Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | Rappel de fin d’essai (fr) | préparé J5, envoyé J5 |
 | Essai fini par une carte refusée | Essai App Store, la carte est refusée à la fin de l’essai (raison BILLING_ERROR). | Rappel de fin d’essai (fr) | préparé J5, envoyé J5 |
 | Essai fini par une carte refusée | Essai App Store, la carte est refusée à la fin de l’essai (raison BILLING_ERROR). | aucun | Essai annulé : rien de préparé (carte refusée : « vous avez annulé » serait faux) |
 | Essai remboursé par le support | Essai App Store remboursé par le support le 2e jour (raison CUSTOMER_SUPPORT). | aucun | Essai annulé : rien de préparé (remboursement : pas un choix de la personne) |
@@ -201,9 +201,9 @@ Langue : français, d'après l'app.
 
 Cas du bilan : 11, 14. Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
 
-**À relire :** Pas dans le bilan (cas 14) : après une reprise, le rappel de fin d’essai n’est jamais préparé. `candidats` écarte un essai dès qu’une annulation le suit, sans lire la reprise (`rc_uncancellation_event`) : la personne est prélevée sans rappel.
+**À relire :** Corrigé le 25/11 : la carte avait montré qu’après une reprise le rappel n’était jamais préparé (la personne était prélevée sans rappel). Seule compte maintenant la dernière annulation, si aucune reprise ne la suit.
 
-Résultat : Bienvenue, envoyé ; Essai annulé, bloqué : a repris son essai ou payé ; Rappel de fin d’essai, rien de préparé.
+Résultat : Bienvenue, envoyé ; Essai annulé, bloqué : a repris son essai ou payé ; Rappel de fin d’essai, envoyé.
 
 - J0 9 h : inscription avec une adresse (langue de l’app : fr)
 - J0 9 h : Bienvenue préparé
@@ -214,6 +214,8 @@ Résultat : Bienvenue, envoyé ; Essai annulé, bloqué : a repris son essai ou 
 - J0 10 h : Essai annulé, court retenu : trop tôt
 - J0 21 h : reprend (annulation retirée)
 - J0 22 h : Essai annulé, court bloqué à l’envoi : a repris son essai ou payé
+- J5 9 h : Rappel de fin d’essai préparé
+- J5 9 h : Rappel de fin d’essai envoyé
 - J7 9 h 10 : fin de l’essai : premier paiement
 
 #### Bienvenue : envoyé
@@ -241,6 +243,20 @@ Langue : français, d'après l'app.
 > Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
 >
 > Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+>
+> Harold
+
+#### Rappel de fin d’essai : envoyé
+
+Langue : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way se termine mardi
+>
+> Bonjour,
+>
+> J'espère qu'Easy Way vous plaît. Votre essai se termine mardi, et l'abonnement démarre ce jour-là.
+>
+> Si quelque chose ne va pas, un court message suffit.
 >
 > Harold
 

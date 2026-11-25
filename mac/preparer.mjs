@@ -82,9 +82,16 @@ export function candidats(faits, inscrits, maintenant) {
   const inscritDe = (f) => f.ids.map((i) => parRc.get(i)).find(Boolean);
   const apres = (f, noms) => faits.some((g) => g.transaction === f.transaction && g.temps > f.temps && noms.includes(g.nom));
   const t = maintenant.getTime();
+  // Un essai annulé puis repris sera prélevé : il garde son rappel (carte des e-mails, 25/11). Seule compte la dernière annulation.
+  const annuleSansReprise = (f) => {
+    const annulations = faits.filter((g) => g.transaction === f.transaction && g.temps > f.temps && g.nom === 'rc_trial_cancelled_event');
+    if (!annulations.length) return false;
+    const derniere = Math.max(...annulations.map((g) => g.temps));
+    return !faits.some((g) => g.transaction === f.transaction && g.temps > derniere && g.nom === 'rc_uncancellation_event');
+  };
   const essais = faits.filter((f) => f.nom === 'rc_trial_started_event' && f.fin)
     .filter((f) => { const reste = new Date(f.fin).getTime() - t; return reste >= FENETRE_J2[0] && reste <= FENETRE_J2[1]; })
-    .filter((f) => !apres(f, ['rc_trial_cancelled_event', 'rc_trial_converted_event', 'rc_expiration_event']))
+    .filter((f) => !apres(f, ['rc_trial_converted_event', 'rc_expiration_event']) && !annuleSansReprise(f))
     .map((f) => ({ type: 'essai_j2', fait: f, user: inscritDe(f) })).filter((c) => c.user);
   // Seul un arrêt par la personne : pas un remboursement (CUSTOMER_SUPPORT), une décision du développeur ou un défaut de carte.
   // Il se prépare 24 h après l'arrêt, et jusqu'à 7 jours.

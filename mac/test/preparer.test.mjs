@@ -276,3 +276,14 @@ test('bilan du 25/11 : le rappel se prépare au moins 26 h avant la fin et expir
   const [a] = await db.lister('crm_actions');
   assert.equal(new Date(a.echeance).getTime(), h(40) - 24 * 3600000);
 });
+
+test('carte du 25/11 : un essai annulé puis repris garde son rappel de fin d’essai ; annulé sans reprise, non', () => {
+  const faits = [
+    essai('rcA', 40, 'T1'), { nom: 'rc_trial_cancelled_event', temps: h(-90), ids: ['rcA'], transaction: 'T1', raison: 'UNSUBSCRIBE' },
+    { nom: 'rc_uncancellation_event', temps: h(-80), ids: ['rcA'], transaction: 'T1' },
+    essai('rcB', 40, 'T2'), { nom: 'rc_trial_cancelled_event', temps: h(-90), ids: ['rcB'], transaction: 'T2', raison: 'UNSUBSCRIBE' },
+    { nom: 'rc_uncancellation_event', temps: h(-80), ids: ['rcB'], transaction: 'T2' },
+    { nom: 'rc_trial_cancelled_event', temps: h(-70), ids: ['rcB'], transaction: 'T2', raison: 'UNSUBSCRIBE' },
+  ];
+  assert.deepEqual(candidats(faits, inscrits, T).filter((c) => c.type === 'essai_j2').map((c) => c.user.id), ['ana@exemple.fr']);
+});
