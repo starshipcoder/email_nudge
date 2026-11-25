@@ -291,7 +291,7 @@ async function reglages() {
       <div class="outils"><button id="notif">${r.notif_telephone === false ? 'Rouvrir les notifications' : 'Couper les notifications'}</button></div></div>
     <div class="carte"><h2>E-mail de bienvenue</h2><p>${r.bienvenue ? 'Ouvert : chaque nouvel inscrit qui a donné son adresse a un e-mail de bienvenue prêt dans Aujourd’hui, pendant 72 h. Rien ne part sans ton clic.' : 'Fermé : aucun e-mail de bienvenue n’est préparé. L’ouvrir vaut ton oui sur ce texte (en français ; les autres langues disent la même chose) :'}</p>
       ${r.texte_bienvenue ? `<p><strong>${echapper(r.texte_bienvenue.sujet)}</strong></p><pre class="texte">${echapper(r.texte_bienvenue.corps)}</pre>` : ''}
-      <p class="doux">Pas de lien de désinscription dans l’e-mail (ta décision du 22/11) : la personne se retire en répondant STOP. La question du bouton « Se désabonner » t’attend dans Athena.</p>
+      <p class="doux">Pas de lien de désinscription dans l’e-mail (ta décision du 22/11) : la personne se retire en répondant STOP. Pas de bouton « Se désabonner » non plus (ta réponse du 24/11).</p>
       <div class="outils"><button id="bienvenue">${r.bienvenue ? 'Fermer l’e-mail de bienvenue' : 'Préparer l’e-mail de bienvenue'}</button></div></div>
     <div class="carte"><h2>Expéditeur</h2><dl class="grille">
       ${[['expediteur', 'Expéditeur', 'Prénom d’Easy Way <adresse@domaine-de-l-app>'], ['repondre_a', 'Réponses à', 'ton adresse'], ['adresse_test', 'Adresse de test', 'reçoit les essais et les utilisateurs de test'], ['signature', 'Signature', 'Prénom, créateur d’Easy Way']]

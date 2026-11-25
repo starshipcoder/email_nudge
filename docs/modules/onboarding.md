@@ -16,9 +16,9 @@ Les premiers jours d'un nouvel utilisateur d'Easy Way, vus depuis Iris CRM, la p
 
 - 22/11 : pas de STOP dans les e-mails ; l'en-tête List-Unsubscribe a été retiré (commit 2b88463).
 - 24/11 (INT-EW-9) : le système d'e-mails automatiques de Firebase n'écrit plus aux utilisateurs. L'e-mail « démarrage rapide » (QuickStart) est coupé dans `functions/src/triggers/paywallTriggers.ts`, et la passe programmée `checkAndSendEmails` n'est plus exportée (retirée de Firebase le 21/11). Seuls les récapitulatifs au fondateur partent encore. L'e-mail de bienvenue d'Iris le remplace.
-- En attente (question au fondateur, Q-EW-70) : remettre ou non le bouton « Se désabonner » des messageries, invisible dans le texte. La tâche de la bienvenue demandait un lien de désinscription en un clic ; la décision du 22/11 l'écarte. C'est au fondateur de trancher avant la fusion, pas au code : sans réponse, rien n'est ajouté.
+- 24/11 (Q-EW-70, réponse du fondateur : non) : pas de bouton « Se désabonner » des messageries. La décision du 22/11 tient : la désinscription passe par la fiche, ou par une réponse « STOP » que le relais Gmail lit.
 - 24/11 : la carte « E-mail de bienvenue » des Réglages montre le texte français et dit qu'il n'a pas de lien de désinscription ; l'ouvrir vaut oui sur ce texte.
-- L'arrêt du système de Firebase est vérifié dans le code (QuickStart commenté, `checkAndSendEmails` non exportée), pas dans les journaux d'envoi de Resend ni de Firebase, que la file ne peut pas lire (pas de réseau).
+- 25/11 : l'arrêt du système de Firebase est vérifié aussi en production. Les fonctions déployées (`firebase functions:list`) sont `getStatus`, `getUser`, `onPaywallStateChanged`, `onRevenueCatWebhook`, `syncUser` et les deux récapitulatifs du fondateur : aucune passe qui écrit aux utilisateurs. Les journaux d'`onPaywallStateChanged` du 17 au 25/11 disent 12 fois « passed paywall - NO EMAIL (désactivé) » et ne montrent aucun envoi. Les journaux de Resend n'ont pas été lus (la clé reste au service d'Iris).
 
 ## La phrase de la politique de confidentialité
 
