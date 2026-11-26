@@ -63,16 +63,22 @@ test('une question ne s’invente pas : sans prospection, sans import, sans erre
   assert.equal(questionsDe(dossier({ lie: false }), 'fr').length, 0);
 });
 
-test('l’e-mail au gros utilisateur porte ses trois premières questions, dans sa langue, sans variable vide', () => {
-  const q = questionsDe(dossier(), 'de');
-  const t = texteGros(q, 'de', SIGNATURE);
-  assert.match(t.corps, /^Hallo,/);
-  for (const x of q.slice(0, 3)) assert.ok(t.corps.includes(x.texte));
-  assert.ok(!t.corps.includes(q[3].texte));
-  assert.ok(t.corps.endsWith(SIGNATURE));
-  assert.ok(t.traduction_fr.corps.includes(q[0].texte_fr));
-  assert.equal(texteGros(questionsDe(dossier(), 'fr'), 'fr', SIGNATURE).traduction_fr, undefined);
-  for (const lg of LANGUES) assert.ok(texteOnboarding(lg, SIGNATURE).corps.endsWith(SIGNATURE), lg);
+// Fondateur, 26/11 : une seule question ouverte, la même pour tous ; les questions tirées de l'usage restent sur l'action,
+// pour la relance du fondateur, et ne sont plus dans l'e-mail (brique interroger-un-utilisateur).
+test('l’e-mail au gros utilisateur : une seule question ouverte, dans sa langue', () => {
+  const t = texteGros(questionsDe(dossier(), 'fr'), 'fr', SIGNATURE);
+  assert.equal(t.sujet, 'Comment ça se passe avec Easy Way ?');
+  assert.equal(t.corps, `Bonjour,\n\nVous faites beaucoup de tournées avec Easy Way. Comment ça se passe, de votre côté ?\n\n${SIGNATURE}`);
+  assert.equal(t.traduction_fr, undefined);
+  const de = texteGros(questionsDe(dossier(), 'de'), 'de', SIGNATURE);
+  assert.match(de.corps, /^Hallo,/);
+  assert.equal(de.traduction_fr.corps, t.corps);
+  for (const lg of LANGUES) {
+    const x = texteGros([], lg, SIGNATURE);
+    assert.equal((x.corps.match(/[?？]/g) ?? []).length, 1, lg);
+    assert.ok(x.corps.endsWith(SIGNATURE), lg);
+    assert.ok(texteOnboarding(lg, SIGNATURE).corps.endsWith(SIGNATURE), lg);
+  }
 });
 
 const inscrit = (id, plus = {}) => ({ id, revenuecat_id: `rc-${id}`, locale: 'fr', created_at: avant(48), onboarding_complete: false, ...plus });
@@ -131,7 +137,8 @@ test('un gros utilisateur reçoit une action « contacter » avec son résumé e
   assert.equal(a.statut, 'prete');
   assert.ok(a.questions.length >= 3);
   assert.ok(a.resume.faits.length > 0);
-  assert.ok(a.questions.every((q) => a.corps.includes(q.texte) || a.questions.indexOf(q) >= 3));
+  // Les questions de l'usage restent sur l'action pour la relance, hors de l'e-mail (fondateur, 26/11).
+  assert.ok(a.questions.every((q) => !a.corps.includes(q.texte)));
   assert.equal((await preparerContacts({ db, dossierPour, maintenant: T })).gros, 0);
   assert.deepEqual(lus, ['rcG'], 'déjà contacté : le dossier n’est pas relu');
 });

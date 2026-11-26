@@ -272,17 +272,11 @@ Exemple : scénario « Onboarding abandonné ».
 
 Exemple : scénario « Gros utilisateur ».
 
-> **Objet :** Quelques questions sur votre usage d'Easy Way
+> **Objet :** Comment ça se passe avec Easy Way ?
 >
 > Bonjour,
 >
-> Vous faites partie des personnes qui utilisent le plus Easy Way : merci. Je cherche à comprendre ce qui marche pour vous et ce qui manque, et j'aurais quelques questions :
->
-> - Vous avez démarré 34 tournées, jusqu'à 22 arrêts : qu'est-ce que vous changez le plus souvent une fois en route ?
-> - L'import depuis un fichier Excel a échoué 1 fois : qu'est-ce que vous essayiez d'importer ?
-> - 2 optimisations de tournée n'ont pas abouti : vous souvenez-vous de ce qui coinçait ?
->
-> Répondez seulement à celle qui vous parle, une ligne suffit.
+> Vous faites beaucoup de tournées avec Easy Way. Comment ça se passe, de votre côté ?
 >
 > Harold
 
@@ -1448,17 +1442,11 @@ Résultat : Gros utilisateur, envoyé.
 
 Langue de la personne : français, d'après l'app.
 
-> **Objet :** Quelques questions sur votre usage d'Easy Way
+> **Objet :** Comment ça se passe avec Easy Way ?
 >
 > Bonjour,
 >
-> Vous faites partie des personnes qui utilisent le plus Easy Way : merci. Je cherche à comprendre ce qui marche pour vous et ce qui manque, et j'aurais quelques questions :
->
-> - Vous avez démarré 34 tournées, jusqu'à 22 arrêts : qu'est-ce que vous changez le plus souvent une fois en route ?
-> - L'import depuis un fichier Excel a échoué 1 fois : qu'est-ce que vous essayiez d'importer ?
-> - 2 optimisations de tournée n'ont pas abouti : vous souvenez-vous de ce qui coinçait ?
->
-> Répondez seulement à celle qui vous parle, une ligne suffit.
+> Vous faites beaucoup de tournées avec Easy Way. Comment ça se passe, de votre côté ?
 >
 > Harold
 

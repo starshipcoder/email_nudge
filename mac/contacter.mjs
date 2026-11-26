@@ -18,7 +18,6 @@ export const ECHEANCE_ONBOARDING = 7 * JOUR;
 export const GROS = { jours_4_semaines: 12, tournees: 10, actif_depuis: 14 * JOUR };
 export const ECHEANCE_GROS = 14 * JOUR;
 export const MAX_QUESTIONS = 5;
-export const QUESTIONS_DANS_LE_TEXTE = 3;
 
 const ts = (v) => (v ? new Date(v).getTime() : NaN);
 
@@ -135,24 +134,22 @@ export function questionsDe(d, langue = 'fr') {
   return sortie.slice(0, MAX_QUESTIONS);
 }
 
+// L'e-mail au gros utilisateur (fondateur, 26/11) : une seule question ouverte, la même pour tous (brique
+// interroger-un-utilisateur : une question ouverte fait répondre bien plus qu'une liste, Groove 10,2 % contre 1,3 %).
+// Les questions tirées de l'usage (questionsDe) restent sur l'action, pour la relance du fondateur.
 const GROS_TEXTE = {
-  fr: { sujet: "Quelques questions sur votre usage d'Easy Way", tete: "Bonjour,\n\nVous faites partie des personnes qui utilisent le plus Easy Way : merci. Je cherche à comprendre ce qui marche pour vous et ce qui manque, et j'aurais quelques questions :", fin: 'Répondez seulement à celle qui vous parle, une ligne suffit.' },
-  en: { sujet: 'A few questions about how you use Easy Way', tete: 'Hello,\n\nYou are one of the people who use Easy Way the most: thank you. I want to understand what works for you and what is missing, and I have a few questions:', fin: 'Just answer the one that speaks to you, one line is enough.' },
-  de: { sujet: 'Ein paar Fragen dazu, wie Sie Easy Way nutzen', tete: 'Hallo,\n\nSie gehören zu den Menschen, die Easy Way am meisten nutzen: danke. Ich möchte verstehen, was für Sie funktioniert und was fehlt, und hätte ein paar Fragen:', fin: 'Beantworten Sie nur die Frage, die Sie anspricht, eine Zeile genügt.' },
-  es: { sujet: 'Algunas preguntas sobre cómo usa Easy Way', tete: 'Hola:\n\nUsted es una de las personas que más usan Easy Way: gracias. Quiero entender qué le funciona y qué le falta, y tengo algunas preguntas:', fin: 'Responda solo a la que le interese, basta con una línea.' },
-  it: { sujet: 'Qualche domanda su come usa Easy Way', tete: 'Buongiorno,\n\nLei è tra le persone che usano di più Easy Way: grazie. Vorrei capire cosa funziona per lei e cosa manca, e avrei qualche domanda:', fin: 'Risponda solo a quella che le interessa, basta una riga.' },
-  pt: { sujet: 'Algumas perguntas sobre como usa o Easy Way', tete: 'Olá,\n\nÉ uma das pessoas que mais usam o Easy Way: obrigado. Quero perceber o que funciona para si e o que falta, e tenho algumas perguntas:', fin: 'Responda só à que lhe diz alguma coisa, basta uma linha.' },
+  fr: ['Comment ça se passe avec Easy Way ?', 'Bonjour,\n\nVous faites beaucoup de tournées avec Easy Way. Comment ça se passe, de votre côté ?'],
+  en: ['How is it going with Easy Way?', 'Hello,\n\nYou do a lot of routes with Easy Way. How is it going on your side?'],
+  de: ['Wie läuft es mit Easy Way?', 'Hallo,\n\nSie fahren viele Touren mit Easy Way. Wie läuft es bei Ihnen?'],
+  es: ['¿Qué tal con Easy Way?', 'Hola:\n\nHace muchas rutas con Easy Way. ¿Qué tal le va?'],
+  it: ['Come va con Easy Way?', 'Buongiorno,\n\nfa molti percorsi con Easy Way. Come va, dal suo punto di vista?'],
+  pt: ['Como está a correr com o Easy Way?', 'Olá,\n\nFaz muitas rotas com o Easy Way. Como está a correr do seu lado?'],
 };
-
-function rendreGros(questions, langue, signature, champ) {
-  const t = GROS_TEXTE[langue];
-  const liste = questions.slice(0, QUESTIONS_DANS_LE_TEXTE).map((q) => `- ${q[champ]}`).join('\n');
-  return { sujet: t.sujet, corps: `${t.tete}\n\n${liste}\n\n${t.fin}\n\n${signature}` };
-}
-export function texteGros(questions, langue, signature) {
+const rendreGros = (l, signature) => ({ sujet: GROS_TEXTE[l][0], corps: `${GROS_TEXTE[l][1]}\n\n${signature}` });
+export function texteGros(_questions, langue, signature) {
   const l = lg(langue);
-  const texte = rendreGros(questions, l, signature, 'texte');
-  return l === 'fr' ? texte : { ...texte, traduction_fr: rendreGros(questions, 'fr', signature, 'texte_fr') };
+  const texte = rendreGros(l, signature);
+  return l === 'fr' ? texte : { ...texte, traduction_fr: rendreGros('fr', signature) };
 }
 
 // La relance d'onboarding : elle n'affirme que ce que dit la fiche Firebase (l'onboarding n'est pas fini).
