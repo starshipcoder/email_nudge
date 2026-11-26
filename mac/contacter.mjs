@@ -153,13 +153,14 @@ export function texteGros(_questions, langue, signature) {
 }
 
 // La relance d'onboarding : elle n'affirme que ce que dit la fiche Firebase (l'onboarding n'est pas fini).
+// Fondateur, 26/11 : sans la phrase générale ni la promesse de ne pas relancer.
 const ONBOARDING_TEXTE = {
-  fr: ['Easy Way : quelque chose vous a bloqué ?', "Bonjour,\n\nVous avez commencé à configurer Easy Way il y a quelques jours, sans aller jusqu'au bout. C'est souvent le moment où quelque chose bloque.\n\nQu'est-ce qui vous a arrêté ? Une ligne en réponse suffit, et je vous aide à finir.\n\nJe ne vous relancerai pas à ce sujet."],
-  en: ['Easy Way: did something get in the way?', 'Hello,\n\nYou started setting up Easy Way a few days ago, without getting to the end. That is often where something gets in the way.\n\nWhat stopped you? One line in reply is enough, and I will help you finish.\n\nI will not follow up on this again.'],
-  de: ['Easy Way: Hat Sie etwas aufgehalten?', 'Hallo,\n\nSie haben vor ein paar Tagen begonnen, Easy Way einzurichten, aber nicht bis zum Ende. Oft hakt es genau an dieser Stelle.\n\nWas hat Sie aufgehalten? Eine Zeile als Antwort genügt, und ich helfe Ihnen, es abzuschließen.\n\nIch schreibe Ihnen dazu kein weiteres Mal.'],
-  es: ['Easy Way: ¿algo le ha frenado?', 'Hola:\n\nEmpezó a configurar Easy Way hace unos días, sin llegar hasta el final. Suele ser el momento en que algo se atasca.\n\n¿Qué le ha frenado? Basta con una línea de respuesta, y le ayudo a terminar.\n\nNo volveré a escribirle sobre esto.'],
-  it: ['Easy Way: qualcosa l’ha bloccata?', 'Buongiorno,\n\nHa iniziato a configurare Easy Way qualche giorno fa, senza arrivare alla fine. Spesso è il momento in cui qualcosa si blocca.\n\nCosa l’ha fermata? Basta una riga di risposta, e la aiuto a finire.\n\nNon le scriverò di nuovo su questo.'],
-  pt: ['Easy Way: alguma coisa o travou?', 'Olá,\n\nComeçou a configurar o Easy Way há alguns dias, sem chegar ao fim. É muitas vezes o momento em que alguma coisa encrava.\n\nO que o fez parar? Basta uma linha em resposta, e eu ajudo-o a terminar.\n\nNão voltarei a escrever-lhe sobre isto.'],
+  fr: ['Easy Way : quelque chose vous a bloqué ?', "Bonjour,\n\nVous avez commencé à configurer Easy Way sans aller jusqu'au bout. Qu'est-ce qui vous a arrêté ? Je vous aide à finir."],
+  en: ['Easy Way: did something get in the way?', 'Hello,\n\nYou started setting up Easy Way without getting to the end. What stopped you? I will help you finish.'],
+  de: ['Easy Way: Hat Sie etwas aufgehalten?', 'Hallo,\n\nSie haben begonnen, Easy Way einzurichten, aber nicht bis zum Ende. Was hat Sie aufgehalten? Ich helfe Ihnen, es abzuschließen.'],
+  es: ['Easy Way: ¿algo le ha frenado?', 'Hola:\n\nEmpezó a configurar Easy Way sin llegar hasta el final. ¿Qué le frenó? Le ayudo a terminar.'],
+  it: ['Easy Way: qualcosa l’ha bloccata?', 'Buongiorno,\n\nha iniziato a configurare Easy Way senza arrivare alla fine. Cosa l’ha fermata? La aiuto a finire.'],
+  pt: ['Easy Way: alguma coisa o travou?', 'Olá,\n\nComeçou a configurar o Easy Way sem chegar ao fim. O que o fez parar? Eu ajudo-o a terminar.'],
 };
 const rendreOnboarding = (l, signature) => ({ sujet: ONBOARDING_TEXTE[l][0], corps: `${ONBOARDING_TEXTE[l][1]}\n\n${signature}` });
 export function texteOnboarding(langue, signature) {

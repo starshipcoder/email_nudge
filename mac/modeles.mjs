@@ -98,74 +98,52 @@ Uma só pergunta: o que o levou a instalar o Easy Way? Basta uma linha em respos
 
 {{signature}}`],
   },
+  // Fondateur, 26/11 : « je », plus direct (brique emails-utilisateurs).
   bug_corrige: {
     fr: ['Le problème que vous avez signalé est corrigé', `Bonjour,
 
-Vous nous avez signalé un problème dans Easy Way : {{titre}}.
+Vous m'avez signalé un problème dans Easy Way : {{titre}}.
 
-Il est corrigé dans la version {{version}}, disponible sur {{store}}. Il suffit de mettre l'app à jour.
-
-Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
-
-Merci de l'avoir signalé.
+C'est corrigé dans la version {{version}}, disponible sur {{store}} : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 
 {{signature}}`],
     en: ['The problem you reported is fixed', `Hello,
 
-You reported a problem in Easy Way: {{titre}}.
+You told me about a problem in Easy Way: {{titre}}.
 
-It is fixed in version {{version}}, available on {{store}}. Just update the app.
-
-If you still see it, reply to this email: I will look into it myself.
-
-Thank you for reporting it.
+It is fixed in version {{version}}, available on {{store}}: just update the app. Thank you for telling me. If it comes back, reply to me.
 
 {{signature}}`],
     de: ['Das gemeldete Problem ist behoben', `Hallo,
 
-Sie haben uns ein Problem in Easy Way gemeldet: {{titre}}.
+Sie haben mir ein Problem in Easy Way gemeldet: {{titre}}.
 
-Es ist in Version {{version}} behoben, ab sofort {{store}} verfügbar. Aktualisieren Sie einfach die App.
-
-Wenn Sie es noch sehen, antworten Sie auf diese E-Mail: Ich sehe es mir selbst an.
-
-Danke für Ihre Meldung.
+Es ist in Version {{version}} behoben, ab sofort {{store}} verfügbar: Aktualisieren Sie einfach die App. Danke für Ihre Meldung. Wenn es wieder auftritt, antworten Sie mir.
 
 {{signature}}`],
-    es: ['El problema que nos indicó está corregido', `Hola:
+    es: ['El problema que me indicó está corregido', `Hola:
 
-Nos indicó un problema en Easy Way: {{titre}}.
+Me indicó un problema en Easy Way: {{titre}}.
 
-Está corregido en la versión {{version}}, ya disponible {{store}}. Solo tiene que actualizar la app.
-
-Si todavía lo ve, responda a este correo: lo reviso yo mismo.
-
-Gracias por avisarnos.
+Está corregido en la versión {{version}}, ya disponible {{store}}: solo tiene que actualizar la app. Gracias por avisarme. Si vuelve a pasar, respóndame.
 
 {{signature}}`],
-    it: ['Il problema che ci ha segnalato è risolto', `Buongiorno,
+    it: ['Il problema che mi ha segnalato è risolto', `Buongiorno,
 
-Ci ha segnalato un problema in Easy Way: {{titre}}.
+mi ha segnalato un problema in Easy Way: {{titre}}.
 
-È risolto nella versione {{version}}, disponibile {{store}}. Basta aggiornare l'app.
-
-Se lo vede ancora, risponda a questa e-mail: controllo di persona.
-
-Grazie per la segnalazione.
+È risolto nella versione {{version}}, disponibile {{store}}: basta aggiornare l'app. Grazie per la segnalazione. Se si ripresenta, mi risponda.
 
 {{signature}}`],
-    pt: ['O problema que nos indicou está corrigido', `Olá,
+    pt: ['O problema que me indicou está corrigido', `Olá,
 
-Indicou-nos um problema no Easy Way: {{titre}}.
+Indicou-me um problema no Easy Way: {{titre}}.
 
-Está corrigido na versão {{version}}, já disponível {{store}}. Basta atualizar a app.
-
-Se ainda o vir, responda a este e-mail: eu próprio vou ver.
-
-Obrigado por nos avisar.
+Está corrigido na versão {{version}}, já disponível {{store}}: basta atualizar a app. Obrigado por me avisar. Se voltar a acontecer, responda-me.
 
 {{signature}}`],
   },
+
 };
 
 // Le jour de fin en toutes lettres, avec la préposition de la langue (« vendredi », « on Friday »…), à l'heure du pays de

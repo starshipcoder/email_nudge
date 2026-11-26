@@ -219,13 +219,9 @@ Exemple : scénario « Bug corrigé, puis demande d’avis ».
 >
 > Bonjour,
 >
-> Vous nous avez signalé un problème dans Easy Way : la carte restait vide après un import.
+> Vous m'avez signalé un problème dans Easy Way : la carte restait vide après un import.
 >
-> Il est corrigé dans la version 7.6.9, disponible sur l’App Store. Il suffit de mettre l'app à jour.
->
-> Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
->
-> Merci de l'avoir signalé.
+> C'est corrigé dans la version 7.6.9, disponible sur l’App Store : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 >
 > Harold
 
@@ -237,10 +233,10 @@ Exemple : scénario « Bug corrigé, puis demande d’avis ».
 >
 > Bonjour,
 >
-> Votre problème est réglé depuis la version 7.6.9. Si Easy Way vous aide au quotidien, un avis sur l’App Store m'aiderait beaucoup :
+> Content que la version 7.6.9 ait réglé votre problème. Si Easy Way vous aide au quotidien, un avis sur l’App Store m'aiderait beaucoup :
 > https://apps.apple.com/app/id6443783383?action=write-review
 >
-> Et s'il reste quelque chose qui vous gêne, répondez-moi.
+> Et si quelque chose vous gêne encore, répondez-moi.
 >
 > Harold
 
@@ -252,11 +248,7 @@ Exemple : scénario « Onboarding abandonné ».
 >
 > Bonjour,
 >
-> Vous avez commencé à configurer Easy Way il y a quelques jours, sans aller jusqu'au bout. C'est souvent le moment où quelque chose bloque.
->
-> Qu'est-ce qui vous a arrêté ? Une ligne en réponse suffit, et je vous aide à finir.
->
-> Je ne vous relancerai pas à ce sujet.
+> Vous avez commencé à configurer Easy Way sans aller jusqu'au bout. Qu'est-ce qui vous a arrêté ? Je vous aide à finir.
 >
 > Harold
 
@@ -1023,11 +1015,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez commencé à configurer Easy Way il y a quelques jours, sans aller jusqu'au bout. C'est souvent le moment où quelque chose bloque.
->
-> Qu'est-ce qui vous a arrêté ? Une ligne en réponse suffit, et je vous aide à finir.
->
-> Je ne vous relancerai pas à ce sujet.
+> Vous avez commencé à configurer Easy Way sans aller jusqu'au bout. Qu'est-ce qui vous a arrêté ? Je vous aide à finir.
 >
 > Harold
 
@@ -1039,13 +1027,9 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous nous avez signalé un problème dans Easy Way : la carte restait vide après un import.
+> Vous m'avez signalé un problème dans Easy Way : la carte restait vide après un import.
 >
-> Il est corrigé dans la version 7.6.9, disponible sur l’App Store. Il suffit de mettre l'app à jour.
->
-> Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
->
-> Merci de l'avoir signalé.
+> C'est corrigé dans la version 7.6.9, disponible sur l’App Store : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 >
 > Harold
 
@@ -1091,13 +1075,9 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous nous avez signalé un problème dans Easy Way : l’import d’un fichier Excel échouait.
+> Vous m'avez signalé un problème dans Easy Way : l’import d’un fichier Excel échouait.
 >
-> Il est corrigé dans la version 7.6.9, disponible sur l’App Store. Il suffit de mettre l'app à jour.
->
-> Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
->
-> Merci de l'avoir signalé.
+> C'est corrigé dans la version 7.6.9, disponible sur l’App Store : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 >
 > Harold
 
@@ -1220,13 +1200,9 @@ Langue de la personne : allemand, d'après l'app. À vérifier : le titre public
 >
 > Bonjour,
 >
-> Vous nous avez signalé un problème dans Easy Way : la carte restait vide après un import.
+> Vous m'avez signalé un problème dans Easy Way : la carte restait vide après un import.
 >
-> Il est corrigé dans la version 7.6.9, disponible sur l’App Store. Il suffit de mettre l'app à jour.
->
-> Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
->
-> Merci de l'avoir signalé.
+> C'est corrigé dans la version 7.6.9, disponible sur l’App Store : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 >
 > Harold
 
@@ -1365,11 +1341,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez commencé à configurer Easy Way il y a quelques jours, sans aller jusqu'au bout. C'est souvent le moment où quelque chose bloque.
->
-> Qu'est-ce qui vous a arrêté ? Une ligne en réponse suffit, et je vous aide à finir.
->
-> Je ne vous relancerai pas à ce sujet.
+> Vous avez commencé à configurer Easy Way sans aller jusqu'au bout. Qu'est-ce qui vous a arrêté ? Je vous aide à finir.
 >
 > Harold
 
@@ -1421,13 +1393,9 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous nous avez signalé un problème dans Easy Way : la carte restait vide après un import.
+> Vous m'avez signalé un problème dans Easy Way : la carte restait vide après un import.
 >
-> Il est corrigé dans la version 7.6.9, disponible sur l’App Store. Il suffit de mettre l'app à jour.
->
-> Si vous le voyez encore, répondez à cet e-mail : je regarde moi-même.
->
-> Merci de l'avoir signalé.
+> C'est corrigé dans la version 7.6.9, disponible sur l’App Store : il suffit de mettre l'app à jour. Merci de me l'avoir signalé. S'il revient, répondez-moi.
 >
 > Harold
 
@@ -1439,10 +1407,10 @@ Langue de la personne : français, par défaut (ni langue ni pays connus).
 >
 > Bonjour,
 >
-> Votre problème est réglé depuis la version 7.6.9. Si Easy Way vous aide au quotidien, un avis sur l’App Store m'aiderait beaucoup :
+> Content que la version 7.6.9 ait réglé votre problème. Si Easy Way vous aide au quotidien, un avis sur l’App Store m'aiderait beaucoup :
 > https://apps.apple.com/app/id6443783383?action=write-review
 >
-> Et s'il reste quelque chose qui vous gêne, répondez-moi.
+> Et si quelque chose vous gêne encore, répondez-moi.
 >
 > Harold
 

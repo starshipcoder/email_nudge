@@ -26,7 +26,7 @@ test('une semaine après un bug corrigé, à qui est revenu dans l’app : une d
   assert.deepEqual(await preparerAvis({ db, revenuDepuis: revenu, maintenant: T }), { creees: 0 });
   const [a] = (await db.lister('crm_actions')).filter((x) => x.type === 'demande_avis');
   assert.equal(a.sujet, 'Votre avis sur Easy Way');
-  assert.match(a.corps, /réglé depuis la version 7\.6\.9/);
+  assert.match(a.corps, /Content que la version 7\.6\.9 ait réglé votre problème/);
   assert.ok(a.corps.includes(LIENS_AVIS.ios));
   assert.doesNotMatch(a.corps, /étoile/);
   assert.match(a.corps, /répondez-moi/);

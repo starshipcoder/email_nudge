@@ -13,13 +13,14 @@ export const LIENS_AVIS = {
 };
 
 // {store} porte la préposition des langues qui en ont besoin (langues.mjs, STORES).
+// Fondateur, 26/11 : il ne redit plus « réglé » juste après l'e-mail du bug corrigé, il s'en réjouit.
 export const TEXTES_AVIS = {
-  fr: { sujet: 'Votre avis sur Easy Way', corps: (v, store, lien) => `Bonjour,\n\nVotre problème est réglé depuis la version ${v}. Si Easy Way vous aide au quotidien, un avis sur ${store} m'aiderait beaucoup :\n${lien}\n\nEt s'il reste quelque chose qui vous gêne, répondez-moi.` },
-  en: { sujet: 'Your review of Easy Way', corps: (v, store, lien) => `Hello,\n\nYour issue has been fixed since version ${v}. If Easy Way helps you day to day, a review on ${store} would help me a lot:\n${lien}\n\nAnd if anything still bothers you, just reply.` },
-  de: { sujet: 'Ihre Bewertung von Easy Way', corps: (v, store, lien) => `Hallo,\n\nIhr Problem ist seit Version ${v} behoben. Wenn Easy Way Ihnen im Alltag hilft, würde mir eine Bewertung ${store} sehr helfen:\n${lien}\n\nUnd wenn Sie noch etwas stört, antworten Sie mir einfach.` },
-  es: { sujet: 'Su opinión sobre Easy Way', corps: (v, store, lien) => `Hola:\n\nSu problema está resuelto desde la versión ${v}. Si Easy Way le ayuda en su día a día, una reseña ${store} me ayudaría mucho:\n${lien}\n\nY si algo todavía le molesta, respóndame.` },
-  it: { sujet: 'La sua opinione su Easy Way', corps: (v, store, lien) => `Buongiorno,\n\nIl suo problema è risolto dalla versione ${v}. Se Easy Way la aiuta ogni giorno, una recensione ${store} mi aiuterebbe molto:\n${lien}\n\nE se qualcosa le dà ancora fastidio, mi risponda.` },
-  pt: { sujet: 'A sua opinião sobre o Easy Way', corps: (v, store, lien) => `Olá,\n\nO seu problema está resolvido desde a versão ${v}. Se o Easy Way o ajuda no dia a dia, uma avaliação ${store} ajudar-me-ia muito:\n${lien}\n\nE se ainda houver algo que o incomode, responda-me.` },
+  fr: { sujet: 'Votre avis sur Easy Way', corps: (v, store, lien) => `Bonjour,\n\nContent que la version ${v} ait réglé votre problème. Si Easy Way vous aide au quotidien, un avis sur ${store} m'aiderait beaucoup :\n${lien}\n\nEt si quelque chose vous gêne encore, répondez-moi.` },
+  en: { sujet: 'Your review of Easy Way', corps: (v, store, lien) => `Hello,\n\nGlad that version ${v} fixed your issue. If Easy Way helps you day to day, a review on ${store} would help me a lot:\n${lien}\n\nAnd if anything still bothers you, just reply.` },
+  de: { sujet: 'Ihre Bewertung von Easy Way', corps: (v, store, lien) => `Hallo,\n\nschön, dass Version ${v} Ihr Problem behoben hat. Wenn Easy Way Ihnen im Alltag hilft, würde mir eine Bewertung ${store} sehr helfen:\n${lien}\n\nUnd wenn Sie noch etwas stört, antworten Sie mir einfach.` },
+  es: { sujet: 'Su opinión sobre Easy Way', corps: (v, store, lien) => `Hola:\n\nMe alegra que la versión ${v} haya resuelto su problema. Si Easy Way le ayuda en su día a día, una reseña ${store} me ayudaría mucho:\n${lien}\n\nY si algo todavía le molesta, respóndame.` },
+  it: { sujet: 'La sua opinione su Easy Way', corps: (v, store, lien) => `Buongiorno,\n\nsono contento che la versione ${v} abbia risolto il suo problema. Se Easy Way la aiuta ogni giorno, una recensione ${store} mi aiuterebbe molto:\n${lien}\n\nE se qualcosa le dà ancora fastidio, mi risponda.` },
+  pt: { sujet: 'A sua opinião sobre o Easy Way', corps: (v, store, lien) => `Olá,\n\nAinda bem que a versão ${v} resolveu o seu problema. Se o Easy Way o ajuda no dia a dia, uma avaliação ${store} ajudar-me-ia muito:\n${lien}\n\nE se ainda houver algo que o incomode, responda-me.` },
 };
 
 export function texteAvis({ langue, version, plateforme, signature }) {
