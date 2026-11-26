@@ -6,36 +6,36 @@ Simulation : rien ne part d’ici. Fichier produit par `node mac/carte.mjs` ; ne
 
 ```
 Inscription avec une adresse
-└─ dans les 72 h ..................................... Bienvenue
+└─ dans les 72 h .................................. Bienvenue
 Essai qui finit dans 2 jours
-├─ a déjà payé ou annulé ............................. aucun
-└─ sinon ............................................. Rappel de fin d’essai
+├─ a déjà payé ou annulé .......................... aucun
+└─ sinon .......................................... Rappel de fin d’essai
 Essai arrêté
-├─ carte refusée ou remboursé ........................ aucun
-├─ arrêté par nous ................................... Essai annulé (une ligne), écart : voulu aucun
-├─ a repris ou payé avant l’envoi .................... aucun
+├─ carte refusée ou remboursé ..................... aucun
+├─ arrêté par nous ................................ Essai annulé (une ligne), écart : voulu aucun
+├─ a repris ou payé avant l’envoi ................. aucun
 ├─ a répondu au questionnaire de l’app
-│  ├─ trop cher, livreur sur iPhone .................. Essai annulé : Boxy
-│  ├─ trop cher, sinon ............................... Essai annulé : la version gratuite
-│  ├─ les fonctions payantes ne lui servent pas ...... Essai annulé : la version gratuite
-│  ├─ plus besoin de l’app ........................... Essai annulé : son activité a changé ?
-│  ├─ il manque des fonctions ........................ Essai annulé : laquelle ?
-│  ├─ trop de bugs ................................... Essai annulé : quel problème ?
-│  ├─ trop lente ..................................... Essai annulé : à quel moment ?
-│  ├─ difficile à utiliser ........................... Essai annulé : où était-ce compliqué ?
-│  └─ autre raison ................................... Essai annulé (une ligne)
-└─ sinon ............................................. Essai annulé (une ligne)
+│  ├─ trop cher, livreur sur iPhone ............... Essai annulé : Boxy
+│  ├─ trop cher, sinon ............................ Essai annulé : la version gratuite
+│  ├─ les fonctions payantes ne lui servent pas ... Essai annulé : la version gratuite
+│  ├─ plus besoin de l’app ........................ Essai annulé : son activité a changé ?
+│  ├─ il manque des fonctions ..................... Essai annulé : laquelle ?
+│  ├─ trop de bugs ................................ Essai annulé : quel problème ?
+│  ├─ trop lente .................................. Essai annulé : à quel moment ?
+│  ├─ difficile à utiliser ........................ Essai annulé : où était-ce compliqué ?
+│  └─ autre raison ................................ Essai annulé (une ligne)
+└─ sinon .......................................... Essai annulé (une ligne)
 Abonnement payant arrêté
-├─ remboursé ou carte refusée ........................ aucun
-├─ arrêté par nous ................................... Résiliation (part de son dossier), écart : voulu aucun
-├─ a repris, ou a déjà reçu un e-mail de départ ...... aucun
-├─ on lit son dossier (réponse, problème ou usage) ... Résiliation (part de son dossier)
-└─ sinon ............................................. Résiliation (simple)
-Bug signalé, puis corrigé dans une version ........... Bug corrigé
-└─ revenu dans l’app ensuite ......................... Demande d’avis
+├─ remboursé ou carte refusée ..................... aucun
+├─ arrêté par nous ................................ Résiliation (une ligne), écart : voulu aucun
+├─ a repris, ou a déjà reçu un e-mail de départ ... aucun
+├─ a répondu au questionnaire de l’app ............ Résiliation (mêmes réponses que l’essai annulé)
+└─ sinon .......................................... Résiliation (une ligne)
+Bug signalé, puis corrigé dans une version ........ Bug corrigé
+└─ revenu dans l’app ensuite ...................... Demande d’avis
 Contacts (onboarding, gros utilisateurs)
-├─ onboarding pas fini, ni essai ni abonnement ....... Onboarding abandonné
-└─ 12 jours actifs en 4 semaines, 10 tournées ........ Gros utilisateur
+├─ onboarding pas fini, ni essai ni abonnement .... Onboarding abandonné
+└─ 12 jours actifs en 4 semaines, 10 tournées ..... Gros utilisateur
 Pour tous : désinscrit, adresse en erreur, sans adresse, compte de test → aucun
             72 h entre deux e-mails (sauf le rappel et le bug corrigé)
 ```
@@ -185,7 +185,7 @@ Exemple : scénario « Essai annulé : autre raison ».
 >
 > Harold
 
-### Résiliation (part de son dossier)
+### Résiliation (mêmes réponses que l’essai annulé)
 
 Exemple : scénario « Résiliation, avec une réponse au questionnaire ».
 
@@ -193,29 +193,21 @@ Exemple : scénario « Résiliation, avec une réponse au questionnaire ».
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez lancé 9 tournées avec l'app en 4 semaines. Dans l'app, vous avez indiqué qu'il vous manquait des fonctions. Vous avez écrit : « Pas de tournée sur plusieurs jours ».
+> Vous avez arrêté votre abonnement à Easy Way, et vous avez dit pourquoi dans l'app, merci.
 >
 > Quelle fonction vous a le plus manqué ?
 >
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
->
 > Harold
 
-### Résiliation (simple)
+### Résiliation (une ligne)
 
 Exemple : scénario « Résiliation, sans dossier lisible ».
 
-> **Objet :** Votre abonnement Easy Way est arrêté
+> **Objet :** Votre abonnement Easy Way
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Une seule question, si vous avez une minute : qu'est-ce qui vous a fait partir ? Une ligne en réponse suffit. C'est ce qui décide de ce que je corrige ensuite.
->
-> Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -328,7 +320,7 @@ Exemple : scénario « Gros utilisateur ».
 | Résiliation, avec une réponse au questionnaire | Payant qui répond « il manque des fonctions » dans l’app et arrête son abonnement ; 9 tournées. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
 | Résiliation, un problème vu, sans réponse | Payant qui arrête sans répondre ; ses imports de fichier ont échoué 3 fois, aucune tournée. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
 | Résiliation, jamais parti en tournée | Payant qui arrête sans répondre ; il a regardé la carte mais n’a jamais démarré de tournée. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
-| Résiliation, base Mixpanel en retard | Payant qui arrête ; la base Mixpanel du Mac a plus d’un jour et demi de retard. | aucun | Résiliation, depuis le dossier : préparé J2, retenu J2 (à vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte), expiré J8 |
+| Résiliation, base Mixpanel en retard | Payant qui arrête ; la base Mixpanel du Mac a plus d’un jour et demi de retard. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
 | Résilié qui revient, puis repart | Arrête puis reprend le même soir ; arrête de nouveau 15 jours plus tard ; revient au 45e jour et repart au 60e. | Résiliation, depuis le dossier (fr) | préparé J17, envoyé J17 |
 | Arrête le mensuel, prend l’annuel | Arrête son abonnement mensuel, puis prend l’offre annuelle deux heures après. | aucun | Résiliation, depuis le dossier : préparé J2, bloqué J2 : plus résilié |
 | Payant remboursé | Payant mensuel remboursé par le support (raison CUSTOMER_SUPPORT). | aucun | Résiliation : rien de préparé (remboursement : seul un arrêt par la personne compte) |
@@ -739,15 +731,11 @@ Résultat : Résiliation, envoyé.
 
 Langue de la personne : français, d'après l'app.
 
-> **Objet :** Votre abonnement Easy Way est arrêté
+> **Objet :** Votre abonnement Easy Way
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Une seule question, si vous avez une minute : qu'est-ce qui vous a fait partir ? Une ligne en réponse suffit. C'est ce qui décide de ce que je corrige ensuite.
->
-> Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -772,13 +760,9 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez lancé 9 tournées avec l'app en 4 semaines. Dans l'app, vous avez indiqué qu'il vous manquait des fonctions. Vous avez écrit : « Pas de tournée sur plusieurs jours ».
+> Vous avez arrêté votre abonnement à Easy Way, et vous avez dit pourquoi dans l'app, merci.
 >
 > Quelle fonction vous a le plus manqué ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
 >
 > Harold
 
@@ -802,13 +786,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez surtout utilisé l'import de contacts, sans avoir encore lancé de tournée. En regardant de mon côté, je vois que l'import de votre fichier n'a pas marché.
->
-> Est-ce ce problème qui vous a arrêté, ou autre chose ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -832,13 +810,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez surtout utilisé la carte, sans avoir encore lancé de tournée.
->
-> Qu'est-ce qui vous a manqué pour partir en tournée avec l'app ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -846,28 +818,25 @@ Langue de la personne : français, d'après l'app.
 
 Cas du bilan : 9, 46. Payant qui arrête ; la base Mixpanel du Mac a plus d’un jour et demi de retard. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
 
-Résultat : Résiliation, expiré (retenu avant : à vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte).
+**À relire :** Depuis le 26/11, le texte ne cite plus son usage : un retard de la base Mixpanel ne bloque plus l’e-mail.
+
+Résultat : Résiliation, envoyé.
 
 - J-60 11 h : inscription avec une adresse (langue de l’app : fr)
 - J-20 10 h : achète l’offre mensuelle
 - J0 11 h : arrête son abonnement
-- J2 9 h : Résiliation, depuis le dossier préparé ; à vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte
-- J2 9 h : Résiliation, depuis le dossier retenu : à vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte
-- J8 9 h : Résiliation, depuis le dossier expiré
+- J2 9 h : Résiliation, depuis le dossier préparé
+- J2 9 h : Résiliation, depuis le dossier envoyé
 
-#### Résiliation, depuis le dossier : expiré (retenu avant : à vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte)
+#### Résiliation, depuis le dossier : envoyé
 
-Langue de la personne : français, d'après l'app. À vérifier : on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte.
+Langue de la personne : français, d'après l'app.
 
 > **Objet :** Votre abonnement Easy Way
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Si vous avez une minute : qu'est-ce qui vous a fait partir ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -896,13 +865,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez lancé 3 tournées avec l'app en 7 semaines.
->
-> Si vous avez une minute : qu'est-ce qui vous a fait partir ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -927,13 +890,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez lancé 3 tournées avec l'app en 4 semaines.
->
-> Si vous avez une minute : qu'est-ce qui vous a fait partir ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -979,13 +936,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Vous avez lancé 3 tournées avec l'app en 4 semaines.
->
-> Si vous avez une minute : qu'est-ce qui vous a fait partir ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 
@@ -1295,15 +1246,11 @@ Résultat : Résiliation, envoyé.
 
 Langue de la personne : italien, d'après l'app.
 
-> **Objet :** Votre abonnement Easy Way est arrêté
+> **Objet :** Votre abonnement Easy Way
 >
 > Bonjour,
 >
-> Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
->
-> Une seule question, si vous avez une minute : qu'est-ce qui vous a fait partir ? Une ligne en réponse suffit. C'est ce qui décide de ce que je corrige ensuite.
->
-> Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?
 >
 > Harold
 

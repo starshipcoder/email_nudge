@@ -69,7 +69,7 @@ test('sans signature réglée, rien n’est préparé ; une action dont l’éch
 });
 
 test('un modèle à trou ne se rend pas', () => {
-  assert.throws(() => rendre('resiliation', 'fr', {}), /signature/);
+  assert.throws(() => rendre('bienvenue', 'fr', {}), /signature/);
   assert.throws(() => rendre('inconnu', 'fr', {}), /inconnu/);
 });
 

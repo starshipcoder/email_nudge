@@ -160,3 +160,23 @@ test('essai annulé : une suite par réponse au questionnaire, dans les six lang
     assert.ok(b.corps.split(/\s+/).length <= 50, `${l} : trop long`);
   }
 });
+
+// Fondateur, 26/11 : la résiliation suit l'essai annulé ; sans réponse, « Qu'est-ce qui vous a fait arrêter ? » (version A).
+test('résiliation : la suite de sa réponse, sinon une ligne, dans les six langues, sans son usage', async () => {
+  const { brouillonDepart, DEPART } = await import('../brouillons.mjs');
+  const d = (raison, metier = 'commercial') => ({ questionnaire: { raison, texte: 'Pas de tournée sur plusieurs jours', le: '2026-12-01' }, calcule_le: '2026-12-02',
+    usage: { metier, tournees: 9, signaux: [{ nom: 'Event-geocoderError' }] }, parcours: { onboarding: { metier } } });
+  const fr = (x, o) => brouillonDepart(x, 'fr', 'Harold', o).corps;
+  assert.equal(fr(null), "Bonjour,\n\nVous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?\n\nHarold");
+  assert.equal(fr(d('other')), fr(null));
+  assert.equal(fr(d('missingFeatures')), "Bonjour,\n\nVous avez arrêté votre abonnement à Easy Way, et vous avez dit pourquoi dans l'app, merci.\n\nQuelle fonction vous a le plus manqué ?\n\nHarold");
+  assert.match(fr(d('tooExpensive', 'livreur'), { store: 'APP_STORE' }), /Boxy/);
+  assert.match(fr(d('tooExpensive')), /La version gratuite reste à vous/);
+  for (const x of [fr(d('tooBuggy')), fr(null)]) assert.doesNotMatch(x, /tournées avec l'app|adresses|plusieurs jours|de mon côté|décide/);
+  for (const l of LANGUES) {
+    assert.ok(DEPART[l]?.ligne && DEPART[l]?.merci, l);
+    const b = brouillonDepart(d('tooSlow'), l, 'S');
+    if (l !== 'fr') assert.match(b.traduction_fr.corps, /lente/);
+    assert.ok(brouillonDepart(null, l, 'S').corps.split(/\s+/).length <= 30, l);
+  }
+});

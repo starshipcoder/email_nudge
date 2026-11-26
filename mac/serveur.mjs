@@ -12,8 +12,8 @@ import { faitsDesFiches, lireFaits, preparer, tourneesPar } from './preparer.mjs
 import { campagnes } from './campagnes.mjs';
 import { bugs, retoursSentry } from './bugs.mjs';
 import { versionsEnVente } from './versions.mjs';
-import { brouillonAvecTraduction, dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
-import { brouillonEssaiAnnule } from './brouillons.mjs';
+import { dossierDe, fermerSources, ouvrirSources, resumer } from './dossier.mjs';
+import { brouillonDepart, brouillonEssaiAnnule } from './brouillons.mjs';
 import { direSource, langueDePersonne } from './langues.mjs';
 import { ligneGestesDHier, veilleur, veilleurGestes } from './notif.mjs';
 import { preparerAvis } from './avis.mjs';
@@ -179,7 +179,7 @@ export function application(s, { port, porte = null, preparerMaintenant = null, 
         if (!signature) throw new Error('Régler la signature d’abord.');
         const u = await db.lire('users', a.user_id);
         const l = langueDePersonne({ locale: u?.locale, pays: d.pays, choix: (await db.lire('crm_fiches', cleUtilisateur(a.user_id)))?.langue });
-        const { sujet, corps, traduction_fr } = a.type === 'essai_annule' ? brouillonEssaiAnnule(d, l.langue, signature) : brouillonAvecTraduction(d, l.langue, signature);
+        const { sujet, corps, traduction_fr } = (a.type === 'essai_annule' ? brouillonEssaiAnnule : brouillonDepart)(d, l.langue, signature, { store: a.store ?? null });
         await db.ecrire('crm_actions', a.id, { sujet, corps, traduction_fr: traduction_fr ?? null, langue: l.langue, langue_source: l.source,
           a_retraduire: false, variante: 'dossier', resume: resumer(d), maj_le: new Date() });
         return json(res, 200, await db.lire('crm_actions', a.id));

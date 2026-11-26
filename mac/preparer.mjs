@@ -2,8 +2,8 @@
 // et des inscrits d'email_nudge. Rien ne part d'ici : la porte d'envoi relit RevenueCat avant chaque e-mail.
 import { cleUtilisateur } from './envoi.mjs';
 import { jourFin, rendre, rendreAvecTraduction } from './modeles.mjs';
-import { brouillonAvecTraduction, resumer } from './dossier.mjs';
-import { brouillonEssaiAnnule } from './brouillons.mjs';
+import { resumer } from './dossier.mjs';
+import { brouillonDepart, brouillonEssaiAnnule } from './brouillons.mjs';
 import { langueDePersonne } from './langues.mjs';
 
 const H = 3600 * 1000;
@@ -130,13 +130,6 @@ export function actionBienvenue(u, { signature, maintenant, pays = null, choix =
 
 // Sans données sûres (personne non reliée à Mixpanel, ou base de plus d'un jour et demi), le brouillon n'affirme rien
 // sur l'usage, et l'action porte un point à vérifier.
-const USAGE_VIDE = { tournees: 0, zones: [], signaux: [], premier_jour: null, dernier_jour: null };
-const INCONNU = "on ne sait pas comment elle a utilisé l'app (données Mixpanel absentes ou en retard) : relire le texte";
-function dossierSur(dossier) {
-  if (!dossier) return { d: null, doute: true };
-  if (dossier.lie === false || dossier.a_jour?.en_retard) return { d: { ...dossier, usage: { ...dossier.usage, ...USAGE_VIDE } }, doute: true };
-  return { d: dossier, doute: false };
-}
 
 export function actionDe(c, { tournees, signature, maintenant, dossierPour = null, choixLangue = () => null }) {
   const cle = cleUtilisateur(c.user.id);
@@ -157,16 +150,17 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
     // Une suite par réponse au questionnaire, sinon une ligne pour tous (fondateur, 26/11). Le texte ne cite que sa
     // raison, jamais son usage : rien à vérifier. Le résumé de son dossier reste joint, pour le fondateur.
     const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(dossier, langue, signature, { store: c.fait.store });
-    return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
+    return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source, store: c.fait.store ?? null,
       ...(traduction_fr ? { traduction_fr } : {}),
       ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
       echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
   }
-  const { d: sur, doute } = dossierSur(dossier);
-  const { sujet, corps, traduction_fr } = sur ? brouillonAvecTraduction(sur, langue, signature) : rendreAvecTraduction('resiliation', langue, () => ({ signature }));
+  // La suite de sa réponse au questionnaire, sinon une ligne (fondateur, 26/11) : le texte ne cite ni son usage ni ce
+  // qu'on voit de notre côté, rien à vérifier. Le résumé de son dossier reste joint, pour le fondateur.
+  const { sujet, corps, traduction_fr } = brouillonDepart(dossier, langue, signature, { store: c.fait.store });
   // Une seule résiliation par personne (Q-EW-63) : preparer ne la crée pas si la personne en a déjà une.
-  return { id: `resiliation__${cle}__${c.fait.transaction}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
-    ...(traduction_fr ? { traduction_fr } : {}), ...(doute && dossier ? { a_verifier: INCONNU } : {}),
+  return { id: `resiliation__${cle}__${c.fait.transaction}`, type: 'resiliation', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source, store: c.fait.store ?? null,
+    ...(traduction_fr ? { traduction_fr } : {}),
     ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
     echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
 }

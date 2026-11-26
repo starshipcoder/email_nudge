@@ -52,62 +52,6 @@ Se algo não estiver bem, basta uma mensagem curta.
 
 {{signature}}`],
   },
-  resiliation: {
-    fr: ['Votre abonnement Easy Way est arrêté', `Bonjour,
-
-Vous avez arrêté votre abonnement à Easy Way. C'est pris en compte, vous n'avez rien d'autre à faire.
-
-Une seule question, si vous avez une minute : qu'est-ce qui vous a fait partir ? Une ligne en réponse suffit. C'est ce qui décide de ce que je corrige ensuite.
-
-Je ne vous écrirai pas d'autre e-mail à ce sujet.
-
-{{signature}}`],
-    en: ['Your Easy Way subscription is cancelled', `Hello,
-
-You cancelled your Easy Way subscription. It is done, there is nothing else to do.
-
-One question, if you have a minute: what made you leave? One line in reply is enough. It decides what I fix next.
-
-I will not write to you again about this.
-
-{{signature}}`],
-    de: ['Ihr Easy Way Abo ist gekündigt', `Hallo,
-
-Sie haben Ihr Abo von Easy Way gekündigt. Das ist erledigt, Sie müssen nichts weiter tun.
-
-Nur eine Frage, wenn Sie eine Minute haben: Warum haben Sie gekündigt? Eine Zeile als Antwort genügt. Sie entscheidet, was ich als Nächstes verbessere.
-
-Ich schreibe Ihnen dazu keine weitere E-Mail.
-
-{{signature}}`],
-    es: ['Su suscripción a Easy Way está cancelada', `Hola:
-
-Ha cancelado su suscripción a Easy Way. Ya está hecho, no tiene que hacer nada más.
-
-Solo una pregunta, si tiene un minuto: ¿qué le hizo irse? Basta una línea como respuesta. Es lo que decide lo que corrijo después.
-
-No le escribiré ningún otro correo sobre esto.
-
-{{signature}}`],
-    it: ['Il suo abbonamento a Easy Way è disdetto', `Buongiorno,
-
-Ha disdetto il suo abbonamento a Easy Way. È fatto, non deve fare altro.
-
-Una sola domanda, se ha un minuto: che cosa l'ha fatta andare via? Basta una riga in risposta. È ciò che decide cosa correggo dopo.
-
-Non le scriverò altre e-mail su questo.
-
-{{signature}}`],
-    pt: ['A sua assinatura do Easy Way foi cancelada', `Olá,
-
-Cancelou a sua assinatura do Easy Way. Está feito, não precisa de fazer mais nada.
-
-Só uma pergunta, se tiver um minuto: o que o fez sair? Basta uma linha como resposta. É isso que decide o que corrijo a seguir.
-
-Não lhe voltarei a escrever sobre isto.
-
-{{signature}}`],
-  },
   // L'e-mail de bienvenue (INT-EW-9) : court, signé, une question à laquelle on répond en une ligne. Il se prépare
   // toujours, mais ne part qu'une fois la bienvenue sortie de l'essai par le fondateur (INT-EW-94), après son oui sur ce texte.
   bienvenue: {

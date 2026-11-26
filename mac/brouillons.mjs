@@ -232,6 +232,34 @@ function suiteEssai(d, store) {
   return ['dontNeedAnymore', 'missingFeatures', 'tooBuggy', 'tooSlow', 'difficultToUse'].includes(r) ? r : null;
 }
 
+// La résiliation d'un abonné (fondateur, 26/11, version A) : comme l'essai annulé, la suite de sa réponse au
+// questionnaire, sinon une ligne. « Qu'est-ce qui vous a fait arrêter » : Groove, environ 19 % de réponses de plus que
+// « pourquoi » (brique interroger-un-utilisateur). Ni son usage, ni ce qu'on voit de notre côté.
+export const DEPART = {
+  fr: { sujet: 'Votre abonnement Easy Way', ligne: "Vous avez arrêté votre abonnement à Easy Way. Qu'est-ce qui vous a fait arrêter ?",
+    merci: "Vous avez arrêté votre abonnement à Easy Way, et vous avez dit pourquoi dans l'app, merci." },
+  en: { sujet: 'Your Easy Way subscription', ligne: 'You cancelled your Easy Way subscription. What made you stop?',
+    merci: 'You cancelled your Easy Way subscription and told me why in the app, thank you.' },
+  de: { sujet: 'Ihr Easy Way Abo', ligne: 'Sie haben Ihr Easy Way Abo gekündigt. Was hat Sie dazu gebracht aufzuhören?',
+    merci: 'Sie haben Ihr Easy Way Abo gekündigt und mir in der App gesagt, warum. Danke.' },
+  es: { sujet: 'Su suscripción a Easy Way', ligne: 'Ha cancelado su suscripción a Easy Way. ¿Qué le hizo dejarla?',
+    merci: 'Ha cancelado su suscripción a Easy Way y me dijo por qué en la app, gracias.' },
+  it: { sujet: 'Il suo abbonamento a Easy Way', ligne: "Ha disdetto il suo abbonamento a Easy Way. Che cosa l'ha fatta smettere?",
+    merci: "Ha disdetto il suo abbonamento a Easy Way e mi ha detto perché nell'app, grazie." },
+  pt: { sujet: 'A sua assinatura do Easy Way', ligne: 'Cancelou a sua assinatura do Easy Way. O que o fez parar?',
+    merci: 'Cancelou a sua assinatura do Easy Way e disse-me porquê na app, obrigado.' },
+};
+export function brouillonDepart(d, langue, signature, { store = null } = {}) {
+  const suite = suiteEssai(d, store);
+  const rendre = (lg) => {
+    const D = DEPART[lg] ?? DEPART.en; const bonjour = (T[lg] ?? T.en).bonjour;
+    const milieu = suite ? [D.merci, (ESSAI_REPONSE[lg] ?? ESSAI_REPONSE.en)[suite]] : [D.ligne];
+    return { sujet: D.sujet, corps: [bonjour, ...milieu, signature].join('\n\n') };
+  };
+  const b = rendre(langue);
+  return langue === 'fr' ? b : { ...b, traduction_fr: rendre('fr') };
+}
+
 // L'e-mail d'essai annulé et sa traduction française : la suite de sa réponse, sinon la ligne pour tous.
 export function brouillonEssaiAnnule(d, langue, signature, { store = null } = {}) {
   const suite = suiteEssai(d, store);

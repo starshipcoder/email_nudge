@@ -130,7 +130,8 @@ export const SCENARIOS = [
     condition: 'Payant qui arrête ; la base Mixpanel du Mac a plus d’un jour et demi de retard.',
     dossier: { tournees: 4, en_retard: true },
     etapes: [{ j: -60, fait: 'inscription' }, { j: -20, fait: 'achat' }, { j: 0, h: '10:00', fait: 'resilie' }],
-    attendu: { resiliation: 'expiré (retenu avant : à vérifier : on ne sait pas comment elle a utilisé l\'app (données Mixpanel absentes ou en retard) : relire le texte)' } },
+    attendu: { resiliation: 'envoyé' },
+    remarque: 'Depuis le 26/11, le texte ne cite plus son usage : un retard de la base Mixpanel ne bloque plus l’e-mail.' },
   { id: 'revient-puis-repart', titre: 'Résilié qui revient, puis repart', cas: [27, 29],
     condition: 'Arrête puis reprend le même soir ; arrête de nouveau 15 jours plus tard ; revient au 45e jour et repart au 60e.',
     etapes: [{ j: -60, fait: 'inscription' }, { j: -20, fait: 'achat' }, { j: 0, h: '10:00', fait: 'resilie' }, { j: 0, h: '18:00', fait: 'reprend' },
@@ -289,12 +290,11 @@ export const ARBRE = [
     { si: 'sinon', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT', scenarios: ['essai-annule-sans-reponse'] }] },
   { si: 'Abonnement payant arrêté', enfants: [
     { si: 'remboursé ou carte refusée', donne: null, sorte: 'resiliation', scenarios: ['payant-rembourse', 'carte-refusee-renouvellement'] },
-    { si: 'arrêté par nous', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',
+    { si: 'arrêté par nous', donne: 'Résiliation (une ligne)', sorte: 'resiliation', modele: 'DEPART',
       scenarios: ['payant-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
     { si: 'a repris, ou a déjà reçu un e-mail de départ', donne: null, sorte: 'resiliation', scenarios: ['changement-offre', { id: 'revient-puis-repart', un_seul: true }] },
-    { si: 'on lit son dossier (réponse, problème ou usage)', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',
-      scenarios: ['resiliation-avec-reponse', 'resiliation-probleme-vu'] },
-    { si: 'sinon', donne: 'Résiliation (simple)', sorte: 'resiliation', variante: 'modèle', modele: 'resiliation', scenarios: ['resiliation-sans-dossier'] }] },
+    { si: 'a répondu au questionnaire de l’app', donne: 'Résiliation (mêmes réponses que l’essai annulé)', sorte: 'resiliation', modele: 'DEPART', contient: 'vous avez dit pourquoi', scenarios: ['resiliation-avec-reponse'] },
+    { si: 'sinon', donne: 'Résiliation (une ligne)', sorte: 'resiliation', modele: 'DEPART', contient: 'fait arrêter', scenarios: ['resiliation-sans-dossier'] }] },
   { si: 'Bug signalé, puis corrigé dans une version', donne: 'Bug corrigé', sorte: 'bug_corrige', modele: 'bug_corrige', scenarios: ['bug-corrige-puis-avis'], enfants: [
     { si: 'revenu dans l’app ensuite', donne: 'Demande d’avis', sorte: 'demande_avis', modele: 'demande_avis', scenarios: ['bug-corrige-puis-avis'] }] },
   { si: 'Contacts (onboarding, gros utilisateurs)', enfants: [
