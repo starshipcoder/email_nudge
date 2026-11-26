@@ -14,7 +14,16 @@ Essai arrêté
 ├─ carte refusée ou remboursé ........................ aucun
 ├─ arrêté par nous ................................... Essai annulé (une ligne), écart : voulu aucun
 ├─ a repris ou payé avant l’envoi .................... aucun
-├─ a répondu au questionnaire de l’app ............... Essai annulé (selon sa réponse)
+├─ a répondu au questionnaire de l’app
+│  ├─ trop cher, livreur sur iPhone .................. Essai annulé : Boxy
+│  ├─ trop cher, sinon ............................... Essai annulé : la version gratuite
+│  ├─ les fonctions payantes ne lui servent pas ...... Essai annulé : la version gratuite
+│  ├─ plus besoin de l’app ........................... Essai annulé : son activité a changé ?
+│  ├─ il manque des fonctions ........................ Essai annulé : laquelle ?
+│  ├─ trop de bugs ................................... Essai annulé : quel problème ?
+│  ├─ trop lente ..................................... Essai annulé : à quel moment ?
+│  ├─ difficile à utiliser ........................... Essai annulé : où était-ce compliqué ?
+│  └─ autre raison ................................... Essai annulé (une ligne)
 └─ sinon ............................................. Essai annulé (une ligne)
 Abonnement payant arrêté
 ├─ remboursé ou carte refusée ........................ aucun
@@ -65,9 +74,24 @@ Exemple : scénario « Essai iOS utilisé, puis payé ».
 >
 > Harold
 
-### Essai annulé (selon sa réponse)
+### Essai annulé : Boxy
 
-Exemple : scénario « Essai annulé avec une réponse au questionnaire ».
+Exemple : scénario « Essai annulé : trop cher, livreur sur iPhone ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Notre app Boxy, faite pour les livreurs, fait les mêmes tournées pour 7,99 € par mois :
+> https://apps.apple.com/app/id6756269385
+>
+> Harold
+
+### Essai annulé : la version gratuite
+
+Exemple : scénario « Essai annulé : trop cher, pas livreur ».
 
 > **Objet :** Votre essai Easy Way
 >
@@ -79,9 +103,79 @@ Exemple : scénario « Essai annulé avec une réponse au questionnaire ».
 >
 > Harold
 
+### Essai annulé : son activité a changé ?
+
+Exemple : scénario « Essai annulé : plus besoin ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> C'est votre activité qui a changé, ou l'app qui ne collait pas à vos tournées ?
+>
+> Harold
+
+### Essai annulé : laquelle ?
+
+Exemple : scénario « Essai annulé : il manque des fonctions ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Quelle fonction vous a le plus manqué ?
+>
+> Harold
+
+### Essai annulé : quel problème ?
+
+Exemple : scénario « Essai annulé : trop de bugs ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Quel problème avez-vous rencontré ? Je le corrige et je vous préviens quand c'est fait.
+>
+> Harold
+
+### Essai annulé : à quel moment ?
+
+Exemple : scénario « Essai annulé : trop lente ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> À quel moment l'app était-elle lente ? Je regarde moi-même.
+>
+> Harold
+
+### Essai annulé : où était-ce compliqué ?
+
+Exemple : scénario « Essai annulé : difficile à utiliser ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> À quel moment l'app vous a-t-elle paru compliquée ?
+>
+> Harold
+
 ### Essai annulé (une ligne)
 
-Exemple : scénario « Essai annulé le 3e jour, sans réponse au questionnaire ».
+Exemple : scénario « Essai annulé : autre raison ».
 
 > **Objet :** Votre essai Easy Way
 >
@@ -211,7 +305,7 @@ Exemple : scénario « Gros utilisateur ».
 - Les rebonds sont posés sur la fiche par le scénario : la lecture des retours de Resend (`livraison.mjs`) n’est pas simulée.
 - La ligne WhatsApp ajoutée à l’envoi n’est pas réglée ici.
 
-37 scénarios. Cas du bilan du 25/11 couverts : 44 sur 48 (1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48). Non couverts : 10, 30, 31, 37.
+47 scénarios. Cas du bilan du 25/11 couverts : 44 sur 48 (1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48). Non couverts : 10, 30, 31, 37.
 
 ### Le tableau
 
@@ -274,6 +368,16 @@ Exemple : scénario « Gros utilisateur ».
 | Bug signalé sans être inscrit | Signale un bug avec une adresse de contact, sans être inscrit ; le bug est corrigé. | aucun | Bug corrigé : rien de préparé (personne inscrite à relier au retour) |
 | Essai annulé sans adresse donnée | N’a jamais donné d’adresse ; démarre un essai et l’annule le lendemain. | aucun | Essai annulé : rien de préparé (aucune adresse : le fondateur est seulement prévenu) |
 | Bienvenue « en essai » (le réglage par défaut) | S’inscrit ; la bienvenue est en essai, comme le veut le réglage par défaut. | aucun | Bienvenue : préparé J0, retenu J0 (en essai : ne part pas aux utilisateurs), expiré J4 |
+| Essai annulé : trop cher, livreur sur iPhone | Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; livreur, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : trop cher, pas livreur | Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : trop cher, livreur sur Android | Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; livreur, Google Play. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : fonctions payantes inutiles | Répond « les fonctions payantes ne lui servent pas » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : plus besoin | Répond « plus besoin de l'app » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : il manque des fonctions | Répond « il manque des fonctions » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : trop de bugs | Répond « trop de bugs » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : trop lente | Répond « trop lente » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : difficile à utiliser | Répond « difficile à utiliser » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé : autre raison | Répond « autre raison » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. | Essai annulé (fr) | préparé J3, envoyé J3 |
 
 ### Essai iOS utilisé, puis payé
 
@@ -1449,5 +1553,274 @@ Langue de la personne : français, d'après l'app.
 > Merci d'avoir installé Easy Way. J'ai créé l'app et je lis moi-même chaque réponse.
 >
 > Une seule question : qu'est-ce qui vous a fait installer Easy Way ? Une ligne en réponse à cet e-mail suffit.
+>
+> Harold
+
+### Essai annulé : trop cher, livreur sur iPhone
+
+Cas du bilan : 13. Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; livreur, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : trop cher
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Notre app Boxy, faite pour les livreurs, fait les mêmes tournées pour 7,99 € par mois :
+> https://apps.apple.com/app/id6756269385
+>
+> Harold
+
+### Essai annulé : trop cher, pas livreur
+
+Cas du bilan : 13. Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : trop cher
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.
+>
+> Harold
+
+### Essai annulé : trop cher, livreur sur Android
+
+Cas du bilan : 13. Répond « trop cher » au questionnaire puis annule son essai le 3e jour ; livreur, Google Play. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (Google Play, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : trop cher
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.
+>
+> Harold
+
+### Essai annulé : fonctions payantes inutiles
+
+Cas du bilan : 13. Répond « les fonctions payantes ne lui servent pas » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : les fonctions payantes ne lui servent pas
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.
+>
+> Harold
+
+### Essai annulé : plus besoin
+
+Cas du bilan : 13. Répond « plus besoin de l'app » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : plus besoin de l'app
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> C'est votre activité qui a changé, ou l'app qui ne collait pas à vos tournées ?
+>
+> Harold
+
+### Essai annulé : il manque des fonctions
+
+Cas du bilan : 13. Répond « il manque des fonctions » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : il manque des fonctions
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Quelle fonction vous a le plus manqué ?
+>
+> Harold
+
+### Essai annulé : trop de bugs
+
+Cas du bilan : 13. Répond « trop de bugs » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : trop de bugs
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> Quel problème avez-vous rencontré ? Je le corrige et je vous préviens quand c'est fait.
+>
+> Harold
+
+### Essai annulé : trop lente
+
+Cas du bilan : 13. Répond « trop lente » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : trop lente
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> À quel moment l'app était-elle lente ? Je regarde moi-même.
+>
+> Harold
+
+### Essai annulé : difficile à utiliser
+
+Cas du bilan : 13. Répond « difficile à utiliser » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : difficile à utiliser
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> À quel moment l'app vous a-t-elle paru compliquée ?
+>
+> Harold
+
+### Essai annulé : autre raison
+
+Cas du bilan : 13. Répond « autre raison » au questionnaire puis annule son essai le 3e jour ; commercial, App Store. J0 : mardi 1 décembre 2026. Envoi simulé : chaque action part dès qu’elle est prête, à la passe qui la prépare.
+
+Résultat : Essai annulé, envoyé.
+
+- J-20 10 h : inscription avec une adresse (langue de l’app : fr)
+- J0 10 h : essai démarré (App Store, 7 jours)
+- J3 15 h : répond au questionnaire de l’app : autre raison
+- J3 15 h 05 : annule son essai
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
+
+#### Essai annulé : envoyé
+
+Langue de la personne : français, d'après l'app.
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold

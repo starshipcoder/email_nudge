@@ -243,6 +243,18 @@ export const SCENARIOS = [
     reglages: { en_essai: ['bienvenue'] },
     etapes: [{ j: 0, h: '08:00', fait: 'inscription' }],
     attendu: { bienvenue: 'expiré (retenu avant : en essai : ne part pas aux utilisateurs)' } },
+  // Une réponse par objection du questionnaire (fondateur, 26/11) : un scénario par suite de l'e-mail.
+  ...[['tooExpensive', 'livreur', 'ios', 'trop cher, livreur sur iPhone'], ['tooExpensive', 'commercial', 'ios', 'trop cher, pas livreur'],
+    ['tooExpensive', 'livreur', 'android', 'trop cher, livreur sur Android'], ['noNeedOfPremiumFeature', 'commercial', 'ios', 'fonctions payantes inutiles'],
+    ['dontNeedAnymore', 'commercial', 'ios', 'plus besoin'], ['missingFeatures', 'commercial', 'ios', 'il manque des fonctions'],
+    ['tooBuggy', 'commercial', 'ios', 'trop de bugs'], ['tooSlow', 'commercial', 'ios', 'trop lente'],
+    ['difficultToUse', 'commercial', 'ios', 'difficile à utiliser'], ['other', 'commercial', 'ios', 'autre raison']]
+    .map(([raison, metier, store, nom]) => ({ id: `essai-objection-${raison}-${metier}-${store}`, titre: `Essai annulé : ${nom}`, cas: [13],
+      condition: `Répond « ${RAISONS[raison]} » au questionnaire puis annule son essai le 3e jour ; ${metier}, ${store === 'ios' ? 'App Store' : 'Google Play'}.`,
+      dossier: { metier },
+      etapes: [{ j: -20, fait: 'inscription' }, { j: 0, fait: 'essai', store },
+        { j: 3, h: '14:00', fait: 'questionnaire', raison }, { j: 3, h: '14:05', fait: 'annule' }],
+      attendu: { essai_annule: 'envoyé' } })),
 ];
 
 // ---------- L'arbre de décision : ce que lit le fondateur ----------
@@ -263,8 +275,17 @@ export const ARBRE = [
     { si: 'arrêté par nous', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT',
       scenarios: ['essai-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
     { si: 'a repris ou payé avant l’envoi', donne: null, sorte: 'essai_annule', scenarios: ['annule-dans-l-heure-puis-repris'] },
-    { si: 'a répondu au questionnaire de l’app', donne: 'Essai annulé (selon sa réponse)', sorte: 'essai_annule', modele: 'ESSAI_REPONSE',
-      scenarios: ['essai-annule-avec-reponse'] },
+    { si: 'a répondu au questionnaire de l’app', enfants: [
+      { si: 'trop cher, livreur sur iPhone', donne: 'Essai annulé : Boxy', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'Boxy', scenarios: ['essai-objection-tooExpensive-livreur-ios'] },
+      { si: 'trop cher, sinon', donne: 'Essai annulé : la version gratuite', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'La version gratuite',
+        scenarios: ['essai-objection-tooExpensive-commercial-ios', 'essai-objection-tooExpensive-livreur-android'] },
+      { si: 'les fonctions payantes ne lui servent pas', donne: 'Essai annulé : la version gratuite', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'La version gratuite', scenarios: ['essai-objection-noNeedOfPremiumFeature-commercial-ios'] },
+      { si: 'plus besoin de l’app', donne: 'Essai annulé : son activité a changé ?', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'votre activité', scenarios: ['essai-objection-dontNeedAnymore-commercial-ios'] },
+      { si: 'il manque des fonctions', donne: 'Essai annulé : laquelle ?', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'Quelle fonction', scenarios: ['essai-objection-missingFeatures-commercial-ios'] },
+      { si: 'trop de bugs', donne: 'Essai annulé : quel problème ?', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'Quel problème', scenarios: ['essai-objection-tooBuggy-commercial-ios'] },
+      { si: 'trop lente', donne: 'Essai annulé : à quel moment ?', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'lente', scenarios: ['essai-objection-tooSlow-commercial-ios'] },
+      { si: 'difficile à utiliser', donne: 'Essai annulé : où était-ce compliqué ?', sorte: 'essai_annule', modele: 'ESSAI_REPONSE', contient: 'compliquée', scenarios: ['essai-objection-difficultToUse-commercial-ios'] },
+      { si: 'autre raison', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT', scenarios: ['essai-objection-other-commercial-ios'] }] },
     { si: 'sinon', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT', scenarios: ['essai-annule-sans-reponse'] }] },
   { si: 'Abonnement payant arrêté', enfants: [
     { si: 'remboursé ou carte refusée', donne: null, sorte: 'resiliation', scenarios: ['payant-rembourse', 'carte-refusee-renouvellement'] },
@@ -396,12 +417,12 @@ export function dossierFictif(sc, e, t) {
   const resilie = e.faits.filter((f) => f.nom === 'rc_cancellation_event').at(-1);
   return {
     rc: rcDe(sc), personne: `p_${sc.id}`, lie: true, pays: o.pays ?? null, questionnaire: questionnaireDeFiche(e.user),
-    usage: { metier: 'commercial', premier_jour: jourIso(debutDe(sc) - 30 * JOUR), jours_actifs: o.jours_actifs ?? 8, dernier_jour: jourIso(t - JOUR),
+    usage: { metier: o.metier ?? 'commercial', premier_jour: jourIso(debutDe(sc) - 30 * JOUR), jours_actifs: o.jours_actifs ?? 8, dernier_jour: jourIso(t - JOUR),
       tournees: n, semaines: o.semaines ?? [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 2], signaux: o.signaux ?? [], zones,
       zones_jamais: ZONES.filter((z) => !zones.some((x) => x.zone === z)) },
     abonnement: { formule: paiements.length ? 'mensuel' : null, essai_le: essai ? jourIso(essai.temps) : null,
       premier_paiement: paiements[0] ? jourIso(paiements[0].temps) : null, paiements: paiements.length, resilie_le: resilie ? jourIso(resilie.temps) : null },
-    parcours: { onboarding: { metier: 'commercial', besoins: [], source: null, fini: true, abandonne: false, ...(o.onboarding ?? {}) },
+    parcours: { onboarding: { metier: o.metier ?? 'commercial', besoins: [], source: null, fini: true, abandonne: false, ...(o.onboarding ?? {}) },
       imports: o.imports ?? [], tournees: { creees: n, optimisees: n, optimisations_ratees: o.optimisations_ratees ?? 0, demarrees: n, arrets_max: n ? (o.arrets_max ?? 12) : null } },
     a_jour: { base_jusqu_a: iso(debutDuJour(t)), en_retard: Boolean(o.en_retard) },
     calcule_le: jourIso(t),

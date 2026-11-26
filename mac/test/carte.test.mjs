@@ -65,7 +65,8 @@ test('chaque feuille de l’arbre : le scénario relié donne ce résultat par l
         assert.equal(partis.length, 0, `« ${f.si} » (${id}) : aucun e-mail ${f.sorte} ne doit partir`);
         continue;
       }
-      const bon = partis.filter((m) => (!f.variante || m.variante === f.variante) && utilise[f.modele](m));
+      // Une feuille qui nomme une suite (« Boxy », « la version gratuite »…) le prouve sur le texte réel.
+      const bon = partis.filter((m) => (!f.variante || m.variante === f.variante) && utilise[f.modele](m) && (!f.contient || m.texte_fr.corps.includes(f.contient)));
       assert.ok(bon.length, `« ${f.si} » (${id}) : ${f.donne} doit partir (vu : ${s.emails.map((m) => `${m.nom} ${m.resultat}`).join(' ; ') || 'rien'})`);
     }
   }
