@@ -168,11 +168,80 @@ export const ESSAI_COURT = {
   pt: { sujet: 'O seu teste do Easy Way', corps: 'Olá,\n\nCancelou o seu teste do Easy Way. O que esperava que a app fizesse por si?' },
 };
 
-// L'e-mail d'essai annulé et sa traduction française. Le dossier n'est plus lu : le texte n'affirme rien sur la personne.
-export function brouillonEssaiAnnule(_d, langue, signature) {
-  const court = (lg) => { const t = ESSAI_COURT[lg] ?? ESSAI_COURT.en; return { sujet: t.sujet, corps: `${t.corps}\n\n${signature}` }; };
-  const b = court(langue);
-  return langue === 'fr' ? b : { ...b, traduction_fr: court('fr') };
+// Une réponse par objection du questionnaire (fondateur, 26/11). « merci » ouvre ; puis la suite de sa raison.
+// Boxy (iOS seulement, absent de Google Play au 26/11) n'est proposé qu'à un livreur sur l'App Store ; 16 arrêts :
+// le plafond gratuit (hephaistos, brique prix-offres, C1) ; « je vous préviens » : l'e-mail « bug corrigé ».
+const LIEN_BOXY = 'https://apps.apple.com/app/id6756269385';
+export const ESSAI_REPONSE = {
+  fr: { merci: "Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.",
+    boxy: `Notre app Boxy, faite pour les livreurs, fait les mêmes tournées pour 7,99 € par mois :\n${LIEN_BOXY}`,
+    gratuit: "La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.",
+    dontNeedAnymore: "C'est votre activité qui a changé, ou l'app qui ne collait pas à vos tournées ?",
+    missingFeatures: 'Quelle fonction vous a le plus manqué ?',
+    tooBuggy: "Quel problème avez-vous rencontré ? Je le corrige et je vous préviens quand c'est fait.",
+    tooSlow: "À quel moment l'app était-elle lente ? Je regarde moi-même.",
+    difficultToUse: "À quel moment l'app vous a-t-elle paru compliquée ?" },
+  en: { merci: 'You cancelled your Easy Way trial and told me why in the app, thank you.',
+    boxy: `Our app Boxy, made for delivery drivers, plans the same routes for less:\n${LIEN_BOXY}`,
+    gratuit: 'The free version is still yours, up to 16 stops per route.',
+    dontNeedAnymore: 'Did your work change, or did the app not fit your routes?',
+    missingFeatures: 'Which feature did you miss the most?',
+    tooBuggy: 'What problem did you run into? I will fix it and let you know when it is done.',
+    tooSlow: 'When was the app slow? I will look into it myself.',
+    difficultToUse: 'At what point did the app feel complicated?' },
+  de: { merci: 'Sie haben Ihre Easy Way Testphase beendet und mir in der App gesagt, warum. Danke.',
+    boxy: `Unsere App Boxy, gemacht für Zusteller, plant dieselben Touren günstiger:\n${LIEN_BOXY}`,
+    gratuit: 'Die kostenlose Version bleibt Ihnen, mit bis zu 16 Stopps pro Route.',
+    dontNeedAnymore: 'Hat sich Ihre Arbeit geändert, oder passte die App nicht zu Ihren Touren?',
+    missingFeatures: 'Welche Funktion hat Ihnen am meisten gefehlt?',
+    tooBuggy: 'Auf welches Problem sind Sie gestoßen? Ich behebe es und sage Ihnen Bescheid, wenn es erledigt ist.',
+    tooSlow: 'Wann war die App langsam? Ich sehe es mir selbst an.',
+    difficultToUse: 'An welcher Stelle kam Ihnen die App kompliziert vor?' },
+  es: { merci: 'Ha cancelado su prueba de Easy Way y me dijo por qué en la app, gracias.',
+    boxy: `Nuestra app Boxy, hecha para repartidores, planifica las mismas rutas por menos:\n${LIEN_BOXY}`,
+    gratuit: 'La versión gratuita sigue siendo suya, con hasta 16 paradas por ruta.',
+    dontNeedAnymore: '¿Cambió su actividad, o la app no encajaba con sus rutas?',
+    missingFeatures: '¿Qué función echó más en falta?',
+    tooBuggy: '¿Qué problema encontró? Lo corrijo y le aviso cuando esté hecho.',
+    tooSlow: '¿En qué momento fue lenta la app? Lo reviso yo mismo.',
+    difficultToUse: '¿En qué momento le pareció complicada la app?' },
+  it: { merci: "Ha annullato la sua prova di Easy Way e mi ha detto perché nell'app, grazie.",
+    boxy: `La nostra app Boxy, fatta per i corrieri, pianifica gli stessi percorsi spendendo meno:\n${LIEN_BOXY}`,
+    gratuit: 'La versione gratuita resta sua, fino a 16 fermate per percorso.',
+    dontNeedAnymore: "È cambiata la sua attività, o l'app non si adattava ai suoi percorsi?",
+    missingFeatures: 'Quale funzione le è mancata di più?',
+    tooBuggy: 'Che problema ha incontrato? Lo correggo e la avviso quando è fatto.',
+    tooSlow: "In quale momento l'app era lenta? Controllo di persona.",
+    difficultToUse: "In quale momento l'app le è sembrata complicata?" },
+  pt: { merci: 'Cancelou o seu teste do Easy Way e disse-me porquê na app, obrigado.',
+    boxy: `A nossa app Boxy, feita para estafetas, planeia as mesmas rotas por menos:\n${LIEN_BOXY}`,
+    gratuit: 'A versão gratuita continua a ser sua, até 16 paragens por rota.',
+    dontNeedAnymore: 'Mudou a sua atividade, ou a app não se adaptava às suas rotas?',
+    missingFeatures: 'Que função lhe fez mais falta?',
+    tooBuggy: 'Que problema encontrou? Eu corrijo-o e aviso-o quando estiver feito.',
+    tooSlow: 'Em que momento a app estava lenta? Vou ver eu próprio.',
+    difficultToUse: 'Em que momento a app lhe pareceu complicada?' },
+};
+const estLivreur = (d) => [d?.parcours?.onboarding?.metier, d?.usage?.metier].some((m) => /livreur|delivery/i.test(String(m ?? '')));
+
+// La suite de l'e-mail selon sa réponse récente au questionnaire, ou null (la ligne pour tous).
+function suiteEssai(d, store) {
+  const r = d && reponseRecente(d) ? d.questionnaire.raison : null;
+  if (r === 'tooExpensive') return estLivreur(d) && store === 'APP_STORE' ? 'boxy' : 'gratuit';
+  if (r === 'noNeedOfPremiumFeature') return 'gratuit';
+  return ['dontNeedAnymore', 'missingFeatures', 'tooBuggy', 'tooSlow', 'difficultToUse'].includes(r) ? r : null;
+}
+
+// L'e-mail d'essai annulé et sa traduction française : la suite de sa réponse, sinon la ligne pour tous.
+export function brouillonEssaiAnnule(d, langue, signature, { store = null } = {}) {
+  const suite = suiteEssai(d, store);
+  const rendre = (lg) => {
+    if (!suite) { const t = ESSAI_COURT[lg] ?? ESSAI_COURT.en; return { sujet: t.sujet, corps: `${t.corps}\n\n${signature}` }; }
+    const R = ESSAI_REPONSE[lg] ?? ESSAI_REPONSE.en; const bonjour = (T[lg] ?? T.en).bonjour;
+    return { sujet: (ESSAI_COURT[lg] ?? ESSAI_COURT.en).sujet, corps: [bonjour, R.merci, R[suite], signature].join('\n\n') };
+  };
+  const b = rendre(langue);
+  return langue === 'fr' ? b : { ...b, traduction_fr: rendre('fr') };
 }
 
 // La question : celle de sa réponse au questionnaire, sinon celle du problème vu, sinon la question ouverte.

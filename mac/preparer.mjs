@@ -154,9 +154,9 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
       echeance: new Date(new Date(c.fait.fin).getTime() - AVANT_PRELEVEMENT), cree_le: maintenant };
   }
   if (c.type === 'essai_annule') {
-    // Une seule ligne pour tous (fondateur, 26/11) : le texte n'affirme rien sur la personne, rien à vérifier.
-    // Le résumé de son dossier reste joint, pour le fondateur qui lit sa réponse.
-    const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(null, langue, signature);
+    // Une suite par réponse au questionnaire, sinon une ligne pour tous (fondateur, 26/11). Le texte ne cite que sa
+    // raison, jamais son usage : rien à vérifier. Le résumé de son dossier reste joint, pour le fondateur.
+    const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(dossier, langue, signature, { store: c.fait.store });
     return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
       ...(traduction_fr ? { traduction_fr } : {}),
       ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),

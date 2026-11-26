@@ -12,9 +12,10 @@ Essai qui finit dans 2 jours
 └─ sinon ............................................. Rappel de fin d’essai
 Essai arrêté
 ├─ carte refusée ou remboursé ........................ aucun
-├─ arrêté par nous ................................... Essai annulé, écart : voulu aucun
+├─ arrêté par nous ................................... Essai annulé (une ligne), écart : voulu aucun
 ├─ a repris ou payé avant l’envoi .................... aucun
-└─ sinon (avec ou sans réponse au questionnaire) ..... Essai annulé
+├─ a répondu au questionnaire de l’app ............... Essai annulé (selon sa réponse)
+└─ sinon ............................................. Essai annulé (une ligne)
 Abonnement payant arrêté
 ├─ remboursé ou carte refusée ........................ aucun
 ├─ arrêté par nous ................................... Résiliation (part de son dossier), écart : voulu aucun
@@ -64,7 +65,21 @@ Exemple : scénario « Essai iOS utilisé, puis payé ».
 >
 > Harold
 
-### Essai annulé
+### Essai annulé (selon sa réponse)
+
+Exemple : scénario « Essai annulé avec une réponse au questionnaire ».
+
+> **Objet :** Votre essai Easy Way
+>
+> Bonjour,
+>
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.
+>
+> Harold
+
+### Essai annulé (une ligne)
 
 Exemple : scénario « Essai annulé le 3e jour, sans réponse au questionnaire ».
 
@@ -539,7 +554,9 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
+> Vous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.
+>
+> La version gratuite reste à vous, jusqu'à 16 arrêts par tournée.
 >
 > Harold
 

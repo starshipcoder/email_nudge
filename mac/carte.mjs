@@ -260,11 +260,12 @@ export const ARBRE = [
     { si: 'sinon', donne: 'Rappel de fin d’essai', sorte: 'essai_j2', modele: 'essai_j2', scenarios: ['essai-ios-utilise'] }] },
   { si: 'Essai arrêté', enfants: [
     { si: 'carte refusée ou remboursé', donne: null, sorte: 'essai_annule', scenarios: ['carte-refusee', 'essai-rembourse'] },
-    { si: 'arrêté par nous', donne: 'Essai annulé', sorte: 'essai_annule', modele: 'ESSAI_COURT',
+    { si: 'arrêté par nous', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT',
       scenarios: ['essai-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
     { si: 'a repris ou payé avant l’envoi', donne: null, sorte: 'essai_annule', scenarios: ['annule-dans-l-heure-puis-repris'] },
-    { si: 'sinon (avec ou sans réponse au questionnaire)', donne: 'Essai annulé', sorte: 'essai_annule', modele: 'ESSAI_COURT',
-      scenarios: ['essai-annule-sans-reponse', 'essai-annule-avec-reponse'] }] },
+    { si: 'a répondu au questionnaire de l’app', donne: 'Essai annulé (selon sa réponse)', sorte: 'essai_annule', modele: 'ESSAI_REPONSE',
+      scenarios: ['essai-annule-avec-reponse'] },
+    { si: 'sinon', donne: 'Essai annulé (une ligne)', sorte: 'essai_annule', modele: 'ESSAI_COURT', scenarios: ['essai-annule-sans-reponse'] }] },
   { si: 'Abonnement payant arrêté', enfants: [
     { si: 'remboursé ou carte refusée', donne: null, sorte: 'resiliation', scenarios: ['payant-rembourse', 'carte-refusee-renouvellement'] },
     { si: 'arrêté par nous', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',

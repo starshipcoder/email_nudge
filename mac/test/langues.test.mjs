@@ -131,3 +131,32 @@ test('bilan du 25/11 : le jour de fin se dit à l’heure du pays de la personne
   assert.equal(jourFin(fin, 'fr', 'GP'), 'vendredi');
   assert.equal(jourFin(fin, 'en', 'ZZ'), 'on Saturday', 'pays inconnu : Paris');
 });
+
+// Fondateur, 26/11 : une réponse par objection du questionnaire ; Boxy seulement aux livreurs sur iPhone.
+test('essai annulé : une suite par réponse au questionnaire, dans les six langues', async () => {
+  const { brouillonEssaiAnnule, ESSAI_REPONSE } = await import('../brouillons.mjs');
+  const dossier = (raison, metier = null) => ({ questionnaire: { raison, texte: '', le: '2026-12-01' }, calcule_le: '2026-12-02',
+    usage: { metier }, parcours: { onboarding: { metier } } });
+  const fr = (d, o) => brouillonEssaiAnnule(d, 'fr', 'Harold', o).corps;
+  const MERCI = "Bonjour,\n\nVous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.\n\n";
+  assert.equal(fr(dossier('tooBuggy')), `${MERCI}Quel problème avez-vous rencontré ? Je le corrige et je vous préviens quand c'est fait.\n\nHarold`);
+  assert.match(fr(dossier('tooExpensive', 'livreur'), { store: 'APP_STORE' }), /Boxy.*7,99 €.*\nhttps:\/\/apps\.apple\.com\/app\/id6756269385\n/s);
+  for (const [metier, store] of [['commercial', 'APP_STORE'], ['livreur', 'PLAY_STORE'], [null, 'APP_STORE']]) {
+    const t = fr(dossier('tooExpensive', metier), { store });
+    assert.doesNotMatch(t, /Boxy/, `${metier} ${store}`);
+    assert.match(t, /La version gratuite reste à vous, jusqu'à 16 arrêts par tournée\./);
+  }
+  assert.match(fr(dossier('noNeedOfPremiumFeature')), /La version gratuite reste à vous/);
+  for (const r of ['dontNeedAnymore', 'missingFeatures', 'tooSlow', 'difficultToUse']) assert.match(fr(dossier(r)), new RegExp(`^${MERCI}`), r);
+  // Autre raison, pas de réponse, ou une réponse de plus de 60 jours : la ligne pour tous.
+  const LIGNE = /^Bonjour,\n\nVous avez annulé votre essai d'Easy Way\. Qu'est-ce que vous espériez que l'app fasse pour vous \?\n\nHarold$/;
+  assert.match(fr(dossier('other')), LIGNE);
+  assert.match(fr(null), LIGNE);
+  assert.match(fr({ questionnaire: { raison: 'tooSlow', le: '2026-08-01' }, calcule_le: '2026-12-02' }), LIGNE);
+  for (const l of LANGUES) {
+    for (const cle of ['merci', 'boxy', 'gratuit', 'dontNeedAnymore', 'missingFeatures', 'tooBuggy', 'tooSlow', 'difficultToUse']) assert.ok(ESSAI_REPONSE[l]?.[cle], `${l} ${cle}`);
+    const b = brouillonEssaiAnnule(dossier('tooBuggy'), l, 'S');
+    if (l !== 'fr') assert.match(b.traduction_fr.corps, /Je le corrige/);
+    assert.ok(b.corps.split(/\s+/).length <= 50, `${l} : trop long`);
+  }
+});

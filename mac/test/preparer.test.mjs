@@ -83,7 +83,7 @@ test('une annulation d’essai des 7 derniers jours donne un e-mail, sauf si la 
   assert.deepEqual(candidats(faits, inscrits, T).map((c) => [c.type, c.user.id]), [['essai_annule', 'ana@exemple.fr']]);
 });
 
-test('l’annulation d’essai : une seule ligne pour tous, une seule fois, le résumé du dossier joint', async () => {
+test('l’annulation d’essai : la suite de sa réponse, sinon une ligne pour tous, une seule fois, le résumé du dossier joint', async () => {
   const db = baseEnMemoire({ users: inscrits, crm_reglages: [{ id: 'general', signature: 'Prénom' }] });
   const faits = [{ nom: 'rc_trial_cancelled_event', temps: h(-24), ids: ['rcA'], transaction: 'E1', type: 'TRIAL' },
     { nom: 'rc_trial_cancelled_event', temps: h(-20), ids: ['rcB'], transaction: 'E2', type: 'TRIAL' }];
@@ -96,8 +96,8 @@ test('l’annulation d’essai : une seule ligne pour tous, une seule fois, le r
   assert.equal(actions.length, 2);
   const a = actions.find((x) => x.user_id === 'ana@exemple.fr');
   assert.match(a.sujet, /essai/);
-  // Une seule ligne pour tous (fondateur, 26/11, version D) : sa réponse au questionnaire n'est plus citée.
-  assert.equal(a.corps, "Bonjour,\n\nVous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?\n\nPrénom");
+  // Sa réponse « il manquait des fonctions » donne sa suite (fondateur, 26/11) ; son usage n'est pas cité.
+  assert.equal(a.corps, "Bonjour,\n\nVous avez annulé votre essai d'Easy Way, et vous avez dit pourquoi dans l'app, merci.\n\nQuelle fonction vous a le plus manqué ?\n\nPrénom");
   assert.equal(a.a_verifier, undefined);
   assert.equal(a.variante, 'dossier', 'le résumé du dossier reste joint pour le fondateur');
   assert.equal(new Date(a.echeance).getTime(), h(-24) + 7 * 24 * 3600000);

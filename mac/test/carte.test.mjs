@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { ARBRE, POUR_TOUS, SCENARIOS, arbreTexte, carte, dossierFictif, etatA, etapesDatees, fauxResend, feuilles, markdown } from '../carte.mjs';
 import { MODELES, rendre } from '../modeles.mjs';
-import { ESSAI_COURT, T, brouillonAvecTraduction, brouillonEssaiAnnule } from '../brouillons.mjs';
+import { ESSAI_COURT, ESSAI_REPONSE, T, brouillonAvecTraduction, brouillonEssaiAnnule } from '../brouillons.mjs';
 import { dossierDe, resumer } from '../dossier.mjs';
 
 const ATTENDUE = fileURLToPath(new URL('../carte-attendue.md', import.meta.url));
@@ -26,9 +26,10 @@ test('chaque modèle et chaque brouillon apparaît dans au moins un scénario', 
     bug_corrige: emails.some((m) => m.type === 'bug_corrige' && fr(m).startsWith(MODELES.bug_corrige.fr[1].split('{{')[0])),
     T: emails.some((m) => m.type === 'resiliation' && fr(m).includes(T.fr.pris) && fr(m) !== rendre('resiliation', 'fr', { signature: 'Harold' }).corps),
     ESSAI_COURT: emails.some((m) => m.type === 'essai_annule' && fr(m).includes(ESSAI_COURT.fr.corps)),
+    ESSAI_REPONSE: emails.some((m) => m.type === 'essai_annule' && fr(m).includes(ESSAI_REPONSE.fr.merci)),
   };
   for (const nom of Object.keys(MODELES)) assert.ok(vu[nom], `le modèle ${nom} n'apparaît dans aucun scénario`);
-  for (const nom of ['T', 'ESSAI_COURT']) assert.ok(vu[nom], `le brouillon ${nom} n'apparaît dans aucun scénario`);
+  for (const nom of ['T', 'ESSAI_COURT', 'ESSAI_REPONSE']) assert.ok(vu[nom], `le brouillon ${nom} n'apparaît dans aucun scénario`);
   // Les six langues sont rendues pour chaque e-mail, sans variable restée vide.
   for (const m of emails) for (const [lg, x] of Object.entries(m.langues)) assert.ok(x && !/\{\{/.test(x.corps), `${m.id} en ${lg}`);
 });
@@ -42,6 +43,7 @@ const utilise = {
   bug_corrige: (m) => m.type === 'bug_corrige' && m.texte_fr.corps.startsWith(MODELES.bug_corrige.fr[1].split('{{')[0]),
   T: (m) => m.type === 'resiliation' && m.texte_fr.corps.includes(T.fr.pris) && m.texte_fr.corps !== MODELE_FR('resiliation'),
   ESSAI_COURT: (m) => m.type === 'essai_annule' && m.texte_fr.corps.includes(ESSAI_COURT.fr.corps),
+  ESSAI_REPONSE: (m) => m.type === 'essai_annule' && m.texte_fr.corps.includes(ESSAI_REPONSE.fr.merci),
   demande_avis: (m) => m.type === 'demande_avis',
   onboarding: (m) => m.type === 'onboarding',
   gros: (m) => m.type === 'gros',
@@ -75,7 +77,7 @@ test('chaque feuille de l’arbre : le scénario relié donne ce résultat par l
 
 test('chaque modèle et chaque brouillon est au bout d’au moins une feuille', () => {
   const aubout = new Set(feuilles().filter((f) => f.donne && !f.ecart).map((f) => f.modele));
-  for (const nom of [...Object.keys(MODELES), 'T', 'ESSAI_COURT']) assert.ok(aubout.has(nom), `${nom} n’est au bout d’aucune feuille`);
+  for (const nom of [...Object.keys(MODELES), 'T', 'ESSAI_COURT', 'ESSAI_REPONSE']) assert.ok(aubout.has(nom), `${nom} n’est au bout d’aucune feuille`);
   for (const f of feuilles()) if (f.donne) assert.ok(utilise[f.modele], `« ${f.si} » : modèle ${f.modele} inconnu`);
 });
 
