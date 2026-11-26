@@ -3,7 +3,7 @@
 import { cleUtilisateur } from './envoi.mjs';
 import { jourFin, rendre, rendreAvecTraduction } from './modeles.mjs';
 import { brouillonAvecTraduction, resumer } from './dossier.mjs';
-import { brouillonEssaiAnnule, reponseRecente } from './brouillons.mjs';
+import { brouillonEssaiAnnule } from './brouillons.mjs';
 import { langueDePersonne } from './langues.mjs';
 
 const H = 3600 * 1000;
@@ -154,14 +154,11 @@ export function actionDe(c, { tournees, signature, maintenant, dossierPour = nul
       echeance: new Date(new Date(c.fait.fin).getTime() - AVANT_PRELEVEMENT), cree_le: maintenant };
   }
   if (c.type === 'essai_annule') {
-    // Sans dossier, un dossier vide : l'ouverture, la question ouverte et la fin, sans fait inventé.
-    const { d: sur, doute: douteUsage } = dossierSur(dossier);
-    const d = sur ?? { questionnaire: null, usage: USAGE_VIDE };
-    const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(d, langue, signature);
-    // Le texte court n'affirme rien sur l'usage : rien à vérifier ; celui qui part de sa réponse, si.
-    const doute = douteUsage && reponseRecente(d);
+    // Une seule ligne pour tous (fondateur, 26/11) : le texte n'affirme rien sur la personne, rien à vérifier.
+    // Le résumé de son dossier reste joint, pour le fondateur qui lit sa réponse.
+    const { sujet, corps, traduction_fr } = brouillonEssaiAnnule(null, langue, signature);
     return { id: `essai_annule__${cle}__${c.fait.transaction}`, type: 'essai_annule', user_id: c.user.id, statut: 'prete', sujet, corps, langue, ...source,
-      ...(traduction_fr ? { traduction_fr } : {}), ...(doute ? { a_verifier: INCONNU } : {}),
+      ...(traduction_fr ? { traduction_fr } : {}),
       ...(dossier ? { variante: 'dossier', resume: resumer(dossier, maintenant) } : {}),
       echeance: new Date(c.fait.temps + FENETRE_RESILIATION), cree_le: maintenant };
   }

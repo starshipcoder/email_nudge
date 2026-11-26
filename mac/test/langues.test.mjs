@@ -90,7 +90,7 @@ test('le texte court de l’essai annulé existe dans les six langues, une seule
     assert.ok(ESSAI_COURT[l], l);
     assert.equal((b.corps.match(/[?]/g) ?? []).length, 1, l);
     assert.match(b.corps, /Prénom$/, l);
-    if (l !== 'fr') assert.match(b.traduction_fr.corps, /Qu'est-ce qui ne vous a pas convenu \?/);
+    if (l !== 'fr') assert.match(b.traduction_fr.corps, /Qu'est-ce que vous espériez que l'app fasse pour vous \?/);
   }
 });
 

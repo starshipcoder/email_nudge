@@ -12,10 +12,9 @@ Essai qui finit dans 2 jours
 └─ sinon ............................................. Rappel de fin d’essai
 Essai arrêté
 ├─ carte refusée ou remboursé ........................ aucun
-├─ arrêté par nous ................................... Essai annulé (court), écart : voulu aucun
+├─ arrêté par nous ................................... Essai annulé, écart : voulu aucun
 ├─ a repris ou payé avant l’envoi .................... aucun
-├─ a répondu au questionnaire de l’app ............... Essai annulé (part de sa réponse)
-└─ sinon ............................................. Essai annulé (court)
+└─ sinon (avec ou sans réponse au questionnaire) ..... Essai annulé
 Abonnement payant arrêté
 ├─ remboursé ou carte refusée ........................ aucun
 ├─ arrêté par nous ................................... Résiliation (part de son dossier), écart : voulu aucun
@@ -65,25 +64,7 @@ Exemple : scénario « Essai iOS utilisé, puis payé ».
 >
 > Harold
 
-### Essai annulé (part de sa réponse)
-
-Exemple : scénario « Essai annulé avec une réponse au questionnaire ».
-
-> **Objet :** Votre essai Easy Way
->
-> Bonjour,
->
-> Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.
->
-> Vous avez lancé 6 tournées avec l'app en 5 semaines. En regardant de mon côté, je vois que beaucoup d'adresses n'ont pas été trouvées sur la carte. Dans l'app, vous avez indiqué que c'était trop cher. Vous avez écrit : « Je fais peu de tournées ».
->
-> Pour quel prix, ou avec quoi de plus, l'app vous aurait-elle paru valoir le coup ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
->
-> Harold
-
-### Essai annulé (court)
+### Essai annulé
 
 Exemple : scénario « Essai annulé le 3e jour, sans réponse au questionnaire ».
 
@@ -91,9 +72,7 @@ Exemple : scénario « Essai annulé le 3e jour, sans réponse au questionnaire 
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -228,20 +207,20 @@ Exemple : scénario « Gros utilisateur ».
 | Essai Android non utilisé | Inscrit depuis 20 jours, essai Google Play de 14 jours, aucune tournée ; l’essai se convertit. | Rappel de fin d’essai (fr) | préparé J12, envoyé J12 |
 | Essai Android non utilisé | Inscrit depuis 20 jours, essai Google Play de 14 jours, aucune tournée ; l’essai se convertit. | aucun | Bienvenue : rien de préparé (inscrit depuis plus de 72 h : pas de bienvenue rattrapée) |
 | Essai annulé dans l’heure | S’inscrit, démarre un essai et l’annule 30 minutes après. | Bienvenue (fr) | préparé J0, envoyé J0 |
-| Essai annulé dans l’heure | S’inscrit, démarre un essai et l’annule 30 minutes après. | Essai annulé, court (fr) | préparé J0, retenu J0 (trop tôt), envoyé J3 |
+| Essai annulé dans l’heure | S’inscrit, démarre un essai et l’annule 30 minutes après. | Essai annulé (fr) | préparé J0, retenu J0 (trop tôt), envoyé J3 |
 | Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | Bienvenue (fr) | préparé J0, envoyé J0 |
-| Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | aucun | Essai annulé, court : préparé J0, retenu J0 (trop tôt), bloqué J0 : a repris son essai ou payé |
+| Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | aucun | Essai annulé : préparé J0, retenu J0 (trop tôt), bloqué J0 : a repris son essai ou payé |
 | Essai annulé dans l’heure, puis repris | Annule son essai 30 minutes après l’avoir démarré, le reprend le soir, puis paie à la fin de l’essai. | Rappel de fin d’essai (fr) | préparé J5, envoyé J5 |
 | Essai fini par une carte refusée | Essai App Store, la carte est refusée à la fin de l’essai (raison BILLING_ERROR). | Rappel de fin d’essai (fr) | préparé J5, envoyé J5 |
 | Essai fini par une carte refusée | Essai App Store, la carte est refusée à la fin de l’essai (raison BILLING_ERROR). | aucun | Essai annulé : rien de préparé (carte refusée : « vous avez annulé » serait faux) |
 | Essai remboursé par le support | Essai App Store remboursé par le support le 2e jour (raison CUSTOMER_SUPPORT). | aucun | Essai annulé : rien de préparé (remboursement : pas un choix de la personne) |
 | Essai remboursé par le support | Essai App Store remboursé par le support le 2e jour (raison CUSTOMER_SUPPORT). | aucun | Rappel de fin d’essai : rien de préparé (l’essai est arrêté) |
-| Essai arrêté par le développeur | Essai arrêté le 2e jour par une décision du développeur (raison DEVELOPER_INITIATED). | Essai annulé, court (fr) | préparé J2, envoyé J2 |
-| Essai annulé le 3e jour, sans réponse au questionnaire | Essai App Store annulé le 3e jour ; pas de réponse au questionnaire de l’app. | Essai annulé, court (fr) | préparé J3, envoyé J3 |
-| Essai annulé avec une réponse au questionnaire | Répond « trop cher » dans l’app puis annule son essai le 3e jour ; 6 tournées, beaucoup d’adresses non trouvées. | Essai annulé, avec sa réponse (fr) | préparé J3, envoyé J3 |
+| Essai arrêté par le développeur | Essai arrêté le 2e jour par une décision du développeur (raison DEVELOPER_INITIATED). | Essai annulé (fr) | préparé J2, envoyé J2 |
+| Essai annulé le 3e jour, sans réponse au questionnaire | Essai App Store annulé le 3e jour ; pas de réponse au questionnaire de l’app. | Essai annulé (fr) | préparé J3, envoyé J3 |
+| Essai annulé avec une réponse au questionnaire | Répond « trop cher » dans l’app puis annule son essai le 3e jour ; 6 tournées, beaucoup d’adresses non trouvées. | Essai annulé (fr) | préparé J3, envoyé J3 |
 | Essai annulé le matin du rappel | Annule son essai le 5e jour à 8 h, une heure avant la passe qui prépare le rappel ; la base Mixpanel ne le sait que le lendemain. | aucun | Rappel de fin d’essai : préparé J5, bloqué J5 : déjà payé ou annulé |
-| Essai annulé le matin du rappel | Annule son essai le 5e jour à 8 h, une heure avant la passe qui prépare le rappel ; la base Mixpanel ne le sait que le lendemain. | Essai annulé, court (fr) | préparé J5, envoyé J5 |
-| Essai annulé, puis payé deux jours après | Annule son essai le 2e jour, puis achète l’abonnement mensuel le 4e jour. | Essai annulé, court (fr) | préparé J2, envoyé J2 |
+| Essai annulé le matin du rappel | Annule son essai le 5e jour à 8 h, une heure avant la passe qui prépare le rappel ; la base Mixpanel ne le sait que le lendemain. | Essai annulé (fr) | préparé J5, envoyé J5 |
+| Essai annulé, puis payé deux jours après | Annule son essai le 2e jour, puis achète l’abonnement mensuel le 4e jour. | Essai annulé (fr) | préparé J2, envoyé J2 |
 | Résiliation, sans dossier lisible | Payant mensuel qui arrête son abonnement ; personne introuvable dans la base Mixpanel. | Résiliation, modèle (fr) | préparé J2, envoyé J2 |
 | Résiliation, avec une réponse au questionnaire | Payant qui répond « il manque des fonctions » dans l’app et arrête son abonnement ; 9 tournées. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
 | Résiliation, un problème vu, sans réponse | Payant qui arrête sans répondre ; ses imports de fichier ont échoué 3 fois, aucune tournée. | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
@@ -254,7 +233,7 @@ Exemple : scénario « Gros utilisateur ».
 | Payant arrêté par le développeur | Payant mensuel dont l’abonnement est arrêté par une décision du développeur (raison DEVELOPER_INITIATED). | Résiliation, depuis le dossier (fr) | préparé J2, envoyé J2 |
 | Désinscrit pendant son essai | S’inscrit et démarre un essai, se désinscrit le lendemain, annule son essai le 6e jour. | Bienvenue (fr) | préparé J0, envoyé J0 |
 | Désinscrit pendant son essai | S’inscrit et démarre un essai, se désinscrit le lendemain, annule son essai le 6e jour. | aucun | Rappel de fin d’essai : préparé J5, bloqué J5 : désinscrit |
-| Désinscrit pendant son essai | S’inscrit et démarre un essai, se désinscrit le lendemain, annule son essai le 6e jour. | aucun | Essai annulé, court : préparé J6, bloqué J6 : désinscrit |
+| Désinscrit pendant son essai | S’inscrit et démarre un essai, se désinscrit le lendemain, annule son essai le 6e jour. | aucun | Essai annulé : préparé J6, bloqué J6 : désinscrit |
 | Compte de test du fondateur | Compte de test, onboarding pas fini ; signale un bug, corrigé en 7.6.9 ; essai démarré puis annulé ; rouvre l’app. | Onboarding abandonné (fr) | préparé J1, envoyé J1 à l’adresse de test |
 | Compte de test du fondateur | Compte de test, onboarding pas fini ; signale un bug, corrigé en 7.6.9 ; essai démarré puis annulé ; rouvre l’app. | Bug corrigé (fr) | préparé J3, envoyé J3 à l’adresse de test |
 | Compte de test du fondateur | Compte de test, onboarding pas fini ; signale un bug, corrigé en 7.6.9 ; essai démarré puis annulé ; rouvre l’app. | aucun | Bienvenue : rien de préparé (compte de test) |
@@ -265,11 +244,11 @@ Exemple : scénario « Gros utilisateur ».
 | Adresse en rebond | S’inscrit, démarre un essai ; Resend signale un rebond le jour même ; un bug qu’il a signalé est corrigé. | aucun | Rappel de fin d’essai : préparé J5, bloqué J5 : adresse en rebond |
 | Bienvenue, rappel, puis annulation | S’inscrit et démarre un essai ; reçoit la bienvenue puis le rappel ; annule le lendemain du rappel. | Bienvenue (fr) | préparé J0, envoyé J0 |
 | Bienvenue, rappel, puis annulation | S’inscrit et démarre un essai ; reçoit la bienvenue puis le rappel ; annule le lendemain du rappel. | Rappel de fin d’essai (fr) | préparé J5, envoyé J5 |
-| Bienvenue, rappel, puis annulation | S’inscrit et démarre un essai ; reçoit la bienvenue puis le rappel ; annule le lendemain du rappel. | Essai annulé, court (fr) | préparé J6, retenu J6 (trop tôt), envoyé J8 |
+| Bienvenue, rappel, puis annulation | S’inscrit et démarre un essai ; reçoit la bienvenue puis le rappel ; annule le lendemain du rappel. | Essai annulé (fr) | préparé J6, retenu J6 (trop tôt), envoyé J8 |
 | Personne au Mexique, fin d’essai un vendredi soir | App en espagnol, au Mexique ; l’essai finit vendredi à 23 h 30 UTC, déjà samedi 0 h 30 à Paris, encore vendredi au Mexique. | Rappel de fin d’essai (es) | préparé J6, envoyé J6 |
 | Bug corrigé pour une personne en allemand | App en allemand ; signale un bug, le fondateur le note corrigé en 7.6.9, la version sort sur l’App Store. | aucun | Bug corrigé : préparé J2, retenu J2 (à vérifier : le titre public est en français : le traduire dans le texte), expiré J33 |
 | Résiliation en italien | App en italien ; payant qui arrête ; pas de dossier lisible. | Résiliation, modèle (it) | préparé J2, envoyé J2 |
-| Langue inconnue, pays Brésil | L’app n’a pas envoyé de langue ; la base Mixpanel le voit au Brésil ; annule son essai le 3e jour. | Essai annulé, court (pt) | préparé J3, envoyé J3 |
+| Langue inconnue, pays Brésil | L’app n’a pas envoyé de langue ; la base Mixpanel le voit au Brésil ; annule son essai le 3e jour. | Essai annulé (pt) | préparé J3, envoyé J3 |
 | Langue inconnue, pays Belgique | L’app n’a pas envoyé de langue ; la base Mixpanel le voit en Belgique ; essai App Store. | Rappel de fin d’essai (en) | préparé J5, envoyé J5 |
 | Ni langue ni pays, store inconnu | Ni langue de l’app ni pays connus ; le store de l’essai n’est pas donné. | Rappel de fin d’essai (en) | préparé J5, envoyé J5 |
 | Onboarding abandonné | S’inscrit et laisse l’onboarding en plan ; ni essai ni abonnement. | Bienvenue (fr) | préparé J0, envoyé J0 |
@@ -362,9 +341,9 @@ Résultat : Bienvenue, envoyé ; Essai annulé, envoyé (retenu avant : trop tô
 - J0 9 h : Bienvenue envoyé
 - J0 9 h 10 : essai démarré (App Store, 7 jours)
 - J0 9 h 40 : annule son essai
-- J0 10 h : Essai annulé, court préparé
-- J0 10 h : Essai annulé, court retenu : trop tôt
-- J3 9 h : Essai annulé, court envoyé
+- J0 10 h : Essai annulé préparé
+- J0 10 h : Essai annulé retenu : trop tôt
+- J3 9 h : Essai annulé envoyé
 
 #### Bienvenue : envoyé
 
@@ -380,7 +359,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Harold
 
-#### Essai annulé, court : envoyé (retenu avant : trop tôt)
+#### Essai annulé : envoyé (retenu avant : trop tôt)
 
 Langue de la personne : français, d'après l'app.
 
@@ -388,9 +367,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -407,10 +384,10 @@ Résultat : Bienvenue, envoyé ; Essai annulé, bloqué : a repris son essai ou 
 - J0 9 h : Bienvenue envoyé
 - J0 9 h 10 : essai démarré (App Store, 7 jours)
 - J0 9 h 40 : annule son essai
-- J0 10 h : Essai annulé, court préparé
-- J0 10 h : Essai annulé, court retenu : trop tôt
+- J0 10 h : Essai annulé préparé
+- J0 10 h : Essai annulé retenu : trop tôt
 - J0 21 h : reprend (annulation retirée)
-- J0 22 h : Essai annulé, court bloqué à l’envoi : a repris son essai ou payé
+- J0 22 h : Essai annulé bloqué à l’envoi : a repris son essai ou payé
 - J5 9 h : Rappel de fin d’essai préparé
 - J5 9 h : Rappel de fin d’essai envoyé
 - J7 9 h 10 : fin de l’essai : premier paiement
@@ -429,7 +406,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Harold
 
-#### Essai annulé, court : bloqué : a repris son essai ou payé
+#### Essai annulé : bloqué : a repris son essai ou payé
 
 Langue de la personne : français, d'après l'app.
 
@@ -437,9 +414,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -504,10 +479,10 @@ Résultat : Essai annulé, envoyé.
 - J-20 10 h : inscription avec une adresse (langue de l’app : fr)
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J2 10 h : essai arrêté : par le développeur (DEVELOPER_INITIATED)
-- J2 11 h : Essai annulé, court préparé
-- J2 11 h : Essai annulé, court envoyé
+- J2 11 h : Essai annulé préparé
+- J2 11 h : Essai annulé envoyé
 
-#### Essai annulé, court : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : français, d'après l'app.
 
@@ -515,9 +490,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -530,10 +503,10 @@ Résultat : Essai annulé, envoyé.
 - J-20 10 h : inscription avec une adresse (langue de l’app : fr)
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J3 15 h : annule son essai
-- J3 16 h : Essai annulé, court préparé
-- J3 16 h : Essai annulé, court envoyé
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
 
-#### Essai annulé, court : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : français, d'après l'app.
 
@@ -541,9 +514,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -557,10 +528,10 @@ Résultat : Essai annulé, envoyé.
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J3 15 h : répond au questionnaire de l’app : trop cher, « Je fais peu de tournées »
 - J3 15 h 05 : annule son essai
-- J3 16 h : Essai annulé, avec sa réponse préparé
-- J3 16 h : Essai annulé, avec sa réponse envoyé
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
 
-#### Essai annulé, avec sa réponse : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : français, d'après l'app.
 
@@ -568,13 +539,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.
->
-> Vous avez lancé 6 tournées avec l'app en 5 semaines. En regardant de mon côté, je vois que beaucoup d'adresses n'ont pas été trouvées sur la carte. Dans l'app, vous avez indiqué que c'était trop cher. Vous avez écrit : « Je fais peu de tournées ».
->
-> Pour quel prix, ou avec quoi de plus, l'app vous aurait-elle paru valoir le coup ?
->
-> Une ligne en réponse suffit : c'est ce qui décide de ce que je corrige ensuite. Je ne vous écrirai pas d'autre e-mail à ce sujet.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -588,9 +553,9 @@ Résultat : Rappel de fin d’essai, bloqué : déjà payé ou annulé ; Essai a
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J5 8 h : annule son essai
 - J5 9 h : Rappel de fin d’essai préparé
-- J5 9 h : Essai annulé, court préparé
+- J5 9 h : Essai annulé préparé
 - J5 9 h : Rappel de fin d’essai bloqué à l’envoi : déjà payé ou annulé
-- J5 9 h : Essai annulé, court envoyé
+- J5 9 h : Essai annulé envoyé
 
 #### Rappel de fin d’essai : bloqué : déjà payé ou annulé
 
@@ -606,7 +571,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Harold
 
-#### Essai annulé, court : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : français, d'après l'app.
 
@@ -614,9 +579,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -629,11 +592,11 @@ Résultat : Essai annulé, envoyé.
 - J-20 10 h : inscription avec une adresse (langue de l’app : fr)
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J2 10 h : annule son essai
-- J2 11 h : Essai annulé, court préparé
-- J2 11 h : Essai annulé, court envoyé
+- J2 11 h : Essai annulé préparé
+- J2 11 h : Essai annulé envoyé
 - J4 10 h : achète l’offre mensuelle
 
-#### Essai annulé, court : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : français, d'après l'app.
 
@@ -641,9 +604,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -927,8 +888,8 @@ Résultat : Bienvenue, envoyé ; Rappel de fin d’essai, bloqué : désinscrit 
 - J5 9 h : Rappel de fin d’essai préparé
 - J5 9 h : Rappel de fin d’essai bloqué à l’envoi : désinscrit
 - J6 11 h : annule son essai
-- J6 12 h : Essai annulé, court préparé
-- J6 12 h : Essai annulé, court bloqué à l’envoi : désinscrit
+- J6 12 h : Essai annulé préparé
+- J6 12 h : Essai annulé bloqué à l’envoi : désinscrit
 
 #### Bienvenue : envoyé
 
@@ -958,7 +919,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Harold
 
-#### Essai annulé, court : bloqué : désinscrit
+#### Essai annulé : bloqué : désinscrit
 
 Langue de la personne : français, d'après l'app.
 
@@ -966,9 +927,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -1103,9 +1062,9 @@ Résultat : Bienvenue, envoyé ; Rappel de fin d’essai, envoyé ; Essai annul�
 - J5 9 h : Rappel de fin d’essai préparé
 - J5 9 h : Rappel de fin d’essai envoyé
 - J6 11 h : annule son essai
-- J6 12 h : Essai annulé, court préparé
-- J6 12 h : Essai annulé, court retenu : trop tôt
-- J8 9 h : Essai annulé, court envoyé
+- J6 12 h : Essai annulé préparé
+- J6 12 h : Essai annulé retenu : trop tôt
+- J8 9 h : Essai annulé envoyé
 
 #### Bienvenue : envoyé
 
@@ -1135,7 +1094,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Harold
 
-#### Essai annulé, court : envoyé (retenu avant : trop tôt)
+#### Essai annulé : envoyé (retenu avant : trop tôt)
 
 Langue de la personne : français, d'après l'app.
 
@@ -1143,9 +1102,7 @@ Langue de la personne : français, d'après l'app.
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 
@@ -1244,10 +1201,10 @@ Résultat : Essai annulé, envoyé.
 - J-20 10 h : inscription avec une adresse (langue de l’app : aucune)
 - J0 10 h : essai démarré (App Store, 7 jours)
 - J3 15 h : annule son essai
-- J3 16 h : Essai annulé, court préparé
-- J3 16 h : Essai annulé, court envoyé
+- J3 16 h : Essai annulé préparé
+- J3 16 h : Essai annulé envoyé
 
-#### Essai annulé, court : envoyé
+#### Essai annulé : envoyé
 
 Langue de la personne : portugais, d'après le pays (BR).
 
@@ -1255,9 +1212,7 @@ Langue de la personne : portugais, d'après le pays (BR).
 >
 > Bonjour,
 >
-> Vous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.
->
-> Qu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même.
+> Vous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?
 >
 > Harold
 

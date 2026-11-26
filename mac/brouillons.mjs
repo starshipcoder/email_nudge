@@ -156,37 +156,20 @@ for (const L of Object.values(T)) {
   L.signaux['Event-ImportGsheetError'] ??= L.signaux['Event-ImportExcelError'];
 }
 
-// L'annulation d'un essai (EW-52, fondateur, 22/11 : « il faudrait écrire à tout le monde ») : le même e-mail, avec
-// son ouverture et les deux questions qui parlaient d'abonnement.
-export const ESSAI = {
-  fr: { sujet: 'Votre essai Easy Way', pris: "Vous avez annulé votre essai d'Easy Way. C'est pris en compte : rien ne vous sera facturé.",
-    questions: { noNeedOfPremiumFeature: "Qu'est-ce qui vous aurait fait continuer après l'essai ?", other: "Si vous avez une minute : qu'est-ce qui vous a fait arrêter l'essai ?" } },
-  en: { sujet: 'Your Easy Way trial', pris: 'You cancelled your Easy Way trial. It is done: you will not be charged.',
-    questions: { noNeedOfPremiumFeature: 'What would have made you continue after the trial?', other: 'If you have a minute: what made you stop the trial?' } },
-  de: { sujet: 'Ihr Easy Way Test', pris: 'Sie haben Ihren Easy Way Test gekündigt. Das ist erledigt: Ihnen wird nichts berechnet.',
-    questions: { noNeedOfPremiumFeature: 'Was hätte Sie dazu gebracht, nach dem Test weiterzumachen?', other: 'Wenn Sie eine Minute haben: Warum haben Sie den Test beendet?' } },
-  es: { sujet: 'Su prueba de Easy Way', pris: 'Ha cancelado su prueba de Easy Way. Ya está hecho: no se le cobrará nada.',
-    questions: { noNeedOfPremiumFeature: '¿Qué le habría hecho continuar después de la prueba?', other: 'Si tiene un minuto: ¿qué le hizo dejar la prueba?' } },
-  it: { sujet: 'La sua prova di Easy Way', pris: 'Ha annullato la sua prova di Easy Way. È fatto: non le verrà addebitato nulla.',
-    questions: { noNeedOfPremiumFeature: "Che cosa l'avrebbe convinta a continuare dopo la prova?", other: "Se ha un minuto: che cosa l'ha fatta smettere la prova?" } },
-  pt: { sujet: 'O seu teste do Easy Way', pris: 'Cancelou o seu teste do Easy Way. Está feito: não lhe será cobrado nada.',
-    questions: { noNeedOfPremiumFeature: 'O que o teria feito continuar depois do teste?', other: 'Se tiver um minuto: o que o fez parar o teste?' } },
-};
-
-// L'essai annulé sans réponse au questionnaire de l'app (EW-54, validé par le fondateur le 22/11) : court, une question.
-// Le questionnaire de l'app répond déjà à 78 % de ceux qui le voient : l'e-mail sert surtout à qui ne l'a pas vu.
+// L'essai annulé (fondateur, 26/11, version D) : une seule ligne, la même pour tous, avec ou sans réponse au questionnaire.
+// Transposée de « what were you hoping it would do? » (environ 20 % de réponses sur une centaine d'envois,
+// hephaistos research/donnees/citations-voix.csv, resil-3, « fort »). Brique emails-utilisateurs.
 export const ESSAI_COURT = {
-  fr: { sujet: 'Votre essai Easy Way', corps: "Bonjour,\n\nVous avez annulé votre essai d'Easy Way, rien ne vous sera facturé.\n\nQu'est-ce qui ne vous a pas convenu ? Une ligne en réponse m'aide beaucoup, je lis tout moi-même." },
-  en: { sujet: 'Your Easy Way trial', corps: "Hello,\n\nYou cancelled your Easy Way trial, you will not be charged.\n\nWhat didn't work for you? One line in reply helps me a lot, I read everything myself." },
-  de: { sujet: 'Ihr Easy Way Test', corps: 'Hallo,\n\nSie haben Ihren Easy Way Test gekündigt, Ihnen wird nichts berechnet.\n\nWas hat für Sie nicht gepasst? Eine Zeile als Antwort hilft mir sehr, ich lese alles selbst.' },
-  es: { sujet: 'Su prueba de Easy Way', corps: 'Hola:\n\nHa cancelado su prueba de Easy Way, no se le cobrará nada.\n\n¿Qué no le convenció? Una línea en respuesta me ayuda mucho, leo todo yo mismo.' },
-  it: { sujet: 'La sua prova di Easy Way', corps: "Buongiorno,\n\nHa annullato la sua prova di Easy Way, non le verrà addebitato nulla.\n\nChe cosa non l'ha convinta? Una riga in risposta mi aiuta molto, leggo tutto io stesso." },
-  pt: { sujet: 'O seu teste do Easy Way', corps: 'Olá,\n\nCancelou o seu teste do Easy Way, não lhe será cobrado nada.\n\nO que não o convenceu? Uma linha em resposta ajuda-me muito, leio tudo eu próprio.' },
+  fr: { sujet: 'Votre essai Easy Way', corps: "Bonjour,\n\nVous avez annulé votre essai d'Easy Way. Qu'est-ce que vous espériez que l'app fasse pour vous ?" },
+  en: { sujet: 'Your Easy Way trial', corps: 'Hello,\n\nYou cancelled your Easy Way trial. What were you hoping the app would do for you?' },
+  de: { sujet: 'Ihre Easy Way Testphase', corps: 'Hallo,\n\nSie haben Ihre Easy Way Testphase beendet. Was hatten Sie sich von der App erhofft?' },
+  es: { sujet: 'Su prueba de Easy Way', corps: 'Hola:\n\nHa cancelado su prueba de Easy Way. ¿Qué esperaba que la app hiciera por usted?' },
+  it: { sujet: 'La sua prova di Easy Way', corps: "Buongiorno,\n\nha annullato la sua prova di Easy Way. Che cosa sperava che l'app facesse per lei?" },
+  pt: { sujet: 'O seu teste do Easy Way', corps: 'Olá,\n\nCancelou o seu teste do Easy Way. O que esperava que a app fizesse por si?' },
 };
 
-// L'e-mail d'essai annulé : court sans réponse au questionnaire, sinon parti de sa réponse ; et sa traduction française.
-export function brouillonEssaiAnnule(d, langue, signature) {
-  if (d && reponseRecente(d)) return brouillonAvecTraduction(d, langue, signature, 'essai');
+// L'e-mail d'essai annulé et sa traduction française. Le dossier n'est plus lu : le texte n'affirme rien sur la personne.
+export function brouillonEssaiAnnule(_d, langue, signature) {
   const court = (lg) => { const t = ESSAI_COURT[lg] ?? ESSAI_COURT.en; return { sujet: t.sujet, corps: `${t.corps}\n\n${signature}` }; };
   const b = court(langue);
   return langue === 'fr' ? b : { ...b, traduction_fr: court('fr') };
@@ -208,11 +191,8 @@ export function cleQuestion(d) {
   return d.usage.signaux.length ? 'probleme' : 'other';
 }
 
-// sorte : 'resiliation' (un abonnement payé) ou 'essai' (un essai annulé).
-export function brouillonResiliation(d, langue, signature, sorte = 'resiliation') {
-  const base = T[langue] ?? T.en;
-  const E = sorte === 'essai' ? (ESSAI[langue] ?? ESSAI.en) : null;
-  const L = E ? { ...base, sujet: E.sujet, pris: E.pris, questions: { ...base.questions, ...E.questions } } : base;
+export function brouillonResiliation(d, langue, signature) {
+  const L = T[langue] ?? T.en;
   const u = d.usage; const r = reponseRecente(d) ? d.questionnaire?.raison : null;
   const semaines = u.premier_jour && u.dernier_jour ? Math.max(1, Math.round((new Date(u.dernier_jour) - new Date(u.premier_jour)) / (7 * JOUR))) : null;
   const zone = u.zones.find((z) => L.zones[z.zone])?.zone;
@@ -230,7 +210,7 @@ export function brouillonResiliation(d, langue, signature, sorte = 'resiliation'
 }
 
 // Le brouillon et, s'il n'est pas en français, le même rendu en français pour la relecture du fondateur.
-export function brouillonAvecTraduction(d, langue, signature, sorte = 'resiliation') {
-  const b = brouillonResiliation(d, langue, signature, sorte);
-  return langue === 'fr' ? b : { ...b, traduction_fr: brouillonResiliation(d, 'fr', signature, sorte) };
+export function brouillonAvecTraduction(d, langue, signature) {
+  const b = brouillonResiliation(d, langue, signature);
+  return langue === 'fr' ? b : { ...b, traduction_fr: brouillonResiliation(d, 'fr', signature) };
 }

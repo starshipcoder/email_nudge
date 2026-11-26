@@ -12,7 +12,6 @@ import { preparerContacts } from './contacter.mjs';
 import { preparerAvis, texteAvis } from './avis.mjs';
 import { bugs } from './bugs.mjs';
 import { ZONES, RAISONS, questionnaireDeFiche } from './dossier.mjs';
-import { ESSAI } from './brouillons.mjs';
 import { LANGUES, NOMS_LANGUES, direSource } from './langues.mjs';
 
 const H = 3600000;
@@ -261,12 +260,11 @@ export const ARBRE = [
     { si: 'sinon', donne: 'Rappel de fin d’essai', sorte: 'essai_j2', modele: 'essai_j2', scenarios: ['essai-ios-utilise'] }] },
   { si: 'Essai arrêté', enfants: [
     { si: 'carte refusée ou remboursé', donne: null, sorte: 'essai_annule', scenarios: ['carte-refusee', 'essai-rembourse'] },
-    { si: 'arrêté par nous', donne: 'Essai annulé (court)', sorte: 'essai_annule', variante: 'court', modele: 'ESSAI_COURT',
+    { si: 'arrêté par nous', donne: 'Essai annulé', sorte: 'essai_annule', modele: 'ESSAI_COURT',
       scenarios: ['essai-arrete-par-le-developpeur'], ecart: 'voulu : aucun. La fiche Firebase ne dit pas qui a arrêté : le code y voit un arrêt par la personne.' },
     { si: 'a repris ou payé avant l’envoi', donne: null, sorte: 'essai_annule', scenarios: ['annule-dans-l-heure-puis-repris'] },
-    { si: 'a répondu au questionnaire de l’app', donne: 'Essai annulé (part de sa réponse)', sorte: 'essai_annule', variante: 'avec sa réponse', modele: 'ESSAI',
-      scenarios: ['essai-annule-avec-reponse'] },
-    { si: 'sinon', donne: 'Essai annulé (court)', sorte: 'essai_annule', variante: 'court', modele: 'ESSAI_COURT', scenarios: ['essai-annule-sans-reponse'] }] },
+    { si: 'sinon (avec ou sans réponse au questionnaire)', donne: 'Essai annulé', sorte: 'essai_annule', modele: 'ESSAI_COURT',
+      scenarios: ['essai-annule-sans-reponse', 'essai-annule-avec-reponse'] }] },
   { si: 'Abonnement payant arrêté', enfants: [
     { si: 'remboursé ou carte refusée', donne: null, sorte: 'resiliation', scenarios: ['payant-rembourse', 'carte-refusee-renouvellement'] },
     { si: 'arrêté par nous', donne: 'Résiliation (part de son dossier)', sorte: 'resiliation', variante: 'depuis le dossier', modele: 'T',
@@ -459,7 +457,6 @@ function direEtape(x) {
 }
 
 const variante = (a) => {
-  if (a.type === 'essai_annule') return (a.traduction_fr?.corps ?? a.corps).includes(ESSAI.fr.pris) ? 'avec sa réponse' : 'court';
   if (a.type === 'resiliation') return a.variante === 'dossier' ? 'depuis le dossier' : 'modèle';
   return null;
 };
